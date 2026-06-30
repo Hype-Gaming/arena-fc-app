@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+}
+
+enum PlanKey {
+  free
+  premium
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  expired
+}
+
+enum CreditTransactionType {
+  purchase
+  grant
+  unlock
+  refund
+}
+
+enum MatchStatus {
+  scheduled
+  live
+  finished
+}
+
+enum EntradaStatus {
+  pending
+  green
+  red
+}
+
+enum GrantType {
+  credits
+  plan
+}
+
+enum ChatRole {
+  user
+  assistant
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  level     Int      @default(1)
+  xp        Int      @default(0)
+  role      Role     @default(user)
+
+  authCodes        AuthCode[]
+  refreshTokens    RefreshToken[]
+  subscriptions    Subscription[]
+  creditTxns       CreditTransaction[]
+  entradaUnlocks   EntradaUnlock[]
+  userAchievements UserAchievement[]
+  chatSessions     ChatSession[]
+}
+
+model AuthCode {
+  id        String    @id @default(cuid())
+  userId    String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Plan {
+  key            PlanKey @id
+  name           String
+  priceLabel     String
+  monthlyCredits Int     @default(0)
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  planKey          PlanKey
+  status           SubscriptionStatus @default(active)
+  provider         String
+  externalId       String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planKey], references: [key])
+
+  @@index([userId])
+}
+
+model CreditTransaction {
+  id           String                @id @default(cuid())
+  userId       String
+  type         CreditTransactionType
+  amount       Int
+  balanceAfter Int
+  refType      String?
+  refId        String?
+  createdAt    DateTime              @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+  icon String?
+
+  matches Match[]
+}
+
+model Match {
+  categoryId  String
+  id          String      @id @default(cuid())
+  homeTeam    String
+  awayTeam    String
+  competition String
+  startsAt    DateTime
+  status      MatchStatus @default(scheduled)
+  createdAt   DateTime    @default(now())
+
+  category Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  entradas Entrada[]
+
+  @@index([categoryId])
+}
+
+model Entrada {
+  id             String        @id @default(cuid())
+  matchId        String
+  market         String
+  selection      String
+  odd            Decimal       @db.Decimal(6, 2)
+  justification  String
+  costInCredits  Int
+  status         EntradaStatus @default(pending)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  match   Match           @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  unlocks EntradaUnlock[]
+
+  @@index([matchId])
+}
+
+model EntradaUnlock {
+  id         String   @id @default(cuid())
+  userId     String
+  entradaId  String
+  unlockedAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entrada Entrada @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entradaId])
+  @@index([userId])
+}
+
+model Product {
+  id                String    @id @default(cuid())
+  provider          String
+  externalProductId String
+  grantType         GrantType
+  grantCredits      Int?
+  grantPlanKey      PlanKey?
+  active            Boolean   @default(true)
+
+  @@unique([provider, externalProductId])
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  externalId  String    @unique
+  type        String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Achievement {
+  key         String @id
+  name        String
+  description String
+  icon        String?
+  criteria    Json
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id             String   @id @default(cuid())
+  userId         String
+  achievementKey String
+  unlockedAt     DateTime @default(now())
+  progress       Int      @default(0)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementKey], references: [key], onDelete: Cascade)
+
+  @@unique([userId, achievementKey])
+  @@index([userId])
+}
+
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      ChatRole
+  content   String
+  entradaId String?
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
