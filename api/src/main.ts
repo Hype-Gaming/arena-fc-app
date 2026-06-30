@@ -6,7 +6,10 @@ import { AppModule } from './app.module';
 import { InsufficientCreditsFilter } from './common/filters/insufficient-credits.filter';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true captures the exact request bytes on `req.rawBody` (needed for
+  // webhook HMAC verification) while still running the normal JSON body parser,
+  // so the global ValidationPipe keeps working for every other route.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.setGlobalPrefix('', { exclude: ['health'] });
   app.useGlobalPipes(
     new ValidationPipe({
