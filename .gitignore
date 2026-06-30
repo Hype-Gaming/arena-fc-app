@@ -1,6 +1,10 @@
+# .gitignore
 node_modules/
 dist/
+build/
 .env
-.env.*
-.superpowers/
 *.log
+api/prisma/dev.db
+coverage/
+web/dev-dist/
+.superpowers/
