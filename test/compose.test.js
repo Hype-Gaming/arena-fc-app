@@ -1,0 +1,21 @@
+// test/compose.test.js
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+const { execSync } = require('child_process');
+
+const root = path.resolve(__dirname, '..');
+// validate compose syntax via docker (config) — fails if file is malformed
+execSync('docker compose -f docker-compose.yml config', { cwd: root, stdio: 'pipe' });
+
+const raw = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
+['nginx:', 'web:', 'api:', 'postgres:'].forEach((s) =>
+  assert.ok(raw.includes(s), 'compose must define service ' + s));
+
+assert.ok(/pgdata:/.test(raw), 'must declare a named volume pgdata');
+assert.ok(/\/var\/lib\/postgresql\/data/.test(raw), 'postgres data must be on the persistent volume');
+assert.ok(/condition:\s*service_healthy/.test(raw), 'api must wait for healthy postgres');
+assert.ok(/pg_isready/.test(raw), 'postgres needs a healthcheck');
+assert.ok(/"80:80"/.test(raw) || /80:80/.test(raw), 'nginx must publish port 80');
+
+console.log('compose OK');
