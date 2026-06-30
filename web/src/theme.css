@@ -1,0 +1,27 @@
+/* web/src/theme.css */
+:root {
+  --bg: #0a0e1a;
+  --surface: #131a2e;
+  --gold: #e8b84b;
+  --green: #1db954;
+  --text: #f5f6fa;
+  --muted: #9aa3b8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-content { flex: 1; padding: 16px 16px 80px; }
+.page h1 { color: var(--gold); }
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: space-around;
+  background: var(--surface); padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.nav-item { color: var(--muted); text-decoration: none; font-size: 13px; }
+.nav-item--active { color: var(--gold); font-weight: 600; }
