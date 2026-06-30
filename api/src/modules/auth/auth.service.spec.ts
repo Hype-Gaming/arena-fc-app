@@ -117,3 +117,66 @@ describe('AuthService.verify', () => {
     expect(result.refreshToken).toMatch(/^[a-f0-9]{96}$/);
   });
 });
+
+describe('AuthService.refresh', () => {
+  let service: AuthService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    prisma = {
+      user: { findUnique: jest.fn() },
+      refreshToken: {
+        findFirst: jest.fn(),
+        delete: jest.fn().mockResolvedValue({}),
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MAIL_SERVICE, useValue: { sendOtp: jest.fn() } },
+        {
+          provide: JwtService,
+          useValue: { signAsync: jest.fn().mockResolvedValue('new.access.jwt') },
+        },
+        { provide: ConfigService, useValue: { get: () => 'test-secret' } },
+      ],
+    }).compile();
+
+    service = moduleRef.get(AuthService);
+  });
+
+  it('rejects an unknown or expired refresh token', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue(null);
+    await expect(service.refresh('deadbeef')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('deletes the old token and issues a new pair on rotation', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({ id: 'rt1', userId: 'u1' });
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
+
+    const result = await service.refresh('old-raw-token');
+
+    expect(prisma.refreshToken.delete).toHaveBeenCalledWith({
+      where: { id: 'rt1' },
+    });
+    expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1);
+    expect(result.accessToken).toBe('new.access.jwt');
+    expect(result.refreshToken).toMatch(/^[a-f0-9]{96}$/);
+  });
+
+  it('looks the token up by its sha256 hash, not the raw value', async () => {
+    prisma.refreshToken.findFirst.mockResolvedValue({ id: 'rt1', userId: 'u1' });
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', email: 'a@b.com' });
+
+    await service.refresh('old-raw-token');
+
+    const whereArg = prisma.refreshToken.findFirst.mock.calls[0][0].where;
+    expect(whereArg.tokenHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(whereArg.tokenHash).not.toBe('old-raw-token');
+  });
+});
