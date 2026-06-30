@@ -41,3 +41,43 @@ describe('LastLinkAdapter.verifySignature', () => {
     expect(adapter.verifySignature(body, { 'x-lastlink-signature': 'not-a-hex' })).toBe(false);
   });
 });
+
+describe('LastLinkAdapter.parse', () => {
+  const adapter = new LastLinkAdapter(SECRET);
+
+  const payload = {
+    Id: 'll_evt_42',
+    Event: 'Purchase_Order_Confirmed',
+    Data: {
+      Buyer: { Email: 'Buyer@Example.com' },
+      Products: [{ Id: 'll_prod_credits_100' }],
+    },
+  };
+
+  it('normalizes a LastLink purchase payload', () => {
+    const norm = adapter.parse(Buffer.from(JSON.stringify(payload)));
+    expect(norm).toEqual({
+      provider: 'lastlink',
+      externalId: 'll_evt_42',
+      type: 'Purchase_Order_Confirmed',
+      buyerEmail: 'buyer@example.com',
+      externalProductId: 'll_prod_credits_100',
+      raw: payload,
+    });
+  });
+
+  it('lowercases and trims the buyer email', () => {
+    const p = { ...payload, Data: { ...payload.Data, Buyer: { Email: '  MIX@Case.COM ' } } };
+    expect(adapter.parse(Buffer.from(JSON.stringify(p))).buyerEmail).toBe('mix@case.com');
+  });
+
+  it('throws on a body that is not valid JSON', () => {
+    expect(() => adapter.parse(Buffer.from('<<<not json>>>'))).toThrow();
+  });
+
+  it('throws when required fields are missing', () => {
+    expect(() => adapter.parse(Buffer.from(JSON.stringify({ Id: 'x' })))).toThrow(
+      /missing/i,
+    );
+  });
+});

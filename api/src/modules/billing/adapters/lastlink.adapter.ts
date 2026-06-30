@@ -31,8 +31,31 @@ export class LastLinkAdapter implements PaymentProvider {
     return timingSafeEqual(providedBuf, expectedBuf);
   }
 
-  parse(_rawBody: Buffer): NormalizedWebhook {
-    throw new Error('not implemented'); // implemented in Task 3
+  parse(rawBody: Buffer): NormalizedWebhook {
+    let data: any;
+    try {
+      data = JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      throw new Error('LastLink webhook: body is not valid JSON');
+    }
+
+    const externalId = data?.Id;
+    const type = data?.Event;
+    const buyerEmail = data?.Data?.Buyer?.Email;
+    const externalProductId = data?.Data?.Products?.[0]?.Id;
+
+    if (!externalId || !type || !buyerEmail || !externalProductId) {
+      throw new Error('LastLink webhook: missing required fields');
+    }
+
+    return {
+      provider: 'lastlink',
+      externalId: String(externalId),
+      type: String(type),
+      buyerEmail: String(buyerEmail).trim().toLowerCase(),
+      externalProductId: String(externalProductId),
+      raw: data,
+    };
   }
 
   private headerValue(headers: Record<string, string>, name: string): string | undefined {
