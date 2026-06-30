@@ -155,3 +155,51 @@ describe('CreditsService.applyTransaction', () => {
     });
   });
 });
+
+describe('CreditsService.applyTransaction — negative balance guard', () => {
+  type Tx = {
+    creditTransaction: { findFirst: jest.Mock; create: jest.Mock };
+    $executeRaw: jest.Mock;
+  };
+  function makeTxPrisma() {
+    const tx: Tx = {
+      creditTransaction: { findFirst: jest.fn(), create: jest.fn() },
+      $executeRaw: jest.fn().mockResolvedValue(undefined),
+    };
+    const prisma = {
+      creditTransaction: { findFirst: jest.fn() },
+      $transaction: jest.fn((cb: (t: Tx) => unknown) => cb(tx)),
+    };
+    return { prisma, tx };
+  }
+
+  it('throws InsufficientCreditsError and does NOT insert when balance would go below 0', async () => {
+    const { prisma, tx } = makeTxPrisma();
+    tx.creditTransaction.findFirst.mockResolvedValue({ balanceAfter: 5 });
+    const service = new CreditsService(prisma as any);
+
+    await expect(
+      service.applyTransaction({ userId: 'user-1', type: 'unlock', amount: -10 }),
+    ).rejects.toMatchObject({
+      name: 'InsufficientCreditsError',
+      userId: 'user-1',
+      currentBalance: 5,
+      amount: -10,
+    });
+    expect(tx.creditTransaction.create).not.toHaveBeenCalled();
+  });
+
+  it('allows spending the balance down to exactly 0', async () => {
+    const { prisma, tx } = makeTxPrisma();
+    tx.creditTransaction.findFirst.mockResolvedValue({ balanceAfter: 10 });
+    tx.creditTransaction.create.mockImplementation(({ data }: any) => ({ id: 'z', createdAt: new Date(), ...data }));
+    const service = new CreditsService(prisma as any);
+
+    const result = await service.applyTransaction({ userId: 'user-1', type: 'unlock', amount: -10 });
+
+    expect(result.balanceAfter).toBe(0);
+    expect(tx.creditTransaction.create).toHaveBeenCalledWith({
+      data: { userId: 'user-1', type: 'unlock', amount: -10, balanceAfter: 0, refType: null, refId: null },
+    });
+  });
+});
