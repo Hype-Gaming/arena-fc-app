@@ -5,6 +5,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { CreditsService } from '../src/modules/credits/credits.service';
 import { JwtAuthGuard } from '../src/modules/auth/jwt-auth.guard';
+import { InsufficientCreditsFilter } from '../src/common/filters/insufficient-credits.filter';
 
 describe('Tips (e2e)', () => {
   let app: INestApplication;
@@ -29,6 +30,7 @@ describe('Tips (e2e)', () => {
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+    app.useGlobalFilters(new InsufficientCreditsFilter());
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -131,5 +133,37 @@ describe('Tips (e2e)', () => {
     await request(app.getHttpServer())
       .post('/tips/entradas/00000000-0000-0000-0000-000000000000/unlock')
       .expect(404);
+  });
+
+  it('POST unlock with insufficient credits returns 402 INSUFFICIENT_CREDITS', async () => {
+    // user has 15 credits (seeded); this entrada costs 20 -> debit must fail
+    const match = await prisma.match.findFirst();
+    const pricey = await prisma.entrada.create({
+      data: {
+        matchId: match!.id,
+        market: 'O/U',
+        selection: 'Over 2.5',
+        odd: 2.1,
+        justification: 'cara demais',
+        costInCredits: 20,
+        status: 'pending',
+        publishedAt: new Date('2026-06-30T10:00:00Z'),
+      },
+    });
+
+    const res = await request(app.getHttpServer())
+      .post(`/tips/entradas/${pricey.id}/unlock`)
+      .expect(402);
+
+    expect(res.body.statusCode).toBe(402);
+    expect(res.body.error).toBe('INSUFFICIENT_CREDITS');
+    expect(res.body.currentBalance).toBe(15);
+    expect(res.body.required).toBe(20);
+
+    // no credits were debited and no unlock row created
+    expect(await credits.getBalance(userId)).toBe(15);
+    expect(
+      await prisma.entradaUnlock.count({ where: { userId, entradaId: pricey.id } }),
+    ).toBe(0);
   });
 });
