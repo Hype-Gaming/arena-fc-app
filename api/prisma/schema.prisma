@@ -119,6 +119,7 @@ model Subscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   plan Plan @relation(fields: [planKey], references: [key])
 
+  @@unique([userId])
   @@index([userId])
 }
 

@@ -141,3 +141,60 @@ describe('BillingService.processWebhook', () => {
     expect(result.eventId).toBe('wh_1');
   });
 });
+
+describe('BillingService plan grant', () => {
+  beforeEach(() => {
+    adapter.verifySignature.mockReset().mockReturnValue(true);
+    adapter.parse
+      .mockReset()
+      .mockReturnValue({ ...norm, externalProductId: 'prod_premium' });
+  });
+
+  it('activates/renews subscription and grants monthlyCredits', async () => {
+    const planFindUnique = jest
+      .fn()
+      .mockResolvedValue({ key: 'premium', monthlyCredits: 50 });
+    const subUpsert = jest.fn().mockResolvedValue({ id: 'sub_1' });
+
+    const { service, credits, users } = await makeModule({
+      productFindFirst: jest.fn().mockResolvedValue({
+        id: 'p2',
+        provider: 'lastlink',
+        externalProductId: 'prod_premium',
+        grantType: 'plan',
+        grantCredits: null,
+        grantPlanKey: 'premium',
+        active: true,
+      }),
+    });
+
+    // wire the extra prisma models the plan path needs
+    (service as any).prisma.plan = { findUnique: planFindUnique };
+    (service as any).prisma.subscription = { upsert: subUpsert };
+
+    const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    expect(users.findOrCreateByEmail).toHaveBeenCalledWith('buyer@example.com');
+    expect(subUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user_1' },
+        create: expect.objectContaining({
+          userId: 'user_1',
+          planKey: 'premium',
+          status: 'active',
+          provider: 'lastlink',
+          externalId: norm.externalId,
+        }),
+        update: expect.objectContaining({ planKey: 'premium', status: 'active' }),
+      }),
+    );
+    expect(credits.applyTransaction).toHaveBeenCalledWith({
+      userId: 'user_1',
+      type: 'grant',
+      amount: 50,
+      refType: 'subscription',
+      refId: 'sub_1',
+    });
+    expect(result.outcome).toBe('processed');
+  });
+});

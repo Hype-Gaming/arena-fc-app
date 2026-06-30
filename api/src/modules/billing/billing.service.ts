@@ -91,7 +91,55 @@ export class BillingService {
       });
       return;
     }
-    // grantType === 'plan' handled in Task 8
+    if (product.grantType === 'plan') {
+      await this.grantPlan(userId, product.grantPlanKey ?? '', _event);
+      return;
+    }
     throw new Error(`Unsupported grantType: ${product.grantType}`);
+  }
+
+  private async grantPlan(
+    userId: string,
+    planKey: string,
+    event: NormalizedWebhook,
+  ): Promise<void> {
+    const plan = await this.prisma.plan.findUnique({
+      where: { key: planKey as never },
+    });
+    if (!plan) {
+      throw new Error(`Plan not found: ${planKey}`);
+    }
+
+    const periodEnd = new Date();
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+    const subscription = await this.prisma.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        planKey: planKey as never,
+        status: 'active',
+        provider: event.provider,
+        externalId: event.externalId,
+        currentPeriodEnd: periodEnd,
+      },
+      update: {
+        planKey: planKey as never,
+        status: 'active',
+        provider: event.provider,
+        externalId: event.externalId,
+        currentPeriodEnd: periodEnd,
+      },
+    });
+
+    if (plan.monthlyCredits > 0) {
+      await this.credits.applyTransaction({
+        userId,
+        type: 'grant',
+        amount: plan.monthlyCredits,
+        refType: 'subscription',
+        refId: subscription.id,
+      });
+    }
   }
 }
