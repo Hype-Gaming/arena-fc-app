@@ -65,4 +65,34 @@ describe('Credits ledger (e2e)', () => {
     const count = await prisma.creditTransaction.count({ where: { userId } });
     expect(count).toBe(1);
   });
+
+  it('serializes concurrent spends so the balance never goes negative', async () => {
+    // Start with exactly 100 credits.
+    await credits.applyTransaction({ userId, type: 'grant', amount: 100 });
+
+    // 15 concurrent unlocks of 10 each => only 10 can succeed (100 / 10).
+    const attempts = Array.from({ length: 15 }, (_, i) =>
+      credits
+        .applyTransaction({ userId, type: 'unlock', amount: -10, refType: 'entrada', refId: `c${i}` })
+        .then(() => 'ok' as const)
+        .catch((e) => (e instanceof InsufficientCreditsError ? ('rejected' as const) : Promise.reject(e))),
+    );
+    const results = await Promise.all(attempts);
+
+    const ok = results.filter((r) => r === 'ok').length;
+    const rejected = results.filter((r) => r === 'rejected').length;
+    expect(ok).toBe(10);
+    expect(rejected).toBe(5);
+
+    // Final balance is exactly 0 and never dipped below 0 in the ledger.
+    expect(await credits.getBalance(userId)).toBe(0);
+    const balances = (
+      await prisma.creditTransaction.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+        select: { balanceAfter: true },
+      })
+    ).map((r) => r.balanceAfter);
+    expect(Math.min(...balances)).toBeGreaterThanOrEqual(0);
+  }, 20000);
 });
