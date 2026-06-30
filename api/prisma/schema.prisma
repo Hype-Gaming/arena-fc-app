@@ -124,6 +124,7 @@ model Subscription {
 
 model CreditTransaction {
   id           String                @id @default(cuid())
+  seq          BigInt                @default(autoincrement()) @unique
   userId       String
   type         CreditTransactionType
   amount       Int

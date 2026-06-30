@@ -12,7 +12,11 @@ export class CreditsService {
   async getBalance(userId: string): Promise<number> {
     const latest = await this.prisma.creditTransaction.findFirst({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      // Order by the strictly-monotonic insertion key, not millisecond
+      // `createdAt`: two rows can share an identical `createdAt`, which would
+      // make `createdAt`-only ordering non-deterministic and risk reading a
+      // stale (older) balanceAfter.
+      orderBy: { seq: 'desc' },
       select: { balanceAfter: true },
     });
     return latest?.balanceAfter ?? 0;
@@ -52,7 +56,9 @@ export class CreditsService {
 
     const latest = await tx.creditTransaction.findFirst({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      // Strictly-monotonic ordering (see getBalance): guarantees we read the
+      // truly-latest committed row even if two rows share a `createdAt` ms.
+      orderBy: { seq: 'desc' },
       select: { balanceAfter: true },
     });
     const current = latest?.balanceAfter ?? 0;

@@ -26,7 +26,7 @@ describe('CreditsService.getBalance', () => {
     expect(balance).toBe(0);
     expect(prisma.creditTransaction.findFirst).toHaveBeenCalledWith({
       where: { userId: 'user-1' },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { seq: 'desc' },
       select: { balanceAfter: true },
     });
   });

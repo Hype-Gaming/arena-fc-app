@@ -66,6 +66,40 @@ describe('Credits ledger (e2e)', () => {
     expect(count).toBe(1);
   });
 
+  it('reads the truly-latest row when two rows share an identical createdAt', async () => {
+    // Reproduce the millisecond-collision the advisory lock normally spaces
+    // apart: two rows for the same user with a BYTE-IDENTICAL `createdAt`.
+    //
+    // `seq` (monotonic insertion key) is the source of truth: the row with the
+    // greater `seq` is the latest, so its `balanceAfter` (7) is the real
+    // balance. We pin explicit `seq` values and lay the rows out so the older
+    // `orderBy: { createdAt: 'desc' }` read deterministically surfaces the
+    // STALE row (balanceAfter 99):
+    //   - the truly-latest row (seq 2, balance 7) is written to the heap FIRST,
+    //   - the stale row (seq 1, balance 99) is written SECOND.
+    // Under a `createdAt`-only tie-break Postgres returns the physically-later
+    // heap row -> the stale 99 (RED). Ordering by `seq` returns seq=2 -> 7.
+    const sameTs = new Date('2026-06-30T12:00:00.000Z');
+
+    await prisma.$executeRaw`
+      INSERT INTO "CreditTransaction"
+        ("id","seq","userId","type","amount","balanceAfter","createdAt")
+      VALUES
+        ('ct-latest', 2, ${userId}, 'unlock', -92, 7,  ${sameTs}),
+        ('ct-stale',  1, ${userId}, 'grant',   99, 99, ${sameTs})
+    `;
+
+    // Source of truth = the max-seq row's balanceAfter.
+    const truth = await prisma.creditTransaction.findFirst({
+      where: { userId },
+      orderBy: { seq: 'desc' },
+      select: { balanceAfter: true },
+    });
+    expect(truth?.balanceAfter).toBe(7);
+
+    expect(await credits.getBalance(userId)).toBe(7);
+  });
+
   it('serializes concurrent spends so the balance never goes negative', async () => {
     // Start with exactly 100 credits.
     await credits.applyTransaction({ userId, type: 'grant', amount: 100 });
