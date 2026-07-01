@@ -4,10 +4,12 @@ import { AppShell } from './shell/AppShell';
 import { TipsPage } from './pages/TipsPage';
 import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
+import { AdminPage } from './admin/AdminPage';
 
 export function App() {
   return (
     <Routes>
+      <Route path="/admin" element={<AdminPage />} />
       <Route element={<AppShell />}>
         <Route index element={<Navigate to="/tips" replace />} />
         <Route path="tips" element={<TipsPage />} />
