@@ -22,7 +22,11 @@ function authHeaders(): Record<string, string> {
 async function unwrap<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { message?: string }).message ?? `Request failed (${res.status})`);
+    const err = new Error(
+      (body as { message?: string }).message ?? `Request failed (${res.status})`,
+    ) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
   }
   return res.json() as Promise<T>;
 }

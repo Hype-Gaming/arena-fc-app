@@ -57,4 +57,22 @@ describe('TipsterChat', () => {
 
     expect(await screen.findByText(/insufficient credits/i)).toBeInTheDocument();
   });
+
+  it('shows a buy-credits CTA (instead of a raw error) on 402 when onBuyCredits is provided', async () => {
+    vi.spyOn(api, 'searchMatches').mockResolvedValue([
+      { id: 'm1', homeTeam: 'São Paulo', awayTeam: 'Palmeiras', competition: 'Brasileirão', startsAt: '', status: 'scheduled' },
+    ]);
+    const err = Object.assign(new Error('Insufficient credits'), { status: 402 });
+    vi.spyOn(api, 'analyzeMatch').mockRejectedValue(err);
+    const onBuyCredits = vi.fn();
+
+    render(<TipsterChat onBuyCredits={onBuyCredits} />);
+    fireEvent.change(screen.getByPlaceholderText(/digite um jogo/i), { target: { value: 'sao' } });
+    fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }));
+
+    const cta = await screen.findByRole('button', { name: /comprar créditos/i });
+    fireEvent.click(cta);
+    expect(onBuyCredits).toHaveBeenCalled();
+  });
 });

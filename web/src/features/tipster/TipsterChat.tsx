@@ -6,11 +6,16 @@ interface ChatLine {
   content: string;
 }
 
-export function TipsterChat() {
+interface TipsterChatProps {
+  onBuyCredits?: () => void;
+}
+
+export function TipsterChat({ onBuyCredits }: TipsterChatProps = {}) {
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<TipsterMatch | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [needCredits, setNeedCredits] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSearch(e: React.FormEvent) {
@@ -36,6 +41,7 @@ export function TipsterChat() {
   async function onConfirm() {
     if (!found) return;
     setError(null);
+    setNeedCredits(false);
     setBusy(true);
     setLines((prev) => [
       ...prev,
@@ -46,7 +52,16 @@ export function TipsterChat() {
       setLines((prev) => [...prev, { role: 'assistant', content: res.message }]);
       setFound(null);
     } catch (err) {
-      setError((err as Error).message);
+      const status = (err as { status?: number }).status;
+      const message = (err as Error).message;
+      if (
+        onBuyCredits &&
+        (status === 402 || /insufficient credits|sem cr[eé]ditos/i.test(message))
+      ) {
+        setNeedCredits(true);
+      } else {
+        setError(message);
+      }
     } finally {
       setBusy(false);
     }
@@ -70,6 +85,15 @@ export function TipsterChat() {
           <p>Achei esse jogo. Confirma?</p>
           <button type="button" onClick={onConfirm} disabled={busy}>
             Confirmar
+          </button>
+        </div>
+      )}
+
+      {needCredits && onBuyCredits && (
+        <div role="alert" className="banner">
+          <span>Sem créditos.</span>
+          <button type="button" className="cta-green" onClick={onBuyCredits}>
+            Comprar créditos
           </button>
         </div>
       )}
