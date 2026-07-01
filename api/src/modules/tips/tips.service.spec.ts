@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { TipsService } from './tips.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
@@ -22,6 +23,7 @@ describe('TipsService.getFeed', () => {
         TipsService,
         { provide: PrismaService, useValue: prisma },
         { provide: CreditsService, useValue: { applyTransaction: jest.fn(), getBalance: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
     service = moduleRef.get(TipsService);
@@ -92,6 +94,7 @@ describe('TipsService.unlockEntrada', () => {
   let service: TipsService;
   let prisma: any;
   let credits: { applyTransaction: jest.Mock };
+  let events: { emit: jest.Mock };
   let txClient: any;
 
   beforeEach(async () => {
@@ -103,11 +106,13 @@ describe('TipsService.unlockEntrada', () => {
       $transaction: jest.fn((cb: any) => cb(txClient)),
     };
     credits = { applyTransaction: jest.fn() };
+    events = { emit: jest.fn() };
     const moduleRef = await Test.createTestingModule({
       providers: [
         TipsService,
         { provide: PrismaService, useValue: prisma },
         { provide: CreditsService, useValue: credits },
+        { provide: EventEmitter2, useValue: events },
       ],
     }).compile();
     service = moduleRef.get(TipsService);
@@ -140,6 +145,12 @@ describe('TipsService.unlockEntrada', () => {
     expect(res.alreadyUnlocked).toBe(false);
     expect(res.justification).toBe('porque sim');
     expect(res.entrada.id).toBe('e1');
+    // A new unlock drives gamification (XP + achievements).
+    expect(events.emit).toHaveBeenCalledWith('entrada.unlocked', {
+      eventName: 'entrada.unlocked',
+      userId: 'u1',
+      entradaId: 'e1',
+    });
   });
 
   it('is idempotent: if already unlocked, does not charge again', async () => {
@@ -152,6 +163,8 @@ describe('TipsService.unlockEntrada', () => {
     expect(txClient.entradaUnlock.create).not.toHaveBeenCalled();
     expect(res.alreadyUnlocked).toBe(true);
     expect(res.justification).toBe('porque sim');
+    // No XP for a repeat unlock.
+    expect(events.emit).not.toHaveBeenCalled();
   });
 
   it('throws EntradaNotFoundError when entrada does not exist', async () => {
@@ -179,6 +192,7 @@ describe('TipsService read endpoints', () => {
         TipsService,
         { provide: PrismaService, useValue: prisma },
         { provide: CreditsService, useValue: { applyTransaction: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
     service = moduleRef.get(TipsService);

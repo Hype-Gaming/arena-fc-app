@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { FeedResponseDto } from './dto/feed-response.dto';
@@ -14,6 +15,7 @@ export class TipsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly credits: CreditsService,
+    private readonly events: EventEmitter2,
   ) {}
 
   async getFeed(userId: string): Promise<FeedResponseDto> {
@@ -87,6 +89,17 @@ export class TipsService {
       await tx.entradaUnlock.create({ data: { userId, entradaId } });
       return false;
     });
+
+    // Award gamification for a NEW unlock only. Decoupled (fire-and-forget) so a
+    // gamification failure can never roll back or 500 the paid unlock; the
+    // GamificationService @OnEvent('entrada.unlocked') listener handles it.
+    if (!alreadyUnlocked) {
+      this.events.emit('entrada.unlocked', {
+        eventName: 'entrada.unlocked',
+        userId,
+        entradaId,
+      });
+    }
 
     return {
       alreadyUnlocked,
