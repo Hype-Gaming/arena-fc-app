@@ -58,33 +58,32 @@ describe('PerfilScreen', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows email, plan, credit balance, xp and level', async () => {
+  it('shows email, plan, level and xp', async () => {
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
 
-    expect(await screen.findByText('Premium')).toBeInTheDocument();
-    expect(screen.getByText(/7 créditos/i)).toBeInTheDocument();
+    expect(await screen.findByText('a@b.com')).toBeInTheDocument();
+    expect(screen.getByText(/plano premium/i)).toBeInTheDocument();
     expect(screen.getByText(/nível 3/i)).toBeInTheDocument();
     expect(screen.getByText(/250 xp/i)).toBeInTheDocument();
-    expect(screen.getByText('a@b.com')).toBeInTheDocument();
   });
 
   it('lists achievements marking unlocked ones', async () => {
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
 
-    const unlocked = await screen.findByText('Primeira Entrada');
-    expect(unlocked.closest('li')).toHaveAttribute('data-unlocked', 'true');
-    expect(screen.getByText('Caçador de Tips').closest('li')).toHaveAttribute(
+    const unlocked = await screen.findByLabelText('Primeira Entrada');
+    expect(unlocked).toHaveAttribute('data-unlocked', 'true');
+    expect(screen.getByLabelText('Caçador de Tips')).toHaveAttribute(
       'data-unlocked',
       'false',
     );
   });
 
-  it('opens the configured checkout URL in a new tab when buy-credits is clicked', async () => {
+  it('opens the checkout URL in a new tab when Upgrade is clicked', async () => {
     const user = userEvent.setup();
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
 
-    await screen.findByText('Premium');
-    await user.click(screen.getByRole('button', { name: /comprar créditos/i }));
+    await screen.findByText('a@b.com');
+    await user.click(screen.getByRole('button', { name: /upgrade/i }));
 
     expect(window.open).toHaveBeenCalledTimes(1);
     const [url, target] = (window.open as ReturnType<typeof vi.fn>).mock
@@ -94,13 +93,13 @@ describe('PerfilScreen', () => {
     expect(target).toBe('_blank');
   });
 
-  it('calls onLogout when the sign-out button is clicked', async () => {
+  it('calls onLogout when Sair da Conta is clicked', async () => {
     const user = userEvent.setup();
     const onLogout = vi.fn();
     render(<PerfilScreen api={makeApi() as never} onLogout={onLogout} />);
 
-    await screen.findByText('Premium');
-    await user.click(screen.getByRole('button', { name: /sair/i }));
+    await screen.findByText('a@b.com');
+    await user.click(screen.getByRole('button', { name: /sair da conta/i }));
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
 });

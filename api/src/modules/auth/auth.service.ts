@@ -47,6 +47,20 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * DEV-ONLY: log in with just an email (no OTP), upserting the user. Guarded by
+   * the controller behind ALLOW_DEV_LOGIN — never enable in production.
+   */
+  async devLogin(rawEmail: string): Promise<TokenPair> {
+    const email = rawEmail.trim().toLowerCase();
+    const user = await this.prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: { email },
+    });
+    return this.issueTokens(user.id, user.email);
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }

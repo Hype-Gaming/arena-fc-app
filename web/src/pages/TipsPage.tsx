@@ -1,9 +1,9 @@
 // web/src/pages/TipsPage.tsx
-import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
-import { TipsScreen } from '../screens/TipsScreen';
+import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 
-export function TipsPage({ api }: { api: ApiClient }) {
-  const navigate = useNavigate();
-  return <TipsScreen api={api} onBuyCredits={() => navigate('/perfil')} />;
+// POC: the Tips tab now embeds the Esportiva sportsbook. The credit-gated tips
+// feed (TipsScreen) remains available in the codebase for reuse.
+export function TipsPage(_props: { api: ApiClient }) {
+  return <SportsbookFrame />;
 }

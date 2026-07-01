@@ -13,7 +13,7 @@ describe('LoginScreen', () => {
     render(<LoginScreen api={api as never} onLogin={onLogin} />);
 
     await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
-    await user.click(screen.getByRole('button', { name: /enviar código/i }));
+    await user.click(screen.getByRole('button', { name: /acessar/i }));
 
     expect(api.post).toHaveBeenCalledWith('/auth/request-code', {
       email: 'a@b.com',
@@ -33,7 +33,7 @@ describe('LoginScreen', () => {
     render(<LoginScreen api={api as never} onLogin={onLogin} />);
 
     await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
-    await user.click(screen.getByRole('button', { name: /enviar código/i }));
+    await user.click(screen.getByRole('button', { name: /acessar/i }));
 
     await user.type(await screen.findByLabelText(/código/i), '123456');
     await user.click(screen.getByRole('button', { name: /entrar/i }));
@@ -59,7 +59,7 @@ describe('LoginScreen', () => {
     render(<LoginScreen api={api as never} onLogin={vi.fn()} />);
 
     await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
-    await user.click(screen.getByRole('button', { name: /enviar código/i }));
+    await user.click(screen.getByRole('button', { name: /acessar/i }));
     await user.type(await screen.findByLabelText(/código/i), '000000');
     await user.click(screen.getByRole('button', { name: /entrar/i }));
 

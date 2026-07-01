@@ -1,4 +1,10 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  HttpCode,
+  Post,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyDto } from './dto/verify.dto';
@@ -12,6 +18,19 @@ export class AuthController {
   @HttpCode(200)
   requestCode(@Body() dto: RequestCodeDto) {
     return this.auth.requestCode(dto.email);
+  }
+
+  /**
+   * DEV-ONLY email login (no OTP). Disabled unless ALLOW_DEV_LOGIN=true, so it
+   * is off by default and in production. Lets the team test without codes.
+   */
+  @Post('dev-login')
+  @HttpCode(200)
+  devLogin(@Body() dto: RequestCodeDto) {
+    if (process.env.ALLOW_DEV_LOGIN !== 'true') {
+      throw new ForbiddenException('dev-login is disabled');
+    }
+    return this.auth.devLogin(dto.email);
   }
 
   @Post('verify')

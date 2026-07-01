@@ -27,6 +27,14 @@ body {
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .app-content { flex: 1; padding: 16px 16px 80px; }
 .page h1 { color: var(--color-gold); }
+.sportsbook-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 96px); /* viewport minus top padding + fixed bottom nav */
+  border: 0;
+  border-radius: 8px;
+  background: #0b0b0b;
+}
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   display: flex; justify-content: space-around;
