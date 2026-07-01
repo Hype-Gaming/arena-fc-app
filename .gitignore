@@ -7,4 +7,5 @@ build/
 api/prisma/dev.db
 coverage/
 web/dev-dist/
+*.tsbuildinfo
 .superpowers/
