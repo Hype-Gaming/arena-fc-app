@@ -44,11 +44,12 @@ describe('MeService', () => {
     expect(credits.getBalance).toHaveBeenCalledWith('u1');
   });
 
-  it('reports the Premium plan when the user has an active premium subscription', async () => {
+  it('reports the Premium plan when the subscription is active within its period', async () => {
     prisma.user.findUniqueOrThrow.mockResolvedValue({ email: 'p@b.com' });
     prisma.subscription.findUnique.mockResolvedValue({
       planKey: 'premium',
       status: 'active',
+      currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
     credits.getBalance.mockResolvedValue(12);
 
@@ -62,11 +63,39 @@ describe('MeService', () => {
     });
   });
 
+  it('treats a premium subscription with no period end as active', async () => {
+    prisma.user.findUniqueOrThrow.mockResolvedValue({ email: 'n@b.com' });
+    prisma.subscription.findUnique.mockResolvedValue({
+      planKey: 'premium',
+      status: 'active',
+      currentPeriodEnd: null,
+    });
+
+    const me = await service.getProfile('u4');
+
+    expect(me.planKey).toBe('premium');
+  });
+
+  it('falls back to Free when the premium period has already ended', async () => {
+    prisma.user.findUniqueOrThrow.mockResolvedValue({ email: 'e@b.com' });
+    prisma.subscription.findUnique.mockResolvedValue({
+      planKey: 'premium',
+      status: 'active',
+      currentPeriodEnd: new Date(Date.now() - 24 * 60 * 60 * 1000),
+    });
+
+    const me = await service.getProfile('u5');
+
+    expect(me.planKey).toBe('free');
+    expect(me.planName).toBe('Free');
+  });
+
   it('falls back to Free when a subscription exists but is not active', async () => {
     prisma.user.findUniqueOrThrow.mockResolvedValue({ email: 'x@b.com' });
     prisma.subscription.findUnique.mockResolvedValue({
       planKey: 'premium',
       status: 'canceled',
+      currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
     const me = await service.getProfile('u3');

@@ -30,13 +30,21 @@ export class MeService {
 
     const subscription = await this.prisma.subscription.findUnique({
       where: { userId },
-      select: { planKey: true, status: true },
+      select: { planKey: true, status: true, currentPeriodEnd: true },
     });
 
-    const planKey =
-      subscription && subscription.status === 'active'
-        ? (subscription.planKey as 'free' | 'premium')
-        : 'free';
+    // Premium only while the subscription is active AND still within its paid
+    // period. A null period end means "no expiry tracked" (treat as active); a
+    // past end means it lapsed even if the webhook never flipped `status`.
+    const active =
+      !!subscription &&
+      subscription.status === 'active' &&
+      (subscription.currentPeriodEnd === null ||
+        subscription.currentPeriodEnd > new Date());
+
+    const planKey = active
+      ? (subscription!.planKey as 'free' | 'premium')
+      : 'free';
 
     const creditBalance = await this.credits.getBalance(userId);
 
