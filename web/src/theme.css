@@ -1,27 +1,101 @@
 /* web/src/theme.css */
 :root {
+  /* legacy short tokens (kept for existing components) */
   --bg: #0a0e1a;
   --surface: #131a2e;
   --gold: #e8b84b;
   --green: #1db954;
   --text: #f5f6fa;
   --muted: #9aa3b8;
+
+  /* canonical design tokens */
+  --color-bg: #0a0e1a;
+  --color-surface: #131a2b;
+  --color-gold: #d4af37;
+  --color-green: #1db954;
+  --color-text: #f5f5f5;
+  --color-muted: #8a93a6;
+  --radius-card: 16px;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: system-ui, -apple-system, sans-serif;
 }
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
 .app-content { flex: 1; padding: 16px 16px 80px; }
-.page h1 { color: var(--gold); }
+.page h1 { color: var(--color-gold); }
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0;
   display: flex; justify-content: space-around;
-  background: var(--surface); padding: 10px 0;
+  background: var(--color-surface); padding: 10px 0;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
-.nav-item { color: var(--muted); text-decoration: none; font-size: 13px; }
-.nav-item--active { color: var(--gold); font-weight: 600; }
+.nav-item { color: var(--color-muted); text-decoration: none; font-size: 13px; }
+.nav-item--active { color: var(--color-gold); font-weight: 600; }
+
+/* cards + CTAs shared by the app screens */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.cta-green {
+  background: var(--color-green);
+  color: #04140a;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cta-ghost {
+  background: transparent;
+  color: var(--color-muted);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+.banner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--color-gold);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.odd { color: var(--color-gold); font-weight: 700; }
+.plan { color: var(--color-gold); font-weight: 700; font-size: 18px; }
+
+/* login */
+.login { padding: 24px; max-width: 420px; margin: 0 auto; }
+.login h1 { color: var(--color-gold); }
+.login form { display: flex; flex-direction: column; gap: 8px; }
+.login input {
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px; padding: 10px; color: var(--color-text);
+}
+
+/* tutorial overlay */
+.tutorial-overlay {
+  position: fixed; inset: 0;
+  background: rgba(4, 8, 18, 0.86);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 50;
+}
+.tutorial-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
+  padding: 24px; max-width: 420px; width: 100%;
+}
+
+/* tipster chat */
+.msg { padding: 8px 12px; border-radius: 12px; margin: 6px 0; }
+.msg--user { background: var(--color-surface); }
+.msg--assistant { background: rgba(29, 185, 84, 0.12); }
