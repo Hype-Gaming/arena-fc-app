@@ -73,4 +73,34 @@ describe('TipsScreen', () => {
     await user.click(cta);
     await waitFor(() => expect(onBuyCredits).toHaveBeenCalled());
   });
+
+  it('surfaces an error message when unlock fails for a non-402 reason', async () => {
+    const user = userEvent.setup();
+    const err = Object.assign(new Error('boom'), { status: 500 });
+    const api = {
+      get: vi.fn().mockResolvedValue(feed),
+      post: vi.fn().mockRejectedValue(err),
+    };
+    render(<TipsScreen api={api as never} onBuyCredits={vi.fn()} />);
+
+    await screen.findByText('Futebol');
+    await user.click(screen.getByRole('button', { name: /destravar/i }));
+
+    expect(await screen.findByText(/não foi possível destravar/i)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /comprar créditos/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a load error when the feed request fails', async () => {
+    const api = {
+      get: vi.fn().mockRejectedValue(new Error('network')),
+      post: vi.fn(),
+    };
+    render(<TipsScreen api={api as never} onBuyCredits={vi.fn()} />);
+
+    expect(
+      await screen.findByText(/não foi possível carregar as entradas/i),
+    ).toBeInTheDocument();
+  });
 });

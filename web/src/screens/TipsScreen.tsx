@@ -26,13 +26,18 @@ interface Props {
 export function TipsScreen({ api, onBuyCredits }: Props) {
   const [feed, setFeed] = useState<FeedCategory[]>([]);
   const [needCredits, setNeedCredits] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<FeedCategory[]>('/tips/feed').then(setFeed);
+    api
+      .get<FeedCategory[]>('/tips/feed')
+      .then(setFeed)
+      .catch(() => setError('Não foi possível carregar as entradas.'));
   }, [api]);
 
   async function unlock(entradaId: string) {
     setNeedCredits(false);
+    setError(null);
     try {
       const updated = await api.post<FeedEntrada>(
         `/tips/entradas/${entradaId}/unlock`,
@@ -47,7 +52,11 @@ export function TipsScreen({ api, onBuyCredits }: Props) {
         })),
       );
     } catch (err) {
-      if ((err as { status?: number }).status === 402) setNeedCredits(true);
+      if ((err as { status?: number }).status === 402) {
+        setNeedCredits(true);
+      } else {
+        setError('Não foi possível destravar. Tente novamente.');
+      }
     }
   }
 
@@ -60,6 +69,11 @@ export function TipsScreen({ api, onBuyCredits }: Props) {
             Comprar créditos
           </button>
         </div>
+      )}
+      {error && (
+        <p role="alert" className="tips__error">
+          {error}
+        </p>
       )}
       {feed.map((group) => (
         <section key={group.category.id}>
