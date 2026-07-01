@@ -57,15 +57,27 @@ export class GamificationService {
     let level = user.level;
 
     if (xpAwarded > 0) {
-      xp = user.xp + xpAwarded;
-      level = levelForXp(xp);
-      const updated = await this.prisma.user.update({
-        where: { id: user.id },
-        data: { xp, level },
-        select: { id: true, xp: true, level: true },
+      // Award atomically: read-then-write on `user.xp` would lose concurrent
+      // XP from two events firing for the same user. Serialize per user with a
+      // transaction-scoped advisory lock (seed 1 keeps this namespace distinct
+      // from the credits ledger's seed 0), increment in place, then persist the
+      // level derived from the true post-increment xp.
+      const bumped = await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${user.id}, 1))`;
+        const incremented = await tx.user.update({
+          where: { id: user.id },
+          data: { xp: { increment: xpAwarded } },
+          select: { xp: true },
+        });
+        const newLevel = levelForXp(incremented.xp);
+        await tx.user.update({
+          where: { id: user.id },
+          data: { level: newLevel },
+        });
+        return { xp: incremented.xp, level: newLevel };
       });
-      xp = updated.xp;
-      level = updated.level;
+      xp = bumped.xp;
+      level = bumped.level;
     }
 
     const newAchievementKeys = await this.evaluateAchievements(user.id, level);

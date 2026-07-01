@@ -3,10 +3,17 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GamificationService } from './gamification.service';
 
 function makePrismaMock() {
+  // XP is now awarded inside prisma.$transaction(cb) where cb receives a tx
+  // client that takes an advisory lock and does the increment + level updates.
+  const tx = {
+    $executeRaw: jest.fn().mockResolvedValue(1),
+    user: { update: jest.fn().mockResolvedValue({ xp: 0 }) },
+  };
   return {
+    tx,
+    $transaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
     user: {
       findUnique: jest.fn(),
-      update: jest.fn(),
     },
     entradaUnlock: { count: jest.fn().mockResolvedValue(0) },
     entrada: { count: jest.fn().mockResolvedValue(0) },
@@ -33,9 +40,10 @@ describe('GamificationService — XP & levels', () => {
     service = moduleRef.get(GamificationService);
   });
 
-  it('adds the event XP to the user and persists new xp+level', async () => {
+  it('atomically increments XP and persists the recomputed level', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 95, level: 1 });
-    prisma.user.update.mockResolvedValue({ id: 'u1', xp: 105, level: 2 });
+    // The atomic increment returns the true post-increment xp (95 + 10).
+    prisma.tx.user.update.mockResolvedValue({ xp: 105 });
 
     const result = await service.handleEvent({
       eventName: 'entrada.unlocked', // +10 xp
@@ -43,11 +51,19 @@ describe('GamificationService — XP & levels', () => {
       entradaId: 'e1',
     });
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
+    // 1st tx write: atomic in-place increment (no read-then-write).
+    expect(prisma.tx.user.update).toHaveBeenNthCalledWith(1, {
       where: { id: 'u1' },
-      data: { xp: 105, level: 2 },
-      select: { id: true, xp: true, level: true },
+      data: { xp: { increment: 10 } },
+      select: { xp: true },
     });
+    // 2nd tx write: level derived from the atomic result (105 -> level 2).
+    expect(prisma.tx.user.update).toHaveBeenNthCalledWith(2, {
+      where: { id: 'u1' },
+      data: { level: 2 },
+    });
+    // Serialized under a per-user advisory lock.
+    expect(prisma.tx.$executeRaw).toHaveBeenCalled();
     expect(result.xp).toBe(105);
     expect(result.level).toBe(2);
     expect(result.xpAwarded).toBe(10);
@@ -61,7 +77,8 @@ describe('GamificationService — XP & levels', () => {
       userId: 'u1',
     });
 
-    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.tx.user.update).not.toHaveBeenCalled();
     expect(result.xpAwarded).toBe(0);
   });
 
@@ -90,7 +107,7 @@ describe('GamificationService — achievement unlocking', () => {
 
   it('unlocks first_unlock when the user reaches 1 unlock', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 0, level: 1 });
-    prisma.user.update.mockResolvedValue({ id: 'u1', xp: 10, level: 1 });
+    prisma.tx.user.update.mockResolvedValue({ xp: 10 });
     prisma.entradaUnlock.count.mockResolvedValue(1);
     prisma.entrada.count.mockResolvedValue(0);
     prisma.achievement.findMany.mockResolvedValue([
@@ -115,7 +132,7 @@ describe('GamificationService — achievement unlocking', () => {
 
   it('does not re-unlock an achievement the user already has', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 0, level: 1 });
-    prisma.user.update.mockResolvedValue({ id: 'u1', xp: 10, level: 1 });
+    prisma.tx.user.update.mockResolvedValue({ xp: 10 });
     prisma.entradaUnlock.count.mockResolvedValue(1);
     prisma.achievement.findMany.mockResolvedValue([
       { key: 'first_unlock', criteria: { type: 'unlock_count', threshold: 1 } },
@@ -136,7 +153,7 @@ describe('GamificationService — achievement unlocking', () => {
 
   it('unlocks level_5 by criteria when the recomputed level qualifies', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 980, level: 4 });
-    prisma.user.update.mockResolvedValue({ id: 'u1', xp: 1005, level: 5 });
+    prisma.tx.user.update.mockResolvedValue({ xp: 1005 });
     prisma.achievement.findMany.mockResolvedValue([
       { key: 'level_5', criteria: { type: 'level_reached', threshold: 5 } },
     ]);
