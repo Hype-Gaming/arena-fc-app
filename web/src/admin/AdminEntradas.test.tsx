@@ -11,7 +11,9 @@ vi.mock('./adminApi', () => ({
 }));
 
 describe('AdminEntradas', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('renders entradas for the match and marks one green', async () => {
     (adminApi.listEntradas as any).mockResolvedValue([

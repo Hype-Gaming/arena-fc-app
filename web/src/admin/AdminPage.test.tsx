@@ -13,7 +13,9 @@ vi.mock('./adminApi', () => ({
 }));
 
 describe('AdminPage', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('renders backoffice sections and a match row', async () => {
     render(<AdminPage />);

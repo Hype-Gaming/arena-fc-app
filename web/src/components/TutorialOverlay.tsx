@@ -7,13 +7,19 @@ export function TutorialOverlay() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetchLatestTutorial().then((t) => {
-      const seen = localStorage.getItem('tutorialSeenVersion');
-      if (seen !== String(t.version)) {
-        setTutorial(t);
-        setOpen(true);
-      }
-    });
+    // First-access only, and defensive: if the tutorial endpoint is
+    // unreachable the app must still render, so swallow any failure.
+    fetchLatestTutorial()
+      .then((t) => {
+        const seen = localStorage.getItem('tutorialSeenVersion');
+        if (seen !== String(t.version)) {
+          setTutorial(t);
+          setOpen(true);
+        }
+      })
+      .catch(() => {
+        /* no tutorial available — skip the overlay */
+      });
   }, []);
 
   if (!open || !tutorial) return null;

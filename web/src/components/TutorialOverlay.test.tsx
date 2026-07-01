@@ -16,7 +16,9 @@ describe('TutorialOverlay', () => {
       ],
     });
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('shows the first step on first access then advances and dismisses', async () => {
     render(<TutorialOverlay />);

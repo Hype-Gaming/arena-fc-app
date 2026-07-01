@@ -51,8 +51,12 @@ function makeApi() {
 }
 
 describe('PerfilScreen', () => {
-  beforeEach(() => vi.stubGlobal('open', vi.fn()));
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.stubGlobal('open', vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it('shows email, plan, credit balance, xp and level', async () => {
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);

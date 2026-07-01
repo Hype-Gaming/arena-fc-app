@@ -1,9 +1,13 @@
 // web/src/pages/PerfilPage.tsx
-export function PerfilPage() {
-  return (
-    <section className="page">
-      <h1>Perfil</h1>
-      <p>Saldo, plano e conquistas.</p>
-    </section>
-  );
+import type { ApiClient } from '../lib/apiClient';
+import { PerfilScreen } from '../screens/PerfilScreen';
+
+export function PerfilPage({
+  api,
+  onLogout,
+}: {
+  api: ApiClient;
+  onLogout: () => void;
+}) {
+  return <PerfilScreen api={api} onLogout={onLogout} />;
 }

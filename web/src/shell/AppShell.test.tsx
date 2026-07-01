@@ -1,36 +1,37 @@
 // web/src/shell/AppShell.test.tsx
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
-import { App } from '../App';
+import { AppShell } from './AppShell';
 
-function renderAt(path: string) {
+// Unit test of the shell chrome in isolation: it must render the routed child
+// (Outlet) alongside the persistent bottom navigation. Full auth-gated routing
+// is covered by App.test.tsx.
+function renderShellWithChild() {
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <App />
+    <MemoryRouter initialEntries={['/child']}>
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="child" element={<p>conteúdo da rota</p>} />
+        </Route>
+      </Routes>
     </MemoryRouter>,
   );
 }
 
-describe('AppShell routing', () => {
-  it('renders the Tips page at /tips inside the shell with nav', () => {
-    renderAt('/tips');
-    expect(screen.getByRole('heading', { name: /tips/i })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: /navegação principal/i })).toBeInTheDocument();
+describe('AppShell', () => {
+  it('renders the routed child inside the shell', () => {
+    renderShellWithChild();
+    expect(screen.getByText('conteúdo da rota')).toBeInTheDocument();
   });
 
-  it('renders the IA Tipster page at /tipster', () => {
-    renderAt('/tipster');
-    expect(screen.getByRole('heading', { name: /ia tipster/i })).toBeInTheDocument();
-  });
-
-  it('renders the Perfil page at /perfil', () => {
-    renderAt('/perfil');
-    expect(screen.getByRole('heading', { name: /perfil/i })).toBeInTheDocument();
-  });
-
-  it('redirects unknown root path to /tips', () => {
-    renderAt('/');
-    expect(screen.getByRole('heading', { name: /tips/i })).toBeInTheDocument();
+  it('renders the persistent bottom navigation with the three tabs', () => {
+    renderShellWithChild();
+    expect(
+      screen.getByRole('navigation', { name: /navegação principal/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^tips$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ia tipster/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
   });
 });

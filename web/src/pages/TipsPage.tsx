@@ -1,9 +1,9 @@
 // web/src/pages/TipsPage.tsx
-export function TipsPage() {
-  return (
-    <section className="page">
-      <h1>Tips</h1>
-      <p>Feed de entradas por categoria.</p>
-    </section>
-  );
+import { useNavigate } from 'react-router-dom';
+import type { ApiClient } from '../lib/apiClient';
+import { TipsScreen } from '../screens/TipsScreen';
+
+export function TipsPage({ api }: { api: ApiClient }) {
+  const navigate = useNavigate();
+  return <TipsScreen api={api} onBuyCredits={() => navigate('/perfil')} />;
 }
