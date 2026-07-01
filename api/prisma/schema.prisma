@@ -264,3 +264,15 @@ model ChatMessage {
 
   @@index([sessionId])
 }
+
+model TutorialStep {
+  id        String   @id @default(cuid())
+  version   Int
+  order     Int
+  title     String
+  body      String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  @@unique([version, order])
+}
