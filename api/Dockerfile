@@ -20,4 +20,4 @@ EXPOSE 3000
 # achievements MUST exist or plan webhooks fail with "Plan not found"), then boot.
 # `prisma db seed` runs ts-node prisma/seed.ts, so tsconfig.json + dev deps
 # (ts-node) copied above are required.
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/src/main.js"]
