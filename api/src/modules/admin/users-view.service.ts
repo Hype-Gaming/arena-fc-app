@@ -17,15 +17,20 @@ export class UsersViewService {
         createdAt: true,
       },
     });
-    const result = [];
-    for (const u of users) {
-      const last = await this.prisma.creditTransaction.findFirst({
-        where: { userId: u.id },
-        orderBy: { createdAt: 'desc' },
-        select: { balanceAfter: true },
-      });
-      result.push({ ...u, balance: last ? last.balanceAfter : 0 });
-    }
-    return result;
+    if (users.length === 0) return [];
+
+    // Latest balance per user in a SINGLE query (was N+1). DISTINCT ON + seq
+    // DESC uses the strictly-monotonic ledger key, matching CreditsService —
+    // ordering by `createdAt` could tie and read a stale balanceAfter.
+    const rows = await this.prisma.$queryRaw<
+      { userId: string; balanceAfter: number }[]
+    >`
+      SELECT DISTINCT ON ("userId") "userId", "balanceAfter"
+      FROM "CreditTransaction"
+      ORDER BY "userId", "seq" DESC
+    `;
+    const balanceByUser = new Map(rows.map((r) => [r.userId, r.balanceAfter]));
+
+    return users.map((u) => ({ ...u, balance: balanceByUser.get(u.id) ?? 0 }));
   }
 }
