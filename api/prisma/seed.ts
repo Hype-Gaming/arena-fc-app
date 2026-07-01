@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { seedAchievements } from './seeds/achievements.seed';
+import { seedPlans } from './seeds/plans.seed';
 
 async function main(prisma: PrismaClient): Promise<void> {
+  await seedPlans(prisma);
   await seedAchievements(prisma);
 }
 

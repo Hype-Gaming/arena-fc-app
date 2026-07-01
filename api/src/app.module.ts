@@ -11,6 +11,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { TutorialModule } from './modules/tutorial/tutorial.module';
+import { MeModule } from './modules/me/me.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TutorialModule } from './modules/tutorial/tutorial.module';
     GamificationModule,
     AdminModule,
     TutorialModule,
+    MeModule,
   ],
 })
 export class AppModule {}
