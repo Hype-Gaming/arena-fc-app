@@ -18,6 +18,7 @@
     "@nestjs/common": "^10.3.0",
     "@nestjs/config": "^3.3.0",
     "@nestjs/core": "^10.3.0",
+    "@nestjs/event-emitter": "^2.1.1",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/platform-express": "^10.3.0",
     "@prisma/client": "^5.10.0",
@@ -48,8 +49,12 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
+    "rootDir": ".",
+    "testRegex": "(src|prisma)/.*\\.spec\\.ts$",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "\\.integration\\.spec\\.ts$"
+    ],
     "transform": {
       "^.+\\.ts$": "ts-jest"
     },
