@@ -6,7 +6,7 @@ import {
   NotFoundException,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard, AuthUser } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { TipsService } from './tips.service';
 import {
@@ -15,11 +15,6 @@ import {
   MatchNotFoundError,
 } from './tips.errors';
 
-interface AuthUser {
-  id: string;
-  role: string;
-}
-
 @Controller('tips')
 @UseGuards(JwtAuthGuard)
 export class TipsController {
@@ -27,13 +22,13 @@ export class TipsController {
 
   @Get('feed')
   getFeed(@CurrentUser() user: AuthUser) {
-    return this.tips.getFeed(user.id);
+    return this.tips.getFeed(user.userId);
   }
 
   @Post('entradas/:id/unlock')
   async unlock(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     try {
-      return await this.tips.unlockEntrada(user.id, id);
+      return await this.tips.unlockEntrada(user.userId, id);
     } catch (err) {
       if (err instanceof EntradaNotFoundError) {
         throw new NotFoundException(err.message);

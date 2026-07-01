@@ -27,7 +27,8 @@ describe('TipsController', () => {
     controller = moduleRef.get(TipsController);
   });
 
-  const user = { id: 'u1', role: 'user' };
+  // Mirrors the real JwtAuthGuard req.user shape: { userId, email }.
+  const user = { userId: 'u1', email: 'u1@test.dev' };
 
   it('GET feed delegates to service with current user id', async () => {
     (service.getFeed as jest.Mock).mockResolvedValue({ categories: [] });

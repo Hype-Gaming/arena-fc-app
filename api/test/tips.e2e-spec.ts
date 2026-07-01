@@ -18,11 +18,16 @@ describe('Tips (e2e)', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
-      // bypass real JWT: inject a fixed user
+      // bypass real JWT but mirror the REAL guard's req.user shape
+      // ({ userId, email }) so this e2e actually exercises the controller's
+      // user-field contract instead of a made-up { id } shape.
       .overrideGuard(JwtAuthGuard)
       .useValue({
         canActivate: (ctx: any) => {
-          ctx.switchToHttp().getRequest().user = { id: userId, role: 'user' };
+          ctx.switchToHttp().getRequest().user = {
+            userId,
+            email: 'tips-e2e@test.dev',
+          };
           return true;
         },
       })
