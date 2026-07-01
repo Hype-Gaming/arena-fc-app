@@ -8,6 +8,7 @@ import { AppShell } from './shell/AppShell';
 import { TipsPage } from './pages/TipsPage';
 import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
+import { PlanosPage } from './pages/PlanosPage';
 import { AdminPage } from './admin/AdminPage';
 
 interface Props {
@@ -34,6 +35,7 @@ function Gate({ api }: { api: ApiClient }) {
             path="perfil"
             element={<PerfilPage api={api} onLogout={logout} />}
           />
+          <Route path="planos" element={<PlanosPage api={api} />} />
           <Route path="*" element={<Navigate to="/tips" replace />} />
         </Route>
       </Routes>

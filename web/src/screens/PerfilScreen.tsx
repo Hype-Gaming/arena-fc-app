@@ -29,6 +29,8 @@ interface GamificationProfile {
 interface Props {
   api: Pick<ApiClient, 'get'>;
   onLogout: () => void;
+  /** Opens the plan comparison. Falls back to the external checkout when absent. */
+  onUpgrade?: () => void;
 }
 
 const env = import.meta.env as Record<string, string | undefined>;
@@ -54,7 +56,7 @@ function levelName(level: number): string {
 
 const ACH_SLOTS = 7; // icons shown before the "+N" overflow chip
 
-export function PerfilScreen({ api, onLogout }: Props) {
+export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [gam, setGam] = useState<GamificationProfile | null>(null);
 
@@ -167,7 +169,9 @@ export function PerfilScreen({ api, onLogout }: Props) {
             </span>
             <button
               className="ppf-upgrade"
-              onClick={() => window.open(CHECKOUT_URL, '_blank')}
+              onClick={() =>
+                onUpgrade ? onUpgrade() : window.open(CHECKOUT_URL, '_blank')
+              }
             >
               <Rocket /> Upgrade
             </button>
