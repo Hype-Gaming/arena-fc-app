@@ -75,14 +75,71 @@ export class GamificationService {
 
   /**
    * Check every achievement the user has NOT yet unlocked; insert the ones
-   * whose criteria are now met. Implemented in Task 5.
+   * whose criteria are now met.
    */
   private async evaluateAchievements(
     userId: string,
     currentLevel: number,
   ): Promise<string[]> {
-    void userId;
-    void currentLevel;
-    return [];
+    const [all, owned] = await Promise.all([
+      this.prisma.achievement.findMany({ select: { key: true, criteria: true } }),
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        select: { achievementKey: true },
+      }),
+    ]);
+
+    const ownedKeys = new Set(owned.map((u) => u.achievementKey));
+    const candidates = all.filter((a) => !ownedKeys.has(a.key));
+    if (candidates.length === 0) {
+      return [];
+    }
+
+    const newlyUnlocked: { key: string; progress: number }[] = [];
+    for (const achievement of candidates) {
+      const criteria = achievement.criteria as unknown as AchievementCriteria;
+      const progress = await this.measure(userId, criteria, currentLevel);
+      if (progress >= criteria.threshold) {
+        newlyUnlocked.push({ key: achievement.key, progress: criteria.threshold });
+      }
+    }
+
+    if (newlyUnlocked.length === 0) {
+      return [];
+    }
+
+    await this.prisma.userAchievement.createMany({
+      data: newlyUnlocked.map((u) => ({
+        userId,
+        achievementKey: u.key,
+        progress: u.progress,
+      })),
+      skipDuplicates: true,
+    });
+
+    return newlyUnlocked.map((u) => u.key);
+  }
+
+  /** Current measured value for a criteria type (used to compare vs threshold). */
+  private async measure(
+    userId: string,
+    criteria: AchievementCriteria,
+    currentLevel: number,
+  ): Promise<number> {
+    switch (criteria.type) {
+      case 'unlock_count':
+        return this.prisma.entradaUnlock.count({ where: { userId } });
+      case 'green_count':
+        return this.prisma.entrada.count({
+          where: { status: 'green', unlocks: { some: { userId } } },
+        });
+      case 'level_reached':
+        return currentLevel;
+      case 'referral_count':
+        // Referral tracking is owned by a future slice; 0 until wired.
+        return 0;
+      default:
+        return 0;
+    }
   }
 }
