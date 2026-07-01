@@ -20,8 +20,9 @@ services:
       dockerfile: api/Dockerfile
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      LASTLINK_WEBHOOK_SECRET: ${LASTLINK_WEBHOOK_SECRET}
+      PAYT_WEBHOOK_TOKEN: ${PAYT_WEBHOOK_TOKEN}
       NODE_ENV: ${NODE_ENV}
     depends_on:
       postgres:

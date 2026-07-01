@@ -15,6 +15,16 @@ assert.ok(/proxy_pass\s+http:\/\/web:80/.test(nginx), 'nginx must proxy web app'
 const apiDocker = read('api/Dockerfile');
 assert.ok(/prisma generate/.test(apiDocker), 'api image must run prisma generate');
 assert.ok(/prisma migrate deploy/.test(apiDocker), 'api start must apply migrations');
+assert.ok(
+  /prisma db seed/.test(apiDocker),
+  'api start must seed (Plan rows) — otherwise plan webhooks fail with "Plan not found"',
+);
+
+// Every secret the code reads (getOrThrow / boot guard) must be documented in
+// .env.example, or a fresh deploy crash-loops at bootstrap.
+const envExample = read('.env.example');
+['DATABASE_URL', 'JWT_SECRET', 'LASTLINK_WEBHOOK_SECRET', 'PAYT_WEBHOOK_TOKEN'].forEach((v) =>
+  assert.ok(new RegExp('^' + v + '=', 'm').test(envExample), '.env.example must document ' + v));
 
 const webDocker = read('web/Dockerfile');
 assert.ok(/npm run build/.test(webDocker), 'web image must build static assets');

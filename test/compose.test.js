@@ -18,4 +18,12 @@ assert.ok(/condition:\s*service_healthy/.test(raw), 'api must wait for healthy p
 assert.ok(/pg_isready/.test(raw), 'postgres needs a healthcheck');
 assert.ok(/"80:80"/.test(raw) || /80:80/.test(raw), 'nginx must publish port 80');
 
+// The api service must forward every secret the code reads, under the exact
+// names the code expects (a name mismatch = crash-loop on boot).
+['DATABASE_URL', 'JWT_SECRET', 'LASTLINK_WEBHOOK_SECRET', 'PAYT_WEBHOOK_TOKEN'].forEach((v) =>
+  assert.ok(
+    new RegExp(v + ':\\s*\\$\\{' + v + '\\}').test(raw),
+    'api service must pass ' + v,
+  ));
+
 console.log('compose OK');
