@@ -10,7 +10,7 @@ function renderHome() {
     <MemoryRouter initialEntries={['/']}>
       <Routes>
         <Route path="/" element={<HomeScreen />} />
-        <Route path="/tips" element={<div>Tips route</div>} />
+        <Route path="/bilhetes" element={<div>Bilhetes route</div>} />
         <Route path="/tipster" element={<div>Tipster route</div>} />
         <Route path="/planos" element={<div>Planos route</div>} />
       </Routes>
@@ -30,11 +30,11 @@ describe('HomeScreen', () => {
     ).toBeInTheDocument();
   });
 
-  it('routes the Futebol card to Tips', async () => {
+  it('routes the Futebol card to Bilhetes', async () => {
     const user = userEvent.setup();
     renderHome();
     await user.click(screen.getByRole('button', { name: /^acesso$/i }));
-    expect(screen.getByText('Tips route')).toBeInTheDocument();
+    expect(screen.getByText('Bilhetes route')).toBeInTheDocument();
   });
 
   it('routes the AI card to the Tipster', async () => {

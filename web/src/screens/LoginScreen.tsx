@@ -1,4 +1,4 @@
-// web/src/screens/LoginScreen.tsx
+// web/src/screens/LoginScreen.tsx — replica of the reference /login
 import { useEffect, useState, type FormEvent } from 'react';
 import type { ApiClient } from '../lib/apiClient';
 import type { Tokens } from '../lib/tokenStorage';
@@ -12,55 +12,71 @@ interface Props {
 const CHECKOUT_URL =
   (import.meta.env.VITE_CHECKOUT_URL as string | undefined) ??
   'https://lastlink.com';
+const SUPPORT_URL =
+  (import.meta.env.VITE_SUPPORT_URL as string | undefined) ??
+  'https://wa.me/5500000000000';
+
+type Tone = 'ia' | 'pro' | 'ultra';
 
 interface Slide {
+  tone: Tone;
   pill: string;
+  odd: string;
   title: string;
   sub: string;
   meta: string;
-  hero: string;
   foot: string;
-  won?: boolean;
 }
 
-// Mirrors the reference carousel: it pages through tiered entries
-// (IA Tipster / ULTRA / PRO / BÁSICO) with odds, match and a "bateu" result.
+// Mirrors the reference carousel: IA Tipster (green), PRO (gold), ULTRA (purple).
 const SLIDES: Slide[] = [
   {
+    tone: 'ia',
     pill: 'IA Tipster',
+    odd: '1.78',
     title: 'Crie suas próprias odds',
     sub: 'Análise de IA em segundos',
-    meta: 'R$ 100 → R$ 214',
-    hero: '2.14',
-    foot: 'Disponível dentro do app',
+    meta: 'R$ 100 → R$ 178',
+    foot: '✨ Disponível dentro do app',
   },
   {
-    pill: 'Ultra',
-    title: 'México x Equador',
-    sub: 'Visitante para mais cartões',
-    meta: 'R$ 100 → R$ 214',
-    hero: '2.14',
-    foot: 'Entrada de ontem bateu',
-    won: true,
+    tone: 'pro',
+    pill: 'PRO',
+    odd: '1.78',
+    title: 'Inglaterra x RD Congo',
+    sub: 'Bilhete Especial',
+    meta: 'R$ 100 → R$ 178',
+    foot: '✓ Entrada de hoje bateu',
   },
   {
-    pill: 'Pro',
-    title: 'Bilhete Especial',
-    sub: 'Combo de 3 seleções',
-    meta: 'R$ 100 → R$ 168',
-    hero: '1.68',
-    foot: 'Green confirmado',
-    won: true,
-  },
-  {
-    pill: 'Básico',
-    title: 'Entrada do dia',
-    sub: 'Uma seleção segura, todo dia',
-    meta: 'R$ 100 → R$ 140',
-    hero: '1.40',
-    foot: 'Disponível dentro do app',
+    tone: 'ultra',
+    pill: 'ULTRA',
+    odd: '1.45',
+    title: 'Inglaterra x RD Congo',
+    sub: 'Finalizações do jogador no alvo , 0.5',
+    meta: 'R$ 100 → R$ 145',
+    foot: '✓ Entrada de hoje bateu',
   },
 ];
+
+function Sparkles() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      <path d="M20 3v4M22 5h-4M4 17v2M5 18H3" />
+    </svg>
+  );
+}
 
 function HexLogo() {
   return (
@@ -68,8 +84,15 @@ function HexLogo() {
       <polygon
         points="26,8 74,8 98,50 74,92 26,92 2,50"
         fill="#0c1a27"
-        stroke="#1fd07a"
-        strokeWidth="3.5"
+        stroke="#e0b341"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <polygon
+        points="30,14 70,14 90,50 70,86 30,86 10,50"
+        fill="none"
+        stroke="rgba(224,179,65,0.35)"
+        strokeWidth="1.5"
         strokeLinejoin="round"
       />
       <text
@@ -77,31 +100,14 @@ function HexLogo() {
         y="53"
         textAnchor="middle"
         dominantBaseline="central"
-        fontFamily="'Saira Condensed', sans-serif"
-        fontWeight="800"
+        fontFamily="'Barlow Condensed', sans-serif"
+        fontWeight="900"
         fontSize="52"
-        fill="#1fd07a"
+        fill="#e0b341"
       >
         P
       </text>
-      <circle cx="64" cy="37" r="5" fill="#e8b74a" />
-    </svg>
-  );
-}
-
-function Spark() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2z" />
-    </svg>
-  );
-}
-
-function Check() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" fill="currentColor" opacity="0.16" />
-      <path d="M7 12.5l3.2 3.2L17 9" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="64" cy="37" r="5" fill="#e0b341" />
     </svg>
   );
 }
@@ -181,37 +187,57 @@ export function LoginScreen({ api, onLogin }: Props) {
     }
   }
 
-  const s = SLIDES[slide];
-
   return (
     <main className="pf-login">
+      {/* ambient light trails, as in the reference */}
+      <div className="pf-trails" aria-hidden="true">
+        <div className="pf-trail pf-trail--1" />
+        <div className="pf-trail pf-trail--2" />
+      </div>
+
       <div className="pf-login__inner">
         <Brand />
 
         {step === 'email' ? (
           <>
             <div className="pf-promo">
-              <article className="pf-card">
-                <div className="pf-card__body">
-                  <span className="pf-pill">
-                    <Spark /> {s.pill}
-                  </span>
-                  <span className="pf-card__odd">{s.hero}</span>
-                  <h2 className="pf-card__title">{s.title}</h2>
-                  <p className="pf-card__sub">{s.sub}</p>
-                  <span className="pf-card__meta">{s.meta}</span>
-                </div>
+              <div className="pf-viewport">
                 <div
-                  className={
-                    s.won ? 'pf-card__foot pf-card__foot--won' : 'pf-card__foot'
-                  }
+                  className="pf-track"
+                  style={{ transform: `translateX(-${slide * 100}%)` }}
                 >
-                  <span className={s.won ? 'pf-check' : 'pf-spark'}>
-                    {s.won ? <Check /> : <Spark />}
-                  </span>
-                  {s.foot}
+                  {SLIDES.map((s, i) => (
+                    <div className="pf-slide" key={s.pill}>
+                      <article
+                        className={
+                          i === 0 ? 'pf-card pf-card--shine' : 'pf-card'
+                        }
+                        data-tone={s.tone}
+                      >
+                        <div className="pf-card__row pf-card__row--top">
+                          <span className="pf-pill" data-tone={s.tone}>
+                            {s.tone === 'ia' && <Sparkles />}
+                            {s.pill}
+                          </span>
+                          <span className="pf-card__odd" data-tone={s.tone}>
+                            {s.odd}
+                          </span>
+                        </div>
+                        <div className="pf-card__row pf-card__row--mid">
+                          <div>
+                            <p className="pf-card__title">{s.title}</p>
+                            <p className="pf-card__sub">{s.sub}</p>
+                          </div>
+                          <span className="pf-card__meta">{s.meta}</span>
+                        </div>
+                        <div className="pf-card__foot" data-tone={s.tone}>
+                          {s.foot}
+                        </div>
+                      </article>
+                    </div>
+                  ))}
                 </div>
-              </article>
+              </div>
               <div className="pf-dots" role="tablist" aria-label="Destaques">
                 {SLIDES.map((sl, i) => (
                   <button
@@ -228,20 +254,22 @@ export function LoginScreen({ api, onLogin }: Props) {
             </div>
 
             <form className="pf-form" onSubmit={requestCode}>
-              <label className="pf-label" htmlFor="email">
-                E-mail
-              </label>
-              <input
-                id="email"
-                className="pf-input"
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+              <div className="pf-field">
+                <label className="pf-label" htmlFor="email">
+                  E-mail
+                </label>
+                <input
+                  id="email"
+                  className="pf-input"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
               {error && (
                 <p className="pf-error" role="alert">
                   {error}
@@ -250,7 +278,7 @@ export function LoginScreen({ api, onLogin }: Props) {
               <button
                 className="pf-btn pf-btn--primary"
                 type="submit"
-                disabled={busy}
+                disabled={busy || email.trim() === ''}
               >
                 {busy ? 'Enviando…' : 'Acessar o Premier'}
               </button>
@@ -261,45 +289,76 @@ export function LoginScreen({ api, onLogin }: Props) {
               className="pf-btn pf-btn--ghost"
               onClick={() => window.open(CHECKOUT_URL, '_blank')}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path
-                  d="M3 3h2l2.4 12.3a1 1 0 0 0 1 .8h9.3a1 1 0 0 0 1-.8L21 7H6"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="9" cy="20" r="1.4" fill="currentColor" />
-                <circle cx="18" cy="20" r="1.4" fill="currentColor" />
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="pf-cart"
+              >
+                <circle cx="8" cy="21" r="1" />
+                <circle cx="19" cy="21" r="1" />
+                <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
               </svg>
               Adquirir acesso
             </button>
 
             <div className="pf-stats">
               <div className="pf-stat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6a3 3 0 0 1 0 6M20.5 19a5 5 0 0 0-3-4.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
-                +50.000 apostadores
+                <span>+50.000 apostadores</span>
               </div>
               <div className="pf-stat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-                  <path d="M14 5v14" stroke="currentColor" strokeWidth="1.7" strokeDasharray="2 2" />
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                  <path d="M13 5v2M13 17v2M13 11v2" />
                 </svg>
-                +10 entradas por dia
+                <span>+10 entradas por dia</span>
               </div>
             </div>
 
             <footer className="pf-foot">
-              Ao continuar, você concorda com nossos{' '}
-              <a href="#termos">Termos e Privacidade</a>
-              <div className="pf-foot__age">18+ • Jogue com responsabilidade</div>
+              <p className="pf-foot__terms">
+                Ao continuar, você concorda com nossos{' '}
+                <a href="#termos">Termos e Privacidade</a>
+              </p>
               <div className="pf-foot__sep">
-                <a href="#termos">Termos e Privacidade</a> &nbsp;|&nbsp;{' '}
-                <a href="#suporte">Suporte no WhatsApp</a>
+                <a href="#termos">Termos e Privacidade</a>
+                <span className="pf-foot__bar">|</span>
+                <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+                  Suporte
+                </a>
               </div>
+              <p className="pf-foot__age">18+ • Jogue com responsabilidade.</p>
             </footer>
           </>
         ) : (
@@ -307,19 +366,21 @@ export function LoginScreen({ api, onLogin }: Props) {
             <p className="pf-code-note">
               Enviamos um código de acesso para <b>{email}</b>.
             </p>
-            <label className="pf-label" htmlFor="code">
-              Código
-            </label>
-            <input
-              id="code"
-              className="pf-input"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              required
-            />
+            <div className="pf-field">
+              <label className="pf-label" htmlFor="code">
+                Código
+              </label>
+              <input
+                id="code"
+                className="pf-input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+              />
+            </div>
             {error && (
               <p className="pf-error" role="alert">
                 {error}

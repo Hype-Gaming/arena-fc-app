@@ -44,7 +44,7 @@ const SECTIONS: Section[] = [
         badges: [{ label: 'IA Ativada', tone: 'gold' }],
         ctaLabel: 'Acesso',
         ctaVariant: 'solid',
-        to: '/tips',
+        to: '/bilhetes',
       },
       {
         key: 'ia-tempo-real',
@@ -105,7 +105,7 @@ const SECTIONS: Section[] = [
         badges: [{ label: 'Verdes', tone: 'green' }],
         ctaLabel: 'Visualização histórica',
         ctaVariant: 'solid',
-        to: '/tips',
+        to: '/bilhetes',
       },
     ],
   },

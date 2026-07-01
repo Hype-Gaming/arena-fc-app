@@ -7,6 +7,7 @@ import { LoginScreen } from './screens/LoginScreen';
 import { AppShell } from './shell/AppShell';
 import { HomePage } from './pages/HomePage';
 import { TipsPage } from './pages/TipsPage';
+import { BilhetesPage } from './pages/BilhetesPage';
 import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
 import { PlanosPage } from './pages/PlanosPage';
@@ -40,6 +41,7 @@ function Gate({ api }: { api: ApiClient }) {
             <Route path="/admin" element={<AdminPage />} />
             <Route element={<AppShell />}>
               <Route index element={<HomePage />} />
+              <Route path="bilhetes" element={<BilhetesPage />} />
               <Route path="tips" element={<TipsPage api={api} />} />
               <Route path="tipster" element={<TipsterPage api={api} />} />
               <Route
