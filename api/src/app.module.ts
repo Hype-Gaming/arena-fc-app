@@ -10,6 +10,7 @@ import { TipsterModule } from './modules/tipster/tipster.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { TutorialModule } from './modules/tutorial/tutorial.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AdminModule } from './modules/admin/admin.module';
     BillingModule,
     GamificationModule,
     AdminModule,
+    TutorialModule,
   ],
 })
 export class AppModule {}
