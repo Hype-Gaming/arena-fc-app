@@ -1,5 +1,6 @@
 // api/src/modules/billing/billing.service.ts
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { UsersService } from '../users/users.service';
@@ -37,18 +38,8 @@ export class BillingService {
       return { outcome: 'duplicate', eventId: existing.id };
     }
 
-    // Record the event first so the grant can reference it (refId) and so
-    // a crash mid-grant still leaves a dedupe marker.
-    const record = await this.prisma.webhookEvent.create({
-      data: {
-        provider: event.provider,
-        externalId: event.externalId,
-        type: event.type,
-        payload: event.raw as object,
-        processedAt: new Date(),
-      },
-    });
-
+    // Product resolution and user upsert are idempotent reads/upserts, so they
+    // stay OUTSIDE the money transaction.
     const product = await this.prisma.product.findFirst({
       where: {
         provider: event.provider,
@@ -57,6 +48,16 @@ export class BillingService {
       },
     });
     if (!product) {
+      // No grant to make: record a standalone dedupe marker and stop.
+      const record = await this.prisma.webhookEvent.create({
+        data: {
+          provider: event.provider,
+          externalId: event.externalId,
+          type: event.type,
+          payload: event.raw as object,
+          processedAt: new Date(),
+        },
+      });
       return {
         outcome: 'ignored',
         eventId: record.id,
@@ -66,9 +67,39 @@ export class BillingService {
 
     const user = await this.users.findOrCreateByEmail(event.buyerEmail);
 
-    await this.applyGrant(user.id, product, record.id, event);
+    try {
+      // Atomic: record the event AND perform the grant in ONE transaction. If
+      // the grant fails (or the process crashes mid-way), the WebhookEvent
+      // insert rolls back too, so a retry can succeed — no lost grant, and no
+      // dedupe marker left without its credits.
+      const eventId = await this.prisma.$transaction(async (tx) => {
+        const record = await tx.webhookEvent.create({
+          data: {
+            provider: event.provider,
+            externalId: event.externalId,
+            type: event.type,
+            payload: event.raw as object,
+            processedAt: new Date(),
+          },
+        });
 
-    return { outcome: 'processed', eventId: record.id };
+        await this.applyGrant(user.id, product, record.id, event, tx);
+        return record.id;
+      });
+
+      return { outcome: 'processed', eventId };
+    } catch (err) {
+      // Concurrent replay: the loser hits a P2002 unique violation on
+      // WebhookEvent.externalId. Treat it as a graceful duplicate (2xx) instead
+      // of surfacing a 500 that gateways would keep retrying.
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        return { outcome: 'duplicate' };
+      }
+      throw err;
+    }
   }
 
   private async applyGrant(
@@ -80,19 +111,23 @@ export class BillingService {
     },
     eventId: string,
     _event: NormalizedWebhook,
+    tx: Prisma.TransactionClient,
   ): Promise<void> {
     if (product.grantType === 'credits') {
-      await this.credits.applyTransaction({
-        userId,
-        type: 'purchase',
-        amount: product.grantCredits ?? 0,
-        refType: 'webhook',
-        refId: eventId,
-      });
+      await this.credits.applyTransaction(
+        {
+          userId,
+          type: 'purchase',
+          amount: product.grantCredits ?? 0,
+          refType: 'webhook',
+          refId: eventId,
+        },
+        tx,
+      );
       return;
     }
     if (product.grantType === 'plan') {
-      await this.grantPlan(userId, product.grantPlanKey ?? '', _event);
+      await this.grantPlan(userId, product.grantPlanKey ?? '', _event, tx);
       return;
     }
     throw new Error(`Unsupported grantType: ${product.grantType}`);
@@ -102,6 +137,7 @@ export class BillingService {
     userId: string,
     planKey: string,
     event: NormalizedWebhook,
+    tx: Prisma.TransactionClient,
   ): Promise<void> {
     const plan = await this.prisma.plan.findUnique({
       where: { key: planKey as never },
@@ -113,7 +149,7 @@ export class BillingService {
     const periodEnd = new Date();
     periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-    const subscription = await this.prisma.subscription.upsert({
+    const subscription = await tx.subscription.upsert({
       where: { userId },
       create: {
         userId,
@@ -133,13 +169,16 @@ export class BillingService {
     });
 
     if (plan.monthlyCredits > 0) {
-      await this.credits.applyTransaction({
-        userId,
-        type: 'grant',
-        amount: plan.monthlyCredits,
-        refType: 'subscription',
-        refId: subscription.id,
-      });
+      await this.credits.applyTransaction(
+        {
+          userId,
+          type: 'grant',
+          amount: plan.monthlyCredits,
+          refType: 'subscription',
+          refId: subscription.id,
+        },
+        tx,
+      );
     }
   }
 }

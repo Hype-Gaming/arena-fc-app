@@ -104,4 +104,46 @@ describe('POST /webhooks/:provider (e2e)', () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email: EMAIL } });
     expect(await latestBalance(prisma, user.id)).toBe(50); // unchanged
   });
+
+  it('concurrent replay of a NEW event: exactly one grant, loser gets a clean 2xx (no 500)', async () => {
+    const EXT = 'e2e_evt_concurrent';
+    const CEMAIL = 'webhook-concurrent@example.com';
+    await prisma.creditTransaction.deleteMany({ where: { user: { email: CEMAIL } } });
+    await prisma.webhookEvent.deleteMany({ where: { externalId: EXT } });
+    await prisma.user.deleteMany({ where: { email: CEMAIL } });
+
+    const bodyStr = JSON.stringify({
+      Id: EXT,
+      Event: 'Purchase_Order_Confirmed',
+      Data: { Buyer: { Email: CEMAIL }, Products: [{ Id: 'e2e_credits_50' }] },
+    });
+    const body = Buffer.from(bodyStr);
+    const sig = sign(body);
+
+    const fire = () =>
+      request(app.getHttpServer())
+        .post('/webhooks/lastlink')
+        .set('content-type', 'application/json')
+        .set('x-lastlink-signature', sig)
+        .send(bodyStr);
+
+    // Fire several identical requests at once. The winner processes; the losers
+    // race the WebhookEvent.externalId unique constraint. With the P2002 catch
+    // they resolve to a graceful duplicate (2xx), NOT an unhandled 500.
+    const results = await Promise.all([fire(), fire(), fire(), fire()]);
+
+    for (const r of results) {
+      expect(r.status).toBeLessThan(500); // no 500s from the P2002 losers
+      expect(r.status).toBe(201);
+    }
+    const outcomes: string[] = results
+      .map((r: request.Response) => r.body.outcome as string)
+      .sort();
+    expect(outcomes.filter((o: string) => o === 'processed')).toHaveLength(1);
+    expect(outcomes.filter((o: string) => o === 'duplicate')).toHaveLength(3);
+
+    // MONEY: credited exactly once despite the concurrent burst.
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: CEMAIL } });
+    expect(await latestBalance(prisma, user.id)).toBe(50);
+  });
 });

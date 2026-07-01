@@ -1,6 +1,7 @@
 // api/src/modules/billing/billing.service.spec.ts
 import { Test } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { BillingService } from './billing.service';
 import { PaymentProviderRegistry } from './adapters/payment-provider.registry';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -28,17 +29,39 @@ function makeModule(overrides: {
   productFindFirst?: jest.Mock;
   applyTransaction?: jest.Mock;
   findOrCreateByEmail?: jest.Mock;
+  planFindUnique?: jest.Mock;
+  subscriptionUpsert?: jest.Mock;
 }) {
+  const webhookCreate =
+    overrides.webhookCreate ??
+    jest.fn().mockResolvedValue({ id: 'wh_1', externalId: norm.externalId });
+  const productFindFirst = overrides.productFindFirst ?? jest.fn();
+  const planFindUnique =
+    overrides.planFindUnique ??
+    jest.fn().mockResolvedValue({ key: 'premium', monthlyCredits: 50 });
+  const subscriptionUpsert =
+    overrides.subscriptionUpsert ?? jest.fn().mockResolvedValue({ id: 'sub_1' });
+
+  // The interactive transaction client passed to the callback. It exposes the
+  // same models the tx body touches: webhookEvent.create + subscription.upsert.
+  const txClient = {
+    webhookEvent: { create: webhookCreate },
+    subscription: { upsert: subscriptionUpsert },
+  };
+
   const prisma = {
     webhookEvent: {
       findUnique: overrides.webhookFindUnique ?? jest.fn().mockResolvedValue(null),
-      create:
-        overrides.webhookCreate ??
-        jest.fn().mockResolvedValue({ id: 'wh_1', externalId: norm.externalId }),
+      // Standalone create (used only for the "ignored" path, outside a tx).
+      create: webhookCreate,
     },
     product: {
-      findFirst: overrides.productFindFirst ?? jest.fn(),
+      findFirst: productFindFirst,
     },
+    plan: { findUnique: planFindUnique },
+    // Run the callback with the tx client so record+grant share one tx. If the
+    // callback rejects, the promise rejects (mirroring a rollback).
+    $transaction: jest.fn((cb: (tx: unknown) => unknown) => cb(txClient)),
   };
   const credits = {
     applyTransaction:
@@ -66,7 +89,18 @@ function makeModule(overrides: {
       credits,
       users,
       registry,
+      webhookCreate,
+      subscriptionUpsert,
+      txClient,
     }));
+}
+
+function p2002OnExternalId(): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+    code: 'P2002',
+    clientVersion: 'test',
+    meta: { target: ['externalId'] },
+  });
 }
 
 describe('BillingService.processWebhook', () => {
@@ -106,7 +140,7 @@ describe('BillingService.processWebhook', () => {
   });
 
   it('grants credits via CreditsService for a credits product', async () => {
-    const { service, credits, users, prisma } = await makeModule({
+    const { service, credits, users, prisma, txClient } = await makeModule({
       productFindFirst: jest.fn().mockResolvedValue({
         id: 'p1',
         provider: 'lastlink',
@@ -121,13 +155,19 @@ describe('BillingService.processWebhook', () => {
     const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
 
     expect(users.findOrCreateByEmail).toHaveBeenCalledWith('buyer@example.com');
-    expect(credits.applyTransaction).toHaveBeenCalledWith({
-      userId: 'user_1',
-      type: 'purchase',
-      amount: 100,
-      refType: 'webhook',
-      refId: 'wh_1',
-    });
+    // MONEY: credits move via applyTransaction, and the tx client is passed as
+    // the 2nd positional arg so record+grant are atomic.
+    expect(credits.applyTransaction).toHaveBeenCalledWith(
+      {
+        userId: 'user_1',
+        type: 'purchase',
+        amount: 100,
+        refType: 'webhook',
+        refId: 'wh_1',
+      },
+      txClient,
+    );
+    expect(prisma.$transaction).toHaveBeenCalled();
     expect(prisma.webhookEvent.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -140,6 +180,80 @@ describe('BillingService.processWebhook', () => {
     expect(result.outcome).toBe('processed');
     expect(result.eventId).toBe('wh_1');
   });
+
+  it('rolls back the WebhookEvent.create when the grant fails (atomic record+grant)', async () => {
+    // The tx client tracks whether create was "committed". Because create+grant
+    // run in ONE $transaction, a grant failure must reject the whole callback so
+    // the create never persists — closing the lost-grant window.
+    let createCommitted = false;
+    const webhookCreate = jest.fn().mockImplementation(async () => {
+      createCommitted = true; // provisional insert inside the tx
+      return { id: 'wh_1', externalId: norm.externalId };
+    });
+    const applyTransaction = jest
+      .fn()
+      .mockRejectedValue(new Error('grant boom (e.g. process crash)'));
+
+    const { service, prisma } = await makeModule({
+      webhookCreate,
+      applyTransaction,
+      productFindFirst: jest.fn().mockResolvedValue({
+        id: 'p1',
+        provider: 'lastlink',
+        externalProductId: norm.externalProductId,
+        grantType: 'credits',
+        grantCredits: 100,
+        grantPlanKey: null,
+        active: true,
+      }),
+    });
+
+    // Make $transaction model rollback: if the callback rejects, discard the
+    // provisional create side effect (createCommitted -> false), then rethrow.
+    prisma.$transaction.mockImplementation(async (cb: (tx: unknown) => unknown) => {
+      try {
+        return await cb((prisma as any).__txClient ?? {
+          webhookEvent: { create: webhookCreate },
+          subscription: { upsert: jest.fn() },
+        });
+      } catch (err) {
+        createCommitted = false; // ROLLBACK: the WebhookEvent row is discarded
+        throw err;
+      }
+    });
+
+    await expect(
+      service.processWebhook('lastlink', Buffer.from('{}'), {}),
+    ).rejects.toThrow(/grant boom/);
+
+    // create WAS attempted inside the tx, but the tx rolled back -> no persisted row.
+    expect(webhookCreate).toHaveBeenCalled();
+    expect(createCommitted).toBe(false);
+  });
+
+  it('returns duplicate (not a 500) when WebhookEvent.create hits P2002 (concurrent replay loser)', async () => {
+    const webhookCreate = jest.fn().mockRejectedValue(p2002OnExternalId());
+    const applyTransaction = jest.fn();
+
+    const { service, credits } = await makeModule({
+      webhookCreate,
+      applyTransaction,
+      productFindFirst: jest.fn().mockResolvedValue({
+        id: 'p1',
+        provider: 'lastlink',
+        externalProductId: norm.externalProductId,
+        grantType: 'credits',
+        grantCredits: 100,
+        grantPlanKey: null,
+        active: true,
+      }),
+    });
+
+    const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    expect(result.outcome).toBe('duplicate');
+    expect(credits.applyTransaction).not.toHaveBeenCalled();
+  });
 });
 
 describe('BillingService plan grant', () => {
@@ -151,12 +265,14 @@ describe('BillingService plan grant', () => {
   });
 
   it('activates/renews subscription and grants monthlyCredits', async () => {
+    const subscriptionUpsert = jest.fn().mockResolvedValue({ id: 'sub_1' });
     const planFindUnique = jest
       .fn()
       .mockResolvedValue({ key: 'premium', monthlyCredits: 50 });
-    const subUpsert = jest.fn().mockResolvedValue({ id: 'sub_1' });
 
-    const { service, credits, users } = await makeModule({
+    const { service, credits, users, txClient } = await makeModule({
+      planFindUnique,
+      subscriptionUpsert,
       productFindFirst: jest.fn().mockResolvedValue({
         id: 'p2',
         provider: 'lastlink',
@@ -168,14 +284,10 @@ describe('BillingService plan grant', () => {
       }),
     });
 
-    // wire the extra prisma models the plan path needs
-    (service as any).prisma.plan = { findUnique: planFindUnique };
-    (service as any).prisma.subscription = { upsert: subUpsert };
-
     const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
 
     expect(users.findOrCreateByEmail).toHaveBeenCalledWith('buyer@example.com');
-    expect(subUpsert).toHaveBeenCalledWith(
+    expect(subscriptionUpsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: 'user_1' },
         create: expect.objectContaining({
@@ -188,13 +300,16 @@ describe('BillingService plan grant', () => {
         update: expect.objectContaining({ planKey: 'premium', status: 'active' }),
       }),
     );
-    expect(credits.applyTransaction).toHaveBeenCalledWith({
-      userId: 'user_1',
-      type: 'grant',
-      amount: 50,
-      refType: 'subscription',
-      refId: 'sub_1',
-    });
+    expect(credits.applyTransaction).toHaveBeenCalledWith(
+      {
+        userId: 'user_1',
+        type: 'grant',
+        amount: 50,
+        refType: 'subscription',
+        refId: 'sub_1',
+      },
+      txClient,
+    );
     expect(result.outcome).toBe('processed');
   });
 });
