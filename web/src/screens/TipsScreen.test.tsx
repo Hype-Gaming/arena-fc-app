@@ -3,30 +3,49 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TipsScreen } from './TipsScreen';
 
-const feed = [
-  {
-    category: { id: 'c1', name: 'Futebol', slug: 'futebol' },
-    entradas: [
-      {
-        id: 'e1',
-        market: 'Resultado Final',
-        selection: 'Casa',
-        odd: 1.85,
-        costInCredits: 1,
-        status: 'pending',
-        justification: null,
-        unlocked: false,
-      },
-    ],
-  },
-];
+// Mirrors the real GET /tips/feed shape (FeedResponseDto): categories → matches
+// → entradas, with a `locked` flag (NOT a flat list with `unlocked`).
+const feed = {
+  categories: [
+    {
+      id: 'c1',
+      name: 'Futebol',
+      slug: 'futebol',
+      icon: '⚽',
+      matches: [
+        {
+          id: 'm1',
+          homeTeam: 'São Paulo',
+          awayTeam: 'Palmeiras',
+          competition: 'Brasileirão',
+          startsAt: '2026-07-02T00:00:00.000Z',
+          status: 'scheduled',
+          entradas: [
+            {
+              id: 'e1',
+              market: 'Resultado Final',
+              selection: 'Casa',
+              odd: 1.85,
+              costInCredits: 1,
+              status: 'pending',
+              publishedAt: null,
+              locked: true,
+              justification: null,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
 describe('TipsScreen', () => {
-  it('renders categories and locked entradas (market/odd visible, justification hidden)', async () => {
+  it('renders categories, matches and locked entradas (justification hidden)', async () => {
     const api = { get: vi.fn().mockResolvedValue(feed), post: vi.fn() };
     render(<TipsScreen api={api as never} onBuyCredits={vi.fn()} />);
 
-    expect(await screen.findByText('Futebol')).toBeInTheDocument();
+    expect(await screen.findByText(/Futebol/)).toBeInTheDocument();
+    expect(screen.getByText(/São Paulo x Palmeiras/)).toBeInTheDocument();
     expect(screen.getByText(/Resultado Final/)).toBeInTheDocument();
     expect(screen.getByText('1.85')).toBeInTheDocument();
     expect(screen.queryByTestId('justification-e1')).not.toBeInTheDocument();
@@ -39,15 +58,16 @@ describe('TipsScreen', () => {
     const user = userEvent.setup();
     const api = {
       get: vi.fn().mockResolvedValue(feed),
+      // Real UnlockResponseDto shape.
       post: vi.fn().mockResolvedValue({
-        id: 'e1',
+        alreadyUnlocked: false,
         justification: 'Casa joga melhor em casa.',
-        unlocked: true,
+        entrada: { id: 'e1' },
       }),
     };
     render(<TipsScreen api={api as never} onBuyCredits={vi.fn()} />);
 
-    await screen.findByText('Futebol');
+    await screen.findByText(/Futebol/);
     await user.click(screen.getByRole('button', { name: /destravar/i }));
 
     expect(api.post).toHaveBeenCalledWith('/tips/entradas/e1/unlock', {});
@@ -66,7 +86,7 @@ describe('TipsScreen', () => {
     };
     render(<TipsScreen api={api as never} onBuyCredits={onBuyCredits} />);
 
-    await screen.findByText('Futebol');
+    await screen.findByText(/Futebol/);
     await user.click(screen.getByRole('button', { name: /destravar/i }));
 
     const cta = await screen.findByRole('button', { name: /comprar créditos/i });
@@ -83,10 +103,12 @@ describe('TipsScreen', () => {
     };
     render(<TipsScreen api={api as never} onBuyCredits={vi.fn()} />);
 
-    await screen.findByText('Futebol');
+    await screen.findByText(/Futebol/);
     await user.click(screen.getByRole('button', { name: /destravar/i }));
 
-    expect(await screen.findByText(/não foi possível destravar/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/não foi possível destravar/i),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /comprar créditos/i }),
     ).not.toBeInTheDocument();

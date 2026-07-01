@@ -9,7 +9,7 @@ import { tokenStorage } from './lib/tokenStorage';
 function makeApi() {
   return {
     get: vi.fn((path: string) => {
-      if (path === '/tips/feed') return Promise.resolve([]);
+      if (path === '/tips/feed') return Promise.resolve({ categories: [] });
       if (path === '/me')
         return Promise.resolve({
           email: 'a@b.com',
