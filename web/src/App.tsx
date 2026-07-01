@@ -5,6 +5,7 @@ import { api as defaultApi, type ApiClient } from './lib/apiClient';
 import { TutorialOverlay } from './components/TutorialOverlay';
 import { LoginScreen } from './screens/LoginScreen';
 import { AppShell } from './shell/AppShell';
+import { HomePage } from './pages/HomePage';
 import { TipsPage } from './pages/TipsPage';
 import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
@@ -18,26 +19,40 @@ interface Props {
 function Gate({ api }: { api: ApiClient }) {
   const { isAuthenticated, login, logout } = useAuth();
 
-  if (!isAuthenticated) {
-    return <LoginScreen api={api} onLogin={login} />;
-  }
-
   return (
     <>
-      <TutorialOverlay />
+      {isAuthenticated && <TutorialOverlay />}
       <Routes>
-        <Route path="/admin" element={<AdminPage />} />
-        <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/tips" replace />} />
-          <Route path="tips" element={<TipsPage api={api} />} />
-          <Route path="tipster" element={<TipsterPage api={api} />} />
-          <Route
-            path="perfil"
-            element={<PerfilPage api={api} onLogout={logout} />}
-          />
-          <Route path="planos" element={<PlanosPage api={api} />} />
-          <Route path="*" element={<Navigate to="/tips" replace />} />
-        </Route>
+        {/* Login is its own route. Authenticated users are bounced to the home hub. */}
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <LoginScreen api={api} onLogin={login} />
+            )
+          }
+        />
+
+        {isAuthenticated ? (
+          <>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route element={<AppShell />}>
+              <Route index element={<HomePage />} />
+              <Route path="tips" element={<TipsPage api={api} />} />
+              <Route path="tipster" element={<TipsterPage api={api} />} />
+              <Route
+                path="perfil"
+                element={<PerfilPage api={api} onLogout={logout} />}
+              />
+              <Route path="planos" element={<PlanosPage api={api} />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </>
+        ) : (
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        )}
       </Routes>
     </>
   );

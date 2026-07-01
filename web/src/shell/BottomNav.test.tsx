@@ -7,15 +7,15 @@ import { BottomNav } from './BottomNav';
 describe('BottomNav', () => {
   it('renders exactly the three MVP tabs with correct routes', () => {
     render(
-      <MemoryRouter initialEntries={['/tips']}>
+      <MemoryRouter initialEntries={['/']}>
         <BottomNav />
       </MemoryRouter>,
     );
-    const tips = screen.getByRole('link', { name: /^tips$/i });
+    const inicio = screen.getByRole('link', { name: /início/i });
     const tipster = screen.getByRole('link', { name: /ia tipster/i });
     const perfil = screen.getByRole('link', { name: /perfil/i });
 
-    expect(tips).toHaveAttribute('href', '/tips');
+    expect(inicio).toHaveAttribute('href', '/');
     expect(tipster).toHaveAttribute('href', '/tipster');
     expect(perfil).toHaveAttribute('href', '/perfil');
     expect(screen.getAllByRole('link')).toHaveLength(3);
@@ -27,6 +27,20 @@ describe('BottomNav', () => {
         <BottomNav />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /perfil/i })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: /perfil/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('keeps Início inactive when on another route (exact match only)', () => {
+    render(
+      <MemoryRouter initialEntries={['/perfil']}>
+        <BottomNav />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByRole('link', { name: /início/i }),
+    ).not.toHaveAttribute('aria-current');
   });
 });
