@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { levelForXp, xpForEvent } from './level.util';
+import { levelForXp, xpForEvent, LEVEL_THRESHOLDS } from './level.util';
 import {
   GAMIFICATION_EVENTS,
   GamificationEventName,
   GamificationEventPayload,
 } from './events/gamification-events';
 import { AchievementCriteria } from '../../../prisma/seeds/achievements.seed';
+import {
+  ProfileGamificationDto,
+  AchievementStatusDto,
+} from './dto/profile-gamification.dto';
 
 export interface GamificationResult {
   userId: string;
@@ -67,6 +71,59 @@ export class GamificationService {
     const newAchievementKeys = await this.evaluateAchievements(user.id, level);
 
     return { userId: user.id, xp, level, xpAwarded, newAchievementKeys };
+  }
+
+  /** Read model for the Perfil screen: XP, level bounds, and achievement status. */
+  async getProfileGamification(
+    userId: string,
+  ): Promise<ProfileGamificationDto> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, xp: true, level: true },
+    });
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    const [allAchievements, owned] = await Promise.all([
+      this.prisma.achievement.findMany({
+        select: { key: true, name: true, description: true, icon: true, criteria: true },
+        orderBy: { key: 'asc' },
+      }),
+      this.prisma.userAchievement.findMany({
+        where: { userId },
+        select: { achievementKey: true, unlockedAt: true, progress: true },
+      }),
+    ]);
+
+    const ownedMap = new Map(owned.map((u) => [u.achievementKey, u]));
+
+    const achievements: AchievementStatusDto[] = allAchievements.map((a) => {
+      const criteria = a.criteria as unknown as AchievementCriteria;
+      const ua = ownedMap.get(a.key);
+      return {
+        key: a.key,
+        name: a.name,
+        description: a.description,
+        icon: a.icon ?? '',
+        unlocked: !!ua,
+        unlockedAt: ua?.unlockedAt ? ua.unlockedAt.toISOString() : null,
+        progress: ua?.progress ?? 0,
+        threshold: criteria.threshold,
+      };
+    });
+
+    const currentLevelFloor = LEVEL_THRESHOLDS[user.level - 1] ?? 0;
+    const nextLevelXp =
+      user.level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[user.level] : null;
+
+    return {
+      xp: user.xp,
+      level: user.level,
+      currentLevelFloor,
+      nextLevelXp,
+      achievements,
+    };
   }
 
   private knownEvent(name: string): name is GamificationEventName {

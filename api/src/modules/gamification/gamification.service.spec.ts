@@ -153,3 +153,49 @@ describe('GamificationService — achievement unlocking', () => {
     expect(result.newAchievementKeys).toEqual(['level_5']);
   });
 });
+
+describe('GamificationService — profile read', () => {
+  let service: GamificationService;
+  let prisma: ReturnType<typeof makePrismaMock>;
+
+  beforeEach(async () => {
+    prisma = makePrismaMock();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        GamificationService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = moduleRef.get(GamificationService);
+  });
+
+  it('returns xp, level, next-level progress and achievements', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 120, level: 2 });
+    prisma.achievement.findMany.mockResolvedValue([
+      { key: 'first_unlock', name: 'Primeira Entrada', description: 'd', icon: 'i', criteria: { type: 'unlock_count', threshold: 1 } },
+      { key: 'ten_unlocks', name: 'Caçador de Tips', description: 'd', icon: 'i', criteria: { type: 'unlock_count', threshold: 10 } },
+    ]);
+    prisma.userAchievement.findMany.mockResolvedValue([
+      { achievementKey: 'first_unlock', unlockedAt: new Date('2026-06-01T00:00:00Z'), progress: 1 },
+    ]);
+
+    const dto = await service.getProfileGamification('u1');
+
+    expect(dto.xp).toBe(120);
+    expect(dto.level).toBe(2);
+    expect(dto.currentLevelFloor).toBe(100); // threshold for level 2
+    expect(dto.nextLevelXp).toBe(250); // threshold for level 3
+    expect(dto.achievements).toHaveLength(2);
+    const first = dto.achievements.find((a) => a.key === 'first_unlock')!;
+    expect(first.unlocked).toBe(true);
+    const ten = dto.achievements.find((a) => a.key === 'ten_unlocks')!;
+    expect(ten.unlocked).toBe(false);
+  });
+
+  it('throws NotFound for an unknown user', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(service.getProfileGamification('ghost')).rejects.toThrow(
+      'User ghost not found',
+    );
+  });
+});
