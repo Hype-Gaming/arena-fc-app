@@ -57,11 +57,10 @@ function View() {
   if (which === 'home') return <HomeScreen />;
   if (which === 'planos') return <PlanosScreen api={mockApi} />;
   if (which === 'tipster') return <TipsterPage api={mockApi} />;
-  if (which === 'bilhetes-diamante') return <BilhetesScreen planKey="diamante" />;
-  return <BilhetesScreen planKey="premium" />;
+  return <BilhetesScreen />;
 }
 
-const wide = which === 'planos' || which === 'tipster';
+const wide = which === 'planos' || which === 'tipster' || which === 'bilhetes';
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <MemoryRouter>
