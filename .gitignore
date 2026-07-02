@@ -9,3 +9,4 @@ coverage/
 web/dev-dist/
 *.tsbuildinfo
 .superpowers/
+*.timestamp-*.mjs
