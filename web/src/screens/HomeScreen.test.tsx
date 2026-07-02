@@ -21,27 +21,34 @@ function renderHome() {
 describe('HomeScreen', () => {
   it('renders the section headers and main cards', () => {
     renderHome();
-    expect(screen.getByRole('heading', { name: /principal/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /principais/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /acesso rápido/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /últimos ingressos/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^futebol$/i })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /análise de ia em tempo real/i }),
+      screen.getByRole('heading', { name: /análises de ia em tempo real/i }),
     ).toBeInTheDocument();
   });
 
   it('routes the Futebol card to Bilhetes', async () => {
     const user = userEvent.setup();
     renderHome();
-    await user.click(screen.getByRole('button', { name: /^acesso$/i }));
+    await user.click(screen.getByRole('button', { name: /^acessar$/i }));
     expect(screen.getByText('Bilhetes route')).toBeInTheDocument();
   });
 
   it('routes the AI card to the Tipster', async () => {
     const user = userEvent.setup();
     renderHome();
-    await user.click(screen.getByRole('button', { name: /teste de dicas de ia/i }));
+    await user.click(screen.getByRole('button', { name: /testar a ia tipster/i }));
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
+  });
+
+  it('opens the plans screen from the sticky header pill', async () => {
+    const user = userEvent.setup();
+    renderHome();
+    await user.click(screen.getByRole('button', { name: /^planos$/i }));
+    expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
 
   it('sends locked quick-access cards to the plans screen', async () => {

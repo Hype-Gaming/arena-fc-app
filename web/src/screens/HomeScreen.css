@@ -17,6 +17,65 @@
   font-family: var(--h-body);
   padding: 8px 12px 24px;
 }
+
+/* ---- sticky top bar (logo + Planos pill) ---- */
+.home-top {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* bleed across .app-content (16px) + .home (12px/8px) paddings */
+  margin: -24px -28px 18px;
+  background: rgba(10, 20, 32, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.home-top__inner {
+  max-width: 80rem; /* max-w-7xl */
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.home-top__logo {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.home-top__hex {
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 0 10px rgba(224, 179, 65, 0.5));
+}
+.home-top__plans {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: rgba(224, 179, 65, 0.12);
+  border: 1px solid rgba(224, 179, 65, 0.5);
+  font-family: var(--h-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: #e0b341;
+  transition: transform 0.15s ease;
+}
+.home-top__plans:hover {
+  transform: scale(1.05);
+}
+.home-top__plans:focus-visible,
+.home-top__logo:focus-visible {
+  outline: 2px solid rgba(224, 179, 65, 0.7);
+  outline-offset: 2px;
+}
 .home__inner {
   max-width: 640px;
   margin: 0 auto;

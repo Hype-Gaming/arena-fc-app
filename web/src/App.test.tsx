@@ -63,7 +63,7 @@ describe('App', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
     // The home hub renders its section headers.
-    expect(screen.getByRole('heading', { name: /principal/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /principais/i })).toBeInTheDocument();
   });
 
   it('navigates to the Perfil tab when its nav link is clicked', async () => {

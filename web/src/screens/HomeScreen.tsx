@@ -32,31 +32,31 @@ interface Section {
 
 const SECTIONS: Section[] = [
   {
-    title: 'Principal',
+    title: 'Principais',
     cards: [
       {
         key: 'futebol',
         title: 'Futebol',
-        subtitle: 'Acesse os melhores ingressos do dia.',
+        subtitle: 'Acesse as melhores entradas do dia',
         icon: 'ball',
         accent: 'gold',
         featured: true,
         badges: [{ label: 'IA Ativada', tone: 'gold' }],
-        ctaLabel: 'Acesso',
+        ctaLabel: 'Acessar',
         ctaVariant: 'solid',
         to: '/bilhetes',
       },
       {
         key: 'ia-tempo-real',
-        title: 'Análise de IA em tempo real',
-        subtitle: 'Pergunte sobre qualquer jogo ou partida ao vivo.',
+        title: 'Análises de IA em tempo real',
+        subtitle: 'Pergunte sobre qualquer jogo ou escolha uma partida ao vivo.',
         icon: 'robot',
         accent: 'blue',
         badges: [
           { label: 'Novo', tone: 'gold' },
           { label: 'Beta', tone: 'blue' },
         ],
-        ctaLabel: 'Teste de dicas de IA',
+        ctaLabel: 'Testar a IA Tipster',
         ctaVariant: 'solid',
         to: '/tipster',
       },
@@ -68,7 +68,7 @@ const SECTIONS: Section[] = [
     cards: [
       {
         key: 'altas',
-        title: 'Altas probabilidades',
+        title: 'Odds Altas',
         subtitle: 'Desbloqueie para acessar',
         icon: 'lock',
         accent: 'muted',
@@ -116,6 +116,26 @@ export function HomeScreen() {
 
   return (
     <main className="home">
+      <header className="home-top">
+        <div className="home-top__inner">
+          <button
+            type="button"
+            className="home-top__logo"
+            aria-label="Premier FC"
+            onClick={() => navigate('/')}
+          >
+            <HexBadge />
+          </button>
+          <button
+            type="button"
+            className="home-top__plans"
+            onClick={() => navigate('/planos')}
+          >
+            <SparklesSmall /> Planos
+          </button>
+        </div>
+      </header>
+
       <div className="home__inner">
         {SECTIONS.map((section) => (
           <section key={section.title} className="home-section">
@@ -254,6 +274,53 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       {ICONS[name]}
+    </svg>
+  );
+}
+
+/* ---- sticky top bar ---- */
+function HexBadge() {
+  return (
+    <svg className="home-top__hex" viewBox="0 0 100 100" aria-hidden="true">
+      <polygon
+        points="26,8 74,8 98,50 74,92 26,92 2,50"
+        fill="#0c1a27"
+        stroke="#e0b341"
+        strokeWidth="6"
+        strokeLinejoin="round"
+      />
+      <text
+        x="47"
+        y="53"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontFamily="'Barlow Condensed', sans-serif"
+        fontWeight="900"
+        fontSize="52"
+        fill="#e0b341"
+      >
+        P
+      </text>
+      <circle cx="64" cy="37" r="5" fill="#e0b341" />
+    </svg>
+  );
+}
+
+function SparklesSmall() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      <path d="M20 3v4M22 5h-4M4 17v2M5 18H3" />
     </svg>
   );
 }
