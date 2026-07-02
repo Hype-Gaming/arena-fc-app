@@ -13,8 +13,8 @@ describe('TipsterChat', () => {
       { id: 'm1', homeTeam: 'São Paulo', awayTeam: 'Palmeiras', competition: 'Brasileirão', startsAt: '', status: 'scheduled' },
     ]);
 
-    render(<TipsterChat />);
-    fireEvent.change(screen.getByPlaceholderText(/digite um jogo/i), {
+    render(<TipsterChat suggestions={[]} />);
+    fireEvent.change(screen.getByPlaceholderText(/pergunte sobre um jogo/i), {
       target: { value: 'sao paulo' },
     });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
@@ -35,8 +35,8 @@ describe('TipsterChat', () => {
       balanceAfter: 7,
     });
 
-    render(<TipsterChat />);
-    fireEvent.change(screen.getByPlaceholderText(/digite um jogo/i), { target: { value: 'sao' } });
+    render(<TipsterChat suggestions={[]} />);
+    fireEvent.change(screen.getByPlaceholderText(/pergunte sobre um jogo/i), { target: { value: 'sao' } });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
     fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }));
 
@@ -50,8 +50,8 @@ describe('TipsterChat', () => {
     ]);
     vi.spyOn(api, 'analyzeMatch').mockRejectedValue(new Error('Insufficient credits'));
 
-    render(<TipsterChat />);
-    fireEvent.change(screen.getByPlaceholderText(/digite um jogo/i), { target: { value: 'sao' } });
+    render(<TipsterChat suggestions={[]} />);
+    fireEvent.change(screen.getByPlaceholderText(/pergunte sobre um jogo/i), { target: { value: 'sao' } });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
     fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }));
 
@@ -66,13 +66,27 @@ describe('TipsterChat', () => {
     vi.spyOn(api, 'analyzeMatch').mockRejectedValue(err);
     const onBuyCredits = vi.fn();
 
-    render(<TipsterChat onBuyCredits={onBuyCredits} />);
-    fireEvent.change(screen.getByPlaceholderText(/digite um jogo/i), { target: { value: 'sao' } });
+    render(<TipsterChat onBuyCredits={onBuyCredits} suggestions={[]} />);
+    fireEvent.change(screen.getByPlaceholderText(/pergunte sobre um jogo/i), { target: { value: 'sao' } });
     fireEvent.click(screen.getByRole('button', { name: /buscar/i }));
     fireEvent.click(await screen.findByRole('button', { name: /confirmar/i }));
 
     const cta = await screen.findByRole('button', { name: /comprar créditos/i });
     fireEvent.click(cta);
     expect(onBuyCredits).toHaveBeenCalled();
+  });
+
+  it('picking an upcoming-match suggestion goes straight to the confirm step', async () => {
+    render(
+      <TipsterChat
+        suggestions={[
+          { id: 'm9', homeTeam: 'Espanha', awayTeam: 'Áustria', competition: 'Copa do Mundo', startsAt: '2026-07-02T16:00:00-03:00', status: 'scheduled' },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /espanha/i }));
+    expect(await screen.findByText(/achei esse jogo\. confirma\?/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirmar/i })).toBeInTheDocument();
   });
 });

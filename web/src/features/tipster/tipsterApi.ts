@@ -31,6 +31,35 @@ async function unwrap<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+interface FeedShape {
+  categories: {
+    matches: {
+      id: string;
+      homeTeam: string;
+      awayTeam: string;
+      competition: string;
+      startsAt: string;
+      status: string;
+    }[];
+  }[];
+}
+
+/** Upcoming scheduled matches for the empty-state suggestions (soonest first). */
+export async function upcomingMatches(limit = 5): Promise<TipsterMatch[]> {
+  const res = await fetch('/api/tips/feed', {
+    method: 'GET',
+    headers: { ...authHeaders() },
+  });
+  const body = await unwrap<FeedShape>(res);
+  return body.categories
+    .flatMap((c) => c.matches)
+    .filter((m) => m.status === 'scheduled')
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    )
+    .slice(0, limit);
+}
+
 export async function searchMatches(q: string): Promise<TipsterMatch[]> {
   const res = await fetch(`/api/tipster/match-search?q=${encodeURIComponent(q)}`, {
     method: 'GET',

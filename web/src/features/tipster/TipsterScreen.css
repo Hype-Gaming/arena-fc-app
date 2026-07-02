@@ -1,0 +1,405 @@
+/* web/src/features/tipster/TipsterScreen.css — IA Tipster screen */
+.tst {
+  --tst-gold: #e0b341;
+  --tst-gold-soft: #eac064;
+  --tst-card: rgba(255, 255, 255, 0.04);
+  --tst-line: rgba(255, 255, 255, 0.08);
+  --tst-text: #eef3f8;
+  --tst-muted: #8092a5;
+  --tst-display: 'Barlow Condensed', sans-serif;
+  --tst-body: 'DM Sans', system-ui, sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 130px); /* fills the shell so the composer sits low */
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+  color: var(--tst-text);
+  font-family: var(--tst-body);
+}
+
+/* ---- header ---- */
+.tst-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 2px 12px;
+}
+.tst-head__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tst-head__spark {
+  color: var(--tst-gold);
+  display: grid;
+  place-items: center;
+}
+.tst-head__title h1 {
+  margin: 0;
+  font-family: var(--tst-body);
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+}
+.tst-head__beta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #cfd8e2;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 5px;
+  padding: 3px 7px;
+}
+.tst-head__credits {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e8edf3;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--tst-line);
+  border-radius: 999px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+.tst-head__credits svg {
+  color: var(--tst-gold);
+}
+
+/* ---- tabs ---- */
+.tst-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--tst-line);
+  margin-bottom: 8px;
+}
+.tst-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 11px 8px;
+  font-family: var(--tst-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--tst-muted);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.tst-tab[data-active='true'] {
+  color: var(--tst-gold-soft);
+  border-bottom-color: var(--tst-gold-soft);
+}
+.tst-tab:hover {
+  color: #cfd8e2;
+}
+.tst-tab[data-active='true']:hover {
+  color: var(--tst-gold-soft);
+}
+
+/* ---- chat container ---- */
+.tst-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* empty state */
+.tst-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 44px 12px 20px;
+}
+.tst-empty__icon {
+  color: var(--tst-gold);
+  margin-bottom: 14px;
+}
+.tst-empty__title {
+  margin: 0 0 8px;
+  font-family: var(--tst-body);
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+}
+.tst-empty__sub {
+  margin: 0;
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tst-muted);
+}
+
+/* suggestions */
+.tst-suggest {
+  width: 100%;
+  max-width: 430px;
+  margin-top: 26px;
+}
+.tst-suggest__label {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: var(--tst-muted);
+}
+.tst-suggest__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tst-suggest__item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  background: var(--tst-card);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--tst-text);
+  font-family: var(--tst-body);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.tst-suggest__item:hover {
+  border-color: rgba(234, 192, 100, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+}
+.tst-suggest__item:focus-visible {
+  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline-offset: 2px;
+}
+.tst-suggest__teams {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.tst-suggest__teams i {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--tst-muted);
+  margin: 0 2px;
+}
+.tst-suggest__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.tst-suggest__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--tst-muted);
+}
+
+/* chat log */
+.tst-log {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 2px;
+  overflow-y: auto;
+}
+.tst-line {
+  margin: 0;
+  max-width: 85%;
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  line-height: 1.5;
+  border-radius: 12px;
+  padding: 10px 13px;
+}
+.tst-line--user {
+  align-self: flex-end;
+  background: rgba(234, 192, 100, 0.14);
+  border: 1px solid rgba(234, 192, 100, 0.35);
+  color: #fff;
+}
+.tst-line--assistant {
+  align-self: flex-start;
+  background: var(--tst-card);
+  border: 1px solid var(--tst-line);
+  color: var(--tst-text);
+}
+
+/* confirm card */
+.tst-confirm {
+  margin: 10px 0;
+  background: var(--tst-card);
+  border: 1px solid rgba(234, 192, 100, 0.4);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+.tst-confirm__match {
+  margin: 0 0 2px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+}
+.tst-confirm__match span {
+  font-weight: 400;
+  color: var(--tst-muted);
+}
+.tst-confirm__ask {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--tst-muted);
+}
+.tst-confirm__btn {
+  cursor: pointer;
+  border: 0;
+  border-radius: 8px;
+  padding: 9px 26px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #241a02;
+  background: linear-gradient(135deg, #f0c65a, #d9a520);
+}
+.tst-confirm__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* credits banner + error */
+.tst-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0;
+  background: rgba(240, 97, 109, 0.08);
+  border: 1px solid rgba(240, 97, 109, 0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.tst-banner__cta {
+  cursor: pointer;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #04170c;
+  background: linear-gradient(135deg, #1fb35f, #0b6f37);
+}
+.tst-error {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #f0616d;
+  text-align: center;
+}
+
+/* composer */
+.tst-composer {
+  position: sticky;
+  bottom: 84px; /* clears the fixed bottom nav */
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 0 4px;
+  background: linear-gradient(180deg, rgba(10, 14, 26, 0) 0%, #0a0e1a 30%);
+  border-top: 1px solid var(--tst-line);
+}
+.tst-composer__input {
+  flex: 1;
+  height: 46px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-family: var(--tst-body);
+  font-size: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--tst-line);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.tst-composer__input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+.tst-composer__input:focus {
+  border-color: rgba(234, 192, 100, 0.6);
+}
+.tst-composer__send {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 0;
+  border-radius: 10px;
+  color: #241a02;
+  background: linear-gradient(135deg, #f0c65a, #d9a520);
+}
+.tst-composer__send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tst-composer__send:active {
+  transform: translateY(1px);
+}
+.tst-composer__send:focus-visible,
+.tst-tab:focus-visible {
+  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline-offset: 2px;
+}
+
+/* placeholders (Ao Vivo / Tutorial) */
+.tst-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--tst-muted);
+}
+.tst-placeholder svg {
+  width: 26px;
+  height: 26px;
+  color: var(--tst-gold);
+  margin-bottom: 4px;
+}
+.tst-placeholder p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+}
+.tst-placeholder span {
+  max-width: 340px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tst-tab,
+  .tst-suggest__item,
+  .tst-composer__input {
+    transition: none;
+  }
+}
