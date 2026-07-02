@@ -61,7 +61,7 @@ describe('App', () => {
     expect(
       await screen.findByRole('navigation', { name: /navegação principal/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^tips$/i })).toBeInTheDocument();
     // The home hub renders its section headers.
     expect(screen.getByRole('heading', { name: /principais/i })).toBeInTheDocument();
   });

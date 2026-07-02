@@ -30,7 +30,7 @@ describe('AppShell', () => {
     expect(
       screen.getByRole('navigation', { name: /navegação principal/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /início/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^tips$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ia tipster/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /perfil/i })).toBeInTheDocument();
   });

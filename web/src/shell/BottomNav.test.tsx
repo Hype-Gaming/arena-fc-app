@@ -11,11 +11,11 @@ describe('BottomNav', () => {
         <BottomNav />
       </MemoryRouter>,
     );
-    const inicio = screen.getByRole('link', { name: /início/i });
+    const tips = screen.getByRole('link', { name: /^tips$/i });
     const tipster = screen.getByRole('link', { name: /ia tipster/i });
     const perfil = screen.getByRole('link', { name: /perfil/i });
 
-    expect(inicio).toHaveAttribute('href', '/');
+    expect(tips).toHaveAttribute('href', '/');
     expect(tipster).toHaveAttribute('href', '/tipster');
     expect(perfil).toHaveAttribute('href', '/perfil');
     expect(screen.getAllByRole('link')).toHaveLength(3);
@@ -33,14 +33,14 @@ describe('BottomNav', () => {
     );
   });
 
-  it('keeps Início inactive when on another route (exact match only)', () => {
+  it('keeps Tips inactive when on another route (exact match only)', () => {
     render(
       <MemoryRouter initialEntries={['/perfil']}>
         <BottomNav />
       </MemoryRouter>,
     );
     expect(
-      screen.getByRole('link', { name: /início/i }),
+      screen.getByRole('link', { name: /^tips$/i }),
     ).not.toHaveAttribute('aria-current');
   });
 });

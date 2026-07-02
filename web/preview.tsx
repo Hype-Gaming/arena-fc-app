@@ -6,6 +6,7 @@ import { BilhetesScreen } from './src/screens/BilhetesScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { PlanosScreen } from './src/screens/PlanosScreen';
 import { TipsterPage } from './src/pages/TipsterPage';
+import { BottomNav } from './src/shell/BottomNav';
 
 const params = new URLSearchParams(location.search);
 const which = params.get('screen') ?? 'bilhetes';
@@ -46,6 +47,13 @@ window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
 }) as typeof window.fetch;
 
 function View() {
+  if (which === 'nav') {
+    return (
+      <div style={{ minHeight: 120 }}>
+        <BottomNav />
+      </div>
+    );
+  }
   if (which === 'home') return <HomeScreen />;
   if (which === 'planos') return <PlanosScreen api={mockApi} />;
   if (which === 'tipster') return <TipsterPage api={mockApi} />;
