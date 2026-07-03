@@ -161,6 +161,8 @@ describe('normalizeAltenarLive', () => {
       homeScore: 1,
       awayScore: 0,
       statusText: '1ª parte',
+      homeLogo: null,
+      awayLogo: null,
     });
   });
 

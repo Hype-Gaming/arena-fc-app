@@ -24,6 +24,9 @@ export interface NormalizedLiveEvent extends NormalizedEvent {
   awayScore: number;
   /** Human status label, e.g. "1ª parte" / "Intervalo". */
   statusText: string;
+  /** Crest URLs cross-matched from the team catalog; null when unmatched. */
+  homeLogo: string | null;
+  awayLogo: string | null;
 }
 
 /**

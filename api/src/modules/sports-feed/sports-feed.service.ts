@@ -3,9 +3,11 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   NormalizedEvent,
+  NormalizedLiveEvent,
   SPORTS_FEED_PROVIDER,
   SportsFeedProvider,
 } from './sports-feed.types';
+import { buildTeamLogoIndex, matchTeamLogo } from './team-logo.match';
 
 export interface SyncEventsSummary {
   provider: string;
@@ -21,9 +23,26 @@ export class SportsFeedService {
     private readonly provider: SportsFeedProvider,
   ) {}
 
-  /** Live (in-play) matches straight from the provider — ephemeral, not cached. */
-  fetchLive() {
-    return this.provider.fetchLive();
+  /**
+   * Live (in-play) matches from the provider — ephemeral, not cached. Team
+   * crests are cross-matched from the API-Football catalog by name; unmatched
+   * teams keep null logos (the UI falls back to an initials badge).
+   */
+  async fetchLive(): Promise<NormalizedLiveEvent[]> {
+    const events = await this.provider.fetchLive();
+    if (events.length === 0) return events;
+
+    const teams = await this.prisma.team.findMany({
+      select: { name: true, logoUrl: true },
+    });
+    if (teams.length === 0) return events;
+
+    const index = buildTeamLogoIndex(teams);
+    return events.map((e) => ({
+      ...e,
+      homeLogo: matchTeamLogo(e.homeTeam, index) ?? e.homeLogo,
+      awayLogo: matchTeamLogo(e.awayTeam, index) ?? e.awayLogo,
+    }));
   }
 
   /** Cached fixtures for the admin picker (soonest first, optional name filter). */

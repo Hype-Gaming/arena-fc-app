@@ -180,6 +180,9 @@ export function normalizeAltenarLive(
       homeScore: Number(ev.score?.[0] ?? 0),
       awayScore: Number(ev.score?.[1] ?? 0),
       statusText: (ev.ls ?? '').trim() || 'Ao vivo',
+      // Crests are attached downstream from the team catalog (provider has none).
+      homeLogo: null,
+      awayLogo: null,
     });
   }
 

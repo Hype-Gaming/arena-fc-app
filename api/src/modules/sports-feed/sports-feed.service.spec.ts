@@ -29,6 +29,7 @@ function makePrisma() {
       findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn().mockResolvedValue({}),
     },
+    team: { findMany: jest.fn().mockResolvedValue([]) },
   } as unknown as PrismaService;
 }
 
@@ -54,17 +55,39 @@ describe('SportsFeedService.sync', () => {
 });
 
 describe('SportsFeedService.fetchLive', () => {
+  const liveEvent = {
+    externalId: 'l1',
+    homeTeam: 'Mjallby AIF',
+    awayTeam: 'Unknown FC',
+    homeLogo: null,
+    awayLogo: null,
+  };
+
   it('delegates to the provider (live is ephemeral, never cached)', async () => {
     const prisma = makePrisma();
     const provider = makeProvider([]);
-    (provider.fetchLive as jest.Mock).mockResolvedValue([{ externalId: 'l1' }]);
+    (provider.fetchLive as jest.Mock).mockResolvedValue([liveEvent]);
     const svc = new SportsFeedService(prisma, provider);
 
-    const live = await svc.fetchLive();
+    await svc.fetchLive();
 
     expect(provider.fetchLive).toHaveBeenCalled();
     expect(prisma.sportEvent.findMany).not.toHaveBeenCalled();
-    expect(live).toEqual([{ externalId: 'l1' }]);
+  });
+
+  it('cross-matches team crests from the catalog by name', async () => {
+    const prisma = makePrisma();
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { name: 'Mjällby', logoUrl: 'https://logos/mjallby.png' },
+    ]);
+    const provider = makeProvider([]);
+    (provider.fetchLive as jest.Mock).mockResolvedValue([liveEvent]);
+    const svc = new SportsFeedService(prisma, provider);
+
+    const [ev] = await svc.fetchLive();
+
+    expect(ev.homeLogo).toBe('https://logos/mjallby.png'); // Mjallby AIF → Mjällby
+    expect(ev.awayLogo).toBeNull(); // no catalog match → stays null
   });
 });
 
