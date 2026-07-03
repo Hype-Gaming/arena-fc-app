@@ -221,6 +221,37 @@ export function BilhetesScreen({ api }: Props = {}) {
     setDot(Math.min(cards.length - 1, Math.round(el.scrollLeft / step)));
   }
 
+  // Click-and-drag to scroll the rail sideways (native scroll only covers
+  // touch/trackpad). We only start dragging past a small threshold, so a plain
+  // click on "Adicionar" still works; a real drag then swallows its click.
+  const drag = useRef({ down: false, startX: 0, startLeft: 0, moved: false });
+  function onRailPointerDown(e: React.PointerEvent) {
+    const el = railRef.current;
+    if (!el) return;
+    drag.current = { down: true, startX: e.clientX, startLeft: el.scrollLeft, moved: false };
+  }
+  function onRailPointerMove(e: React.PointerEvent) {
+    const el = railRef.current;
+    if (!el || !drag.current.down) return;
+    const dx = e.clientX - drag.current.startX;
+    if (!drag.current.moved && Math.abs(dx) > 5) {
+      drag.current.moved = true;
+      el.setPointerCapture?.(e.pointerId);
+    }
+    if (drag.current.moved) el.scrollLeft = drag.current.startLeft - dx;
+  }
+  function onRailPointerUp(e: React.PointerEvent) {
+    if (drag.current.moved) railRef.current?.releasePointerCapture?.(e.pointerId);
+    drag.current.down = false;
+  }
+  function onRailClickCapture(e: React.MouseEvent) {
+    if (drag.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      drag.current.moved = false;
+    }
+  }
+
   function pickCat(c: CatView) {
     if (c.locked) {
       navigate('/planos');
@@ -267,6 +298,11 @@ export function BilhetesScreen({ api }: Props = {}) {
             className="spt-rail"
             ref={railRef}
             onScroll={onRailScroll}
+            onPointerDown={onRailPointerDown}
+            onPointerMove={onRailPointerMove}
+            onPointerUp={onRailPointerUp}
+            onPointerLeave={onRailPointerUp}
+            onClickCapture={onRailClickCapture}
             aria-label="Bilhetes do mercado"
           >
             {cards.map((c) => (

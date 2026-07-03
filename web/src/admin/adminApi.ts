@@ -169,6 +169,11 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  createBilhetesFromEvents: (data: { categoria?: BilheteCategoria; limit?: number } = {}) =>
+    req<{ created: number; withCrest: number; availableEvents: number }>(
+      '/admin/bilhetes/from-events',
+      { method: 'POST', body: JSON.stringify(data) },
+    ),
   publishTutorial: (steps: { title: string; body: string; imageUrl?: string }[]) =>
     req('/tutorial/versions', { method: 'POST', body: JSON.stringify({ steps }) }),
 };

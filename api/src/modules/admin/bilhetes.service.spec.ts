@@ -36,6 +36,31 @@ describe('AdminBilhetesService', () => {
     expect(call.data.publish).toBeUndefined(); // flag must not leak to the row
   });
 
+  it('createFromEvents floats crested games first and attaches the cache URL', async () => {
+    const prisma = makePrisma();
+    (prisma as unknown as { sportEvent: unknown }).sportEvent = {
+      findMany: jest.fn().mockResolvedValue([
+        { externalId: 'e1', homeTeam: 'Obscure XI', awayTeam: 'Nobody FC', competition: 'Friendly', startsAt: new Date('2026-07-10T10:00:00Z'), oddHome: 1.8, deepLink: 'https://x/e1' },
+        { externalId: 'e2', homeTeam: 'Bahia', awayTeam: 'Nobody FC', competition: 'Brasileirão', startsAt: new Date('2026-07-10T12:00:00Z'), oddHome: 1.6, deepLink: 'https://x/e2' },
+      ]),
+    };
+    (prisma as unknown as { team: unknown }).team = {
+      findMany: jest.fn().mockResolvedValue([
+        { externalId: 118, name: 'Bahia', logoUrl: 'https://x/118.png', country: 'Brazil' },
+      ]),
+    };
+
+    const svc = new AdminBilhetesService(prisma);
+    const r = await svc.createFromEvents({ categoria: 'safes', limit: 1 });
+
+    expect(r).toMatchObject({ created: 1, withCrest: 1 });
+    // limit 1 → the crested Bahia game wins even though it starts later.
+    const call = (prisma.bilhete.create as jest.Mock).mock.calls[0][0];
+    expect(call.data.homeTeam).toBe('Bahia');
+    expect(call.data.homeLogo).toBe('/api/team-logos/118.png');
+    expect(call.data.eventExternalId).toBe('e2');
+  });
+
   it('create with publish=false stays a draft', async () => {
     const svc = new AdminBilhetesService(makePrisma());
     const created = await svc.create({ ...CREATE, publish: false });

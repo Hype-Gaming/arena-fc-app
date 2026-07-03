@@ -116,6 +116,23 @@ export function AdminBilhetes() {
     }
   }
 
+  async function onCreateFromEvents() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const r = await adminApi.createBilhetesFromEvents({ categoria: form.categoria });
+      setSyncMsg(
+        `Bilhetes criados: ${r.created} (${r.withCrest} com escudo, de ${r.availableEvents} jogos)`,
+      );
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onSyncLiveLogos() {
     setError(null);
     setSyncMsg(null);
@@ -252,6 +269,10 @@ export function AdminBilhetes() {
           Sincronizar jogos (Esportiva)
         </button>
         <small>{events.length} jogos disponíveis</small>
+        <button type="button" onClick={onCreateFromEvents} disabled={busy}>
+          Criar bilhetes dos jogos
+        </button>
+        <small>vira cada jogo em bilhete, com escudo do catálogo</small>
       </p>
 
       <p className="ab-sync">
