@@ -1,8 +1,8 @@
 // web/src/pages/TipsterPage.tsx — IA Tipster screen: header, tabs, chat
 import { useEffect, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
 import { TipsterChat } from '../features/tipster/TipsterChat';
+import { BuyCreditsModal } from '../features/tipster/BuyCreditsModal';
 import '../features/tipster/TipsterScreen.css';
 
 type Tab = 'chat' | 'aovivo' | 'tutorial';
@@ -12,9 +12,9 @@ interface MeProfile {
 }
 
 export function TipsterPage({ api }: { api: ApiClient }) {
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('chat');
   const [credits, setCredits] = useState<number | null>(null);
+  const [buyOpen, setBuyOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -34,9 +34,14 @@ export function TipsterPage({ api }: { api: ApiClient }) {
           <span className="tst-head__beta">BETA</span>
         </div>
         {credits !== null && (
-          <span className="tst-head__credits">
+          <button
+            type="button"
+            className="tst-head__credits"
+            onClick={() => setBuyOpen(true)}
+            title="Comprar créditos IA"
+          >
             <CoinsIcon /> {credits} {credits === 1 ? 'crédito' : 'créditos'}
-          </span>
+          </button>
         )}
       </header>
 
@@ -69,7 +74,7 @@ export function TipsterPage({ api }: { api: ApiClient }) {
 
       {tab === 'chat' && (
         <TipsterChat
-          onBuyCredits={() => navigate('/planos')}
+          onBuyCredits={() => setBuyOpen(true)}
           onBalance={(b) => setCredits(b)}
         />
       )}
@@ -81,6 +86,8 @@ export function TipsterPage({ api }: { api: ApiClient }) {
         </div>
       )}
       {tab === 'tutorial' && <TutorialGuide />}
+
+      <BuyCreditsModal open={buyOpen} onClose={() => setBuyOpen(false)} />
     </section>
   );
 }

@@ -57,6 +57,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--tst-body);
   font-size: 12px;
   font-weight: 500;
   color: #e8edf3;
@@ -65,6 +66,16 @@
   border-radius: 999px;
   padding: 5px 11px;
   white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.tst-head__credits:hover {
+  border-color: rgba(234, 192, 100, 0.5);
+  background: rgba(234, 192, 100, 0.08);
+}
+.tst-head__credits:focus-visible {
+  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline-offset: 2px;
 }
 .tst-head__credits svg {
   color: var(--tst-gold);
