@@ -233,39 +233,6 @@ export function BilhetesScreen({ api }: Props = {}) {
 
   return (
     <main className="spt">
-      {/* top bar */}
-      <header className="spt-top">
-        <div className="spt-top__inner">
-          <div className="spt-top__left">
-            <button
-              type="button"
-              className="spt-top__back"
-              aria-label="Voltar"
-              onClick={() => navigate('/')}
-            >
-              <ArrowLeft />
-            </button>
-            <HexBadge />
-          </div>
-          <div className="spt-top__right">
-            <button
-              type="button"
-              className="spt-pill"
-              onClick={() => navigate('/tipster')}
-            >
-              <Sparkles /> Criar Odds
-            </button>
-            <button
-              type="button"
-              className="spt-pill"
-              onClick={() => navigate('/planos')}
-            >
-              <Sparkles /> Planos
-            </button>
-          </div>
-        </div>
-      </header>
-
       <div className="spt__inner">
         <div className="spt-markets__head">
           <h1>Mercados disponíveis</h1>
@@ -390,32 +357,6 @@ function Crest({ team }: { team: Team }) {
 }
 
 /* ---- inline icons ---- */
-function ArrowLeft() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M19 12H5M12 19l-7-7 7-7" />
-    </svg>
-  );
-}
-function HexBadge() {
-  return (
-    <svg className="spt-top__hex" viewBox="0 0 100 100" aria-hidden="true">
-      <polygon points="26,8 74,8 98,50 74,92 26,92 2,50" fill="#0c1a27" stroke="#e0b341" strokeWidth="6" strokeLinejoin="round" />
-      <text x="47" y="53" textAnchor="middle" dominantBaseline="central" fontFamily="'Barlow Condensed', sans-serif" fontWeight="900" fontSize="52" fill="#e0b341">
-        P
-      </text>
-      <circle cx="64" cy="37" r="5" fill="#e0b341" />
-    </svg>
-  );
-}
-function Sparkles() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
-      <path d="M20 3v4M22 5h-4M4 17v2M5 18H3" />
-    </svg>
-  );
-}
 function Chevron() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

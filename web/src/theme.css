@@ -18,14 +18,23 @@
   --radius-card: 16px;
 }
 * { box-sizing: border-box; }
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
 body {
   margin: 0;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: system-ui, -apple-system, sans-serif;
 }
-.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-.app-content { flex: 1; padding: 16px 16px 80px; }
+/* Never let a stray-wide child scroll the whole page sideways (it would push
+   the fixed/sticky bars' right-aligned actions off-screen). `clip` — not
+   `hidden` — so it doesn't turn the shell into a scroll container and break
+   the sticky top bar / composer. */
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; overflow-x: clip; }
+.app-content { flex: 1; min-width: 0; padding: 16px 16px 80px; }
 .page h1 { color: var(--color-gold); }
 .sportsbook-frame {
   display: block;

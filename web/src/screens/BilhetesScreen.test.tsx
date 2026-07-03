@@ -52,12 +52,4 @@ describe('BilhetesScreen', () => {
     await user.click(screen.getByRole('tab', { name: /alavancagem/i }));
     expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
-
-  it('routes Criar Odds to the tipster and back arrow to home', async () => {
-    const user = userEvent.setup();
-    renderScreen();
-
-    await user.click(screen.getByRole('button', { name: /criar odds/i }));
-    expect(screen.getByText('Tipster route')).toBeInTheDocument();
-  });
 });

@@ -44,13 +44,6 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
   });
 
-  it('opens the plans screen from the sticky header pill', async () => {
-    const user = userEvent.setup();
-    renderHome();
-    await user.click(screen.getByRole('button', { name: /^planos$/i }));
-    expect(screen.getByText('Planos route')).toBeInTheDocument();
-  });
-
   it('sends locked quick-access cards to the plans screen', async () => {
     const user = userEvent.setup();
     renderHome();

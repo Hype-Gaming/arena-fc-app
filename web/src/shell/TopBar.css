@@ -1,0 +1,107 @@
+/* web/src/shell/TopBar.css — global sticky app bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(10, 20, 32, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.topbar__inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.topbar__back,
+.topbar__logo {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: #eef3f8;
+}
+.topbar__back {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+.topbar__back:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.topbar__hex {
+  width: 42px;
+  height: 42px;
+  filter: drop-shadow(0 0 10px rgba(224, 179, 65, 0.5));
+}
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.topbar__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(224, 179, 65, 0.12);
+  border: 1px solid rgba(224, 179, 65, 0.5);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: #e0b341;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.topbar__pill svg {
+  flex: none;
+}
+.topbar__pill:hover {
+  transform: scale(1.05);
+}
+.topbar__back:focus-visible,
+.topbar__logo:focus-visible,
+.topbar__pill:focus-visible {
+  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar__pill {
+    transition: none;
+  }
+}
+/* Phones can't fit logo + two pills; "Criar Odds" duplicates the bottom-nav
+   IA Tipster tab, so drop it and keep the primary Planos action. */
+@media (max-width: 560px) {
+  .topbar__pill--secondary {
+    display: none;
+  }
+}
+@media (max-width: 430px) {
+  .topbar__hex {
+    width: 38px;
+    height: 38px;
+  }
+  .topbar__pill {
+    padding: 6px 11px;
+    font-size: 12px;
+    gap: 5px;
+  }
+}

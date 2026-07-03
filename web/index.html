@@ -15,6 +15,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.addEventListener('load', () =>
+        setTimeout(() => {
+          const de = document.documentElement;
+          document.title =
+            'SW=' + de.scrollWidth + ' CW=' + de.clientWidth + ' iw=' + window.innerWidth;
+        }, 3000),
+      );
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
