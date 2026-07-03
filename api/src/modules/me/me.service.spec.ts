@@ -38,7 +38,7 @@ describe('MeService', () => {
     expect(me).toEqual({
       email: 'a@b.com',
       planKey: 'free',
-      planName: 'Free',
+      planName: 'Livre',
       creditBalance: 3,
     });
     expect(credits.getBalance).toHaveBeenCalledWith('u1');
@@ -87,7 +87,7 @@ describe('MeService', () => {
     const me = await service.getProfile('u5');
 
     expect(me.planKey).toBe('free');
-    expect(me.planName).toBe('Free');
+    expect(me.planName).toBe('Livre');
   });
 
   it('falls back to Free when a subscription exists but is not active', async () => {
@@ -101,6 +101,6 @@ describe('MeService', () => {
     const me = await service.getProfile('u3');
 
     expect(me.planKey).toBe('free');
-    expect(me.planName).toBe('Free');
+    expect(me.planName).toBe('Livre');
   });
 });

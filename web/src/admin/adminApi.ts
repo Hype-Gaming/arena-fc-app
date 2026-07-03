@@ -15,6 +15,37 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 export interface Category { id: string; name: string; slug: string; icon: string; }
 export interface Entrada { id: string; status: 'pending' | 'green' | 'red'; }
 
+export type BilheteCategoria =
+  | 'safes' | 'pro' | 'ultra' | 'alavancagem' | 'multiplas' | 'secundario' | 'ligas';
+
+export interface AdminBilhete {
+  id: string;
+  titulo: string;
+  categoria: BilheteCategoria;
+  homeTeam: string;
+  awayTeam: string;
+  homeColor: string | null;
+  awayColor: string | null;
+  competition: string | null;
+  startsAt: string;
+  odd: string | number;
+  resultado: 'pending' | 'green' | 'red';
+  publishedAt: string | null;
+}
+
+export interface CreateBilheteInput {
+  titulo?: string;
+  categoria: BilheteCategoria;
+  homeTeam: string;
+  awayTeam: string;
+  homeColor?: string;
+  awayColor?: string;
+  competition?: string;
+  startsAt: string;
+  odd: number;
+  publish?: boolean;
+}
+
 export const adminApi = {
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>
@@ -34,6 +65,21 @@ export const adminApi = {
   createProduct: (data: unknown) =>
     req('/admin/products', { method: 'POST', body: JSON.stringify(data) }),
   listUsers: () => req<any[]>('/admin/users'),
+  listBilhetes: () => req<AdminBilhete[]>('/admin/bilhetes'),
+  createBilhete: (data: CreateBilheteInput) =>
+    req<AdminBilhete>('/admin/bilhetes', { method: 'POST', body: JSON.stringify(data) }),
+  setBilheteResult: (id: string, resultado: 'pending' | 'green' | 'red') =>
+    req<AdminBilhete>(`/admin/bilhetes/${id}/result`, {
+      method: 'PATCH',
+      body: JSON.stringify({ resultado }),
+    }),
+  setBilhetePublished: (id: string, published: boolean) =>
+    req<AdminBilhete>(`/admin/bilhetes/${id}/publish`, {
+      method: 'PATCH',
+      body: JSON.stringify({ published }),
+    }),
+  deleteBilhete: (id: string) =>
+    req(`/admin/bilhetes/${id}`, { method: 'DELETE' }),
   publishTutorial: (steps: { title: string; body: string; imageUrl?: string }[]) =>
     req('/tutorial/versions', { method: 'POST', body: JSON.stringify({ steps }) }),
 };

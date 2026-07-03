@@ -13,6 +13,8 @@ import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
 import { UsersViewController } from './users-view.controller';
 import { UsersViewService } from './users-view.service';
+import { AdminBilhetesController } from './bilhetes.controller';
+import { AdminBilhetesService } from './bilhetes.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, GamificationModule],
@@ -22,6 +24,7 @@ import { UsersViewService } from './users-view.service';
     EntradasController,
     ProductsController,
     UsersViewController,
+    AdminBilhetesController,
   ],
   providers: [
     AdminRoleGuard,
@@ -30,6 +33,7 @@ import { UsersViewService } from './users-view.service';
     EntradasService,
     ProductsService,
     UsersViewService,
+    AdminBilhetesService,
   ],
   exports: [AdminRoleGuard],
 })

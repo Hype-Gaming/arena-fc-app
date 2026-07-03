@@ -1,33 +1,16 @@
-// web/src/screens/BilhetesScreen.tsx — mercados + carrossel de bilhetes (mock)
+// web/src/screens/BilhetesScreen.tsx — mercados + carrossel de bilhetes
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { ApiClient } from '../lib/apiClient';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 import './BilhetesScreen.css';
 
-type CatKey = 'safes' | 'pro' | 'ultra';
-
-interface Cat {
-  key: CatKey | string;
+interface CatView {
+  key: string;
   label: string;
-  count?: number;
+  count: number;
   locked: boolean;
 }
-
-const CATS: Cat[] = [
-  { key: 'safes', label: 'Odds Safes', count: 4, locked: false },
-  { key: 'pro', label: 'Odds Pró', count: 3, locked: false },
-  { key: 'ultra', label: 'Odds Ultra', count: 2, locked: false },
-  { key: 'alavancagem', label: 'Alavancagem', count: 1, locked: true },
-  { key: 'multiplas', label: 'Múltiplas', count: 1, locked: true },
-  { key: 'secundario', label: 'Merc. Secundário', count: 3, locked: true },
-  { key: 'ligas', label: 'Ligas Americanas', locked: true },
-];
-
-const TIER_OF: Record<CatKey, { label: string; tone: string }> = {
-  safes: { label: 'Básico', tone: 'basico' },
-  pro: { label: 'Pró', tone: 'pro' },
-  ultra: { label: 'Ultra', tone: 'ultra' },
-};
 
 interface Team {
   name: string;
@@ -35,23 +18,72 @@ interface Team {
   color: string;
 }
 
-interface OddCard {
+interface RailCard {
   id: string;
-  cat: CatKey;
+  cat: string;
+  tierLabel: string;
   home: Team;
   away: Team;
-  /** hours from "now" until kickoff — mock data stays live-looking */
-  inHours: number;
+  /** kickoff instant (ms since epoch) — drives the countdown + time label */
+  koMs: number;
   odd: number;
+  resultado: 'pending' | 'green' | 'red';
 }
 
-const t = (name: string, short: string, color: string): Team => ({
-  name,
-  short,
-  color,
-});
+/** Server shape of GET /bilhetes. */
+interface FeedResponse {
+  plan: { key: string; rank: number };
+  categorias: CatView[];
+  bilhetes: {
+    id: string;
+    categoria: string;
+    tierLabel: string;
+    titulo: string;
+    homeTeam: string;
+    awayTeam: string;
+    homeColor: string | null;
+    awayColor: string | null;
+    competition: string | null;
+    startsAt: string;
+    odd: number;
+    resultado: 'pending' | 'green' | 'red';
+  }[];
+}
 
-const CARDS: OddCard[] = [
+const TIER_TONE: Record<string, string> = {
+  'Básico': 'basico',
+  'Pró': 'pro',
+  'Ultra': 'ultra',
+};
+
+/* ---- mock fallback (shown until the admin publishes real bilhetes) ---- */
+
+const DEFAULT_CATS: CatView[] = [
+  { key: 'safes', label: 'Odds Safes', count: 4, locked: false },
+  { key: 'pro', label: 'Odds Pró', count: 3, locked: false },
+  { key: 'ultra', label: 'Odds Ultra', count: 2, locked: false },
+  { key: 'alavancagem', label: 'Alavancagem', count: 1, locked: true },
+  { key: 'multiplas', label: 'Múltiplas', count: 1, locked: true },
+  { key: 'secundario', label: 'Merc. Secundário', count: 3, locked: true },
+  { key: 'ligas', label: 'Ligas Americanas', count: 0, locked: true },
+];
+
+const MOCK_TIER: Record<string, string> = {
+  safes: 'Básico',
+  pro: 'Pró',
+  ultra: 'Ultra',
+};
+
+const t = (name: string, short: string, color: string): Team => ({ name, short, color });
+
+const MOCK_SEED: {
+  id: string;
+  cat: string;
+  home: Team;
+  away: Team;
+  inHours: number;
+  odd: number;
+}[] = [
   { id: 's1', cat: 'safes', home: t('Espanha', 'ESP', '#c60b1e'), away: t('Áustria', 'AUT', '#ed2939'), inHours: 2.2, odd: 1.53 },
   { id: 's2', cat: 'safes', home: t('Portugal', 'POR', '#006600'), away: t('Croácia', 'CRO', '#ff2400'), inHours: 6.2, odd: 1.57 },
   { id: 's3', cat: 'safes', home: t('Cuiabá', 'CUI', '#f5c518'), away: t('América Mineiro', 'AME', '#0b7a3b'), inHours: 6.2, odd: 1.47 },
@@ -63,13 +95,48 @@ const CARDS: OddCard[] = [
   { id: 'u2', cat: 'ultra', home: t('França', 'FRA', '#0055a4'), away: t('Marrocos', 'MAR', '#c1272d'), inHours: 50.7, odd: 3.85 },
 ];
 
-/** Kickoff instants are derived once per mount so the countdown ticks down. */
-function buildKickoffs(): Record<string, number> {
+function buildMockCards(): RailCard[] {
   const now = Date.now();
-  return Object.fromEntries(
-    CARDS.map((c) => [c.id, now + c.inHours * 3_600_000]),
-  );
+  return MOCK_SEED.map((m) => ({
+    id: m.id,
+    cat: m.cat,
+    tierLabel: MOCK_TIER[m.cat] ?? 'Ultra',
+    home: m.home,
+    away: m.away,
+    koMs: now + m.inHours * 3_600_000,
+    odd: m.odd,
+    resultado: 'pending' as const,
+  }));
 }
+
+/* ---- server mapping ---- */
+
+const CREST_FALLBACKS = ['#c60b1e', '#006600', '#0b7a3b', '#3c3b6e', '#d52b1e', '#0055a4', '#e63946'];
+
+function shortName(name: string): string {
+  return name.replace(/[^\p{L}\p{N}]/gu, '').slice(0, 3).toUpperCase() || '???';
+}
+
+function fallbackColor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return CREST_FALLBACKS[h % CREST_FALLBACKS.length];
+}
+
+function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
+  return {
+    id: b.id,
+    cat: b.categoria,
+    tierLabel: b.tierLabel,
+    home: t(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
+    away: t(b.awayTeam, shortName(b.awayTeam), b.awayColor ?? fallbackColor(b.awayTeam)),
+    koMs: new Date(b.startsAt).getTime(),
+    odd: b.odd,
+    resultado: b.resultado,
+  };
+}
+
+/* ---- time helpers ---- */
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
@@ -90,10 +157,16 @@ function kickoffLabel(toMs: number): string {
   });
 }
 
-export function BilhetesScreen() {
+interface Props {
+  /** When provided, the screen loads real bilhetes from GET /bilhetes. */
+  api?: Pick<ApiClient, 'get'>;
+}
+
+export function BilhetesScreen({ api }: Props = {}) {
   const navigate = useNavigate();
-  const [cat, setCat] = useState<CatKey>('safes');
-  const [kickoffs] = useState<Record<string, number>>(buildKickoffs);
+  const [cats, setCats] = useState<CatView[]>(DEFAULT_CATS);
+  const [all, setAll] = useState<RailCard[]>(buildMockCards);
+  const [cat, setCat] = useState('safes');
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
   const railRef = useRef<HTMLDivElement>(null);
@@ -104,7 +177,28 @@ export function BilhetesScreen() {
     return () => clearInterval(id);
   }, []);
 
-  const cards = CARDS.filter((c) => c.cat === cat);
+  useEffect(() => {
+    if (!api) return;
+    let alive = true;
+    api
+      .get<FeedResponse>('/bilhetes')
+      .then((feed) => {
+        // Until the admin publishes content, keep the demo rail on screen.
+        if (!alive || feed.bilhetes.length === 0) return;
+        setCats(feed.categorias);
+        setAll(feed.bilhetes.map(toRailCard));
+        const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
+        if (firstOpen) setCat(firstOpen.key);
+      })
+      .catch(() => {
+        /* mock fallback stays */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [api]);
+
+  const cards = all.filter((c) => c.cat === cat);
 
   function onRailScroll() {
     const el = railRef.current;
@@ -113,12 +207,12 @@ export function BilhetesScreen() {
     setDot(Math.min(cards.length - 1, Math.round(el.scrollLeft / step)));
   }
 
-  function pickCat(c: Cat) {
+  function pickCat(c: CatView) {
     if (c.locked) {
       navigate('/planos');
       return;
     }
-    setCat(c.key as CatKey);
+    setCat(c.key);
     setDot(0);
     railRef.current?.scrollTo?.({ left: 0 });
   }
@@ -166,7 +260,7 @@ export function BilhetesScreen() {
 
         {/* category chips */}
         <div className="spt-chips" role="tablist" aria-label="Mercados">
-          {CATS.map((c) => (
+          {cats.map((c) => (
             <button
               key={c.key}
               type="button"
@@ -179,31 +273,34 @@ export function BilhetesScreen() {
             >
               {c.label}
               {c.locked && <Lock />}
-              {typeof c.count === 'number' && <span>({c.count})</span>}
+              {c.count > 0 && <span>({c.count})</span>}
             </button>
           ))}
         </div>
 
         {/* horizontal card rail */}
-        <div
-          className="spt-rail"
-          ref={railRef}
-          onScroll={onRailScroll}
-          aria-label="Bilhetes do mercado"
-        >
-          {cards.map((c) => {
-            const tier = TIER_OF[c.cat];
-            const ko = kickoffs[c.id];
-            return (
+        {cards.length === 0 ? (
+          <p className="spt-empty">Nenhum bilhete publicado neste mercado ainda.</p>
+        ) : (
+          <div
+            className="spt-rail"
+            ref={railRef}
+            onScroll={onRailScroll}
+            aria-label="Bilhetes do mercado"
+          >
+            {cards.map((c) => (
               <article className="spt-card" key={c.id}>
                 <div className="spt-card__meta">
                   <span className="spt-card__timer">
-                    <Clock /> {countdown(ko, now)}
+                    <Clock /> {countdown(c.koMs, now)}
                   </span>
-                  <span className="spt-card__tier" data-tone={tier.tone}>
-                    {tier.label}
+                  <span
+                    className="spt-card__tier"
+                    data-tone={TIER_TONE[c.tierLabel] ?? 'ultra'}
+                  >
+                    {c.tierLabel}
                   </span>
-                  <span className="spt-card__kickoff">{kickoffLabel(ko)}</span>
+                  <span className="spt-card__kickoff">{kickoffLabel(c.koMs)}</span>
                 </div>
 
                 <div className="spt-card__teams">
@@ -243,9 +340,9 @@ export function BilhetesScreen() {
                   </button>
                 </div>
               </article>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="spt-dots" aria-hidden="true">
           {cards.map((c, i) => (

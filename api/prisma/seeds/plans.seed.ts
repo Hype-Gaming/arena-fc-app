@@ -1,34 +1,46 @@
 import { PrismaClient } from '@prisma/client';
 
 export interface PlanSeed {
-  key: 'free' | 'premium';
+  key: 'free' | 'premium' | 'diamante';
   name: string;
-  /** Cosmetic label shown on the Perfil screen. Adjust to the real price. */
+  /** Cosmetic label shown on the Perfil/Planos screens. Adjust to the real price. */
   priceLabel: string;
   /** Monthly credit bonus granted on activation/renewal (spec section 5). */
   monthlyCredits: number;
+  /** Access ordering: a plan unlocks every bilhete category with minRank <= rank. */
+  rank: number;
 }
 
-// The two MVP plans (spec section: Assinatura Free / Premium). Premium grants a
-// monthly credit bonus; unlocking still always costs credits (they are
-// independent). `priceLabel` is display-only — edit to the real published price.
+// The three plans (Livre / Premium / Diamante, matching the plan-comparison
+// screen). Premium and Diamante grant monthly credit bonuses; unlocking
+// entradas still always costs credits (they are independent). `priceLabel` is
+// display-only — edit to the real published price.
 export const PLAN_SEEDS: PlanSeed[] = [
   {
     key: 'free',
-    name: 'Free',
+    name: 'Livre',
     priceLabel: 'Grátis',
     monthlyCredits: 0,
+    rank: 0,
   },
   {
     key: 'premium',
     name: 'Premium',
-    priceLabel: 'R$ 29,90/mês',
+    priceLabel: 'R$ 47 VIDA',
     monthlyCredits: 50,
+    rank: 1,
+  },
+  {
+    key: 'diamante',
+    name: 'Diamante',
+    priceLabel: 'R$ 127 VIDA',
+    monthlyCredits: 120,
+    rank: 2,
   },
 ];
 
 /**
- * Idempotently upsert the Free/Premium plans by their PlanKey.
+ * Idempotently upsert the plans by their PlanKey.
  * Subscriptions FK to Plan, and the billing webhook throws "Plan not found"
  * without these rows — so this must run on every deploy / `prisma db seed`.
  */
@@ -43,11 +55,13 @@ export async function seedPlans(
         name: seed.name,
         priceLabel: seed.priceLabel,
         monthlyCredits: seed.monthlyCredits,
+        rank: seed.rank,
       },
       update: {
         name: seed.name,
         priceLabel: seed.priceLabel,
         monthlyCredits: seed.monthlyCredits,
+        rank: seed.rank,
       },
     });
   }

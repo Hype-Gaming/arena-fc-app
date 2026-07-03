@@ -12,6 +12,7 @@ import { GamificationModule } from './modules/gamification/gamification.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { TutorialModule } from './modules/tutorial/tutorial.module';
 import { MeModule } from './modules/me/me.module';
+import { BilhetesModule } from './modules/bilhetes/bilhetes.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { MeModule } from './modules/me/me.module';
     AdminModule,
     TutorialModule,
     MeModule,
+    BilhetesModule,
   ],
 })
 export class AppModule {}

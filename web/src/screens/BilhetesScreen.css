@@ -359,6 +359,13 @@
   background: rgba(234, 192, 100, 0.08);
 }
 
+.spt-empty {
+  margin: 26px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--s-muted);
+}
+
 /* dots */
 .spt-dots {
   display: flex;

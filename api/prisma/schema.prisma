@@ -16,6 +16,7 @@ enum Role {
 enum PlanKey {
   free
   premium
+  diamante
 }
 
 enum SubscriptionStatus {
@@ -101,6 +102,9 @@ model Plan {
   name           String
   priceLabel     String
   monthlyCredits Int     @default(0)
+  // Access ordering: free=0 < premium=1 < diamante=2. A plan unlocks every
+  // bilhete category whose minimum rank is <= its own.
+  rank           Int     @default(0)
 
   subscriptions Subscription[]
 }
@@ -263,6 +267,40 @@ model ChatMessage {
   session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
+}
+
+enum BilheteCategoria {
+  safes
+  pro
+  ultra
+  alavancagem
+  multiplas
+  secundario
+  ligas
+}
+
+enum BilheteResultado {
+  pending
+  green
+  red
+}
+
+model Bilhete {
+  id          String           @id @default(cuid())
+  titulo      String           @default("Bilhete Especial")
+  categoria   BilheteCategoria
+  homeTeam    String
+  awayTeam    String
+  homeColor   String? // crest accent hex until real team logos exist
+  awayColor   String?
+  competition String?
+  startsAt    DateTime
+  odd         Decimal          @db.Decimal(6, 2)
+  resultado   BilheteResultado @default(pending)
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([categoria, startsAt])
 }
 
 model TutorialStep {

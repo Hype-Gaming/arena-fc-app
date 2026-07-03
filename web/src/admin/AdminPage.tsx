@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from './adminApi';
 import { AdminEntradas } from './AdminEntradas';
+import { AdminBilhetes } from './AdminBilhetes';
 
 export function AdminPage() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -15,6 +16,8 @@ export function AdminPage() {
   return (
     <main className="admin">
       <h1>Backoffice</h1>
+
+      <AdminBilhetes />
 
       <section>
         <h2>Matches</h2>

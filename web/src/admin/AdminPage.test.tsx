@@ -9,6 +9,7 @@ vi.mock('./adminApi', () => ({
     listMatches: vi.fn().mockResolvedValue([{ id: 'm1', homeTeam: 'A', awayTeam: 'B' }]),
     listUsers: vi.fn().mockResolvedValue([{ id: 'u1', email: 'a@x.com', balance: 10 }]),
     listEntradas: vi.fn().mockResolvedValue([]),
+    listBilhetes: vi.fn().mockResolvedValue([]),
   },
 }));
 

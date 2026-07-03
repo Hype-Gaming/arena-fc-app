@@ -2,15 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 
+export type PlanKeyValue = 'free' | 'premium' | 'diamante';
+
 /** Human-facing plan names keyed by the PlanKey enum. */
-const PLAN_NAMES: Record<'free' | 'premium', string> = {
-  free: 'Free',
+const PLAN_NAMES: Record<PlanKeyValue, string> = {
+  free: 'Livre',
   premium: 'Premium',
+  diamante: 'Diamante',
 };
 
 export interface MeProfile {
   email: string;
-  planKey: 'free' | 'premium';
+  planKey: PlanKeyValue;
   planName: string;
   creditBalance: number;
 }
@@ -42,8 +45,8 @@ export class MeService {
       (subscription.currentPeriodEnd === null ||
         subscription.currentPeriodEnd > new Date());
 
-    const planKey = active
-      ? (subscription!.planKey as 'free' | 'premium')
+    const planKey: PlanKeyValue = active
+      ? (subscription!.planKey as PlanKeyValue)
       : 'free';
 
     const creditBalance = await this.credits.getBalance(userId);

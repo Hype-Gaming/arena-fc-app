@@ -41,7 +41,7 @@ function Gate({ api }: { api: ApiClient }) {
             <Route path="/admin" element={<AdminPage />} />
             <Route element={<AppShell />}>
               <Route index element={<HomePage />} />
-              <Route path="bilhetes" element={<BilhetesPage />} />
+              <Route path="bilhetes" element={<BilhetesPage api={api} />} />
               <Route path="tips" element={<TipsPage api={api} />} />
               <Route path="tipster" element={<TipsterPage api={api} />} />
               <Route
