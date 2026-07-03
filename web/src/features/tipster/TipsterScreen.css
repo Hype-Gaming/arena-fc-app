@@ -874,9 +874,25 @@
   max-width: 100%;
   align-self: stretch;
 }
+.tst-live__esportiva {
+  align-self: stretch;
+  margin-top: 14px;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 11px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #04170c;
+  background: linear-gradient(135deg, #1fb35f, #0b6f37);
+}
 .tst-live__back {
   align-self: flex-start;
-  margin-top: 14px;
+  margin-top: 12px;
   cursor: pointer;
   background: none;
   border: 0;

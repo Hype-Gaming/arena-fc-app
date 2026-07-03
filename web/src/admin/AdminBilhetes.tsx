@@ -110,6 +110,25 @@ export function AdminBilhetes() {
     }
   }
 
+  async function onSyncLiveLogos() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const s = await adminApi.syncLiveLogos();
+      setSyncMsg(
+        `Escudos ao vivo: +${s.added} novos, ${s.alreadyMatched}/${s.liveTeams} já tinham` +
+          (s.notFound ? `, ${s.notFound} sem correspondência` : '') +
+          (s.skippedForCap ? `, ${s.skippedForCap} adiados (cota)` : ''),
+      );
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   /** Picking a synced fixture fills teams, kickoff, 1X2 home odd and deep link. */
   function onPickEvent(eventId: string) {
     const ev = events.find((e) => e.id === eventId);
@@ -227,6 +246,13 @@ export function AdminBilhetes() {
           Sincronizar jogos (Esportiva)
         </button>
         <small>{events.length} jogos disponíveis</small>
+      </p>
+
+      <p className="ab-sync">
+        <button type="button" onClick={onSyncLiveLogos} disabled={busy}>
+          Sincronizar escudos (ao vivo)
+        </button>
+        <small>casa os times ao vivo com o catálogo e baixa os logos</small>
       </p>
 
       <form onSubmit={onCreate} className="admin-bilhetes__form">

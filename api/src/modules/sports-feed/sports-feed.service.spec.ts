@@ -75,10 +75,10 @@ describe('SportsFeedService.fetchLive', () => {
     expect(prisma.sportEvent.findMany).not.toHaveBeenCalled();
   });
 
-  it('cross-matches team crests from the catalog by name', async () => {
+  it('cross-matches crests from the catalog and points at the cache URL', async () => {
     const prisma = makePrisma();
     (prisma.team.findMany as jest.Mock).mockResolvedValue([
-      { name: 'Mjällby', logoUrl: 'https://logos/mjallby.png' },
+      { externalId: 42, name: 'Mjällby', logoUrl: 'https://src/mjallby.png' },
     ]);
     const provider = makeProvider([]);
     (provider.fetchLive as jest.Mock).mockResolvedValue([liveEvent]);
@@ -86,7 +86,8 @@ describe('SportsFeedService.fetchLive', () => {
 
     const [ev] = await svc.fetchLive();
 
-    expect(ev.homeLogo).toBe('https://logos/mjallby.png'); // Mjallby AIF → Mjällby
+    // Mjallby AIF → Mjällby (id 42), served from our cache, not hotlinked.
+    expect(ev.homeLogo).toBe('/api/team-logos/42.png');
     expect(ev.awayLogo).toBeNull(); // no catalog match → stays null
   });
 });

@@ -3,6 +3,8 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { SportsFeedService } from './sports-feed.service';
 import { AltenarFeedProvider } from './altenar.provider';
+import { TeamLogoCacheService } from './team-logo-cache.service';
+import { TeamLogosController } from './team-logos.controller';
 import { SPORTS_FEED_PROVIDER } from './sports-feed.types';
 
 /**
@@ -12,11 +14,13 @@ import { SPORTS_FEED_PROVIDER } from './sports-feed.types';
  */
 @Module({
   imports: [PrismaModule],
+  controllers: [TeamLogosController],
   providers: [
     SportsFeedService,
     AltenarFeedProvider,
+    TeamLogoCacheService,
     { provide: SPORTS_FEED_PROVIDER, useExisting: AltenarFeedProvider },
   ],
-  exports: [SportsFeedService],
+  exports: [SportsFeedService, TeamLogoCacheService],
 })
 export class SportsFeedModule {}

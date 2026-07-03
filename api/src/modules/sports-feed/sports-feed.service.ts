@@ -8,6 +8,7 @@ import {
   SportsFeedProvider,
 } from './sports-feed.types';
 import { buildTeamLogoIndex, matchTeamLogo } from './team-logo.match';
+import { teamLogoUrl } from './team-logo-cache.service';
 
 export interface SyncEventsSummary {
   provider: string;
@@ -33,15 +34,20 @@ export class SportsFeedService {
     if (events.length === 0) return events;
 
     const teams = await this.prisma.team.findMany({
-      select: { name: true, logoUrl: true },
+      select: { externalId: true, name: true, logoUrl: true },
     });
     if (teams.length === 0) return events;
 
     const index = buildTeamLogoIndex(teams);
+    const logo = (name: string): string | null => {
+      const ref = matchTeamLogo(name, index);
+      // Point at our cached, self-hosted copy — never hotlink the source.
+      return ref ? teamLogoUrl(ref.externalId) : null;
+    };
     return events.map((e) => ({
       ...e,
-      homeLogo: matchTeamLogo(e.homeTeam, index) ?? e.homeLogo,
-      awayLogo: matchTeamLogo(e.awayTeam, index) ?? e.awayLogo,
+      homeLogo: logo(e.homeTeam) ?? e.homeLogo,
+      awayLogo: logo(e.awayTeam) ?? e.awayLogo,
     }));
   }
 

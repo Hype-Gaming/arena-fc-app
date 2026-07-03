@@ -17,4 +17,9 @@ export class AdminTeamsController {
   @Post('sync') sync(@Body() dto: SyncTeamsDto) {
     return this.service.sync(dto.league ?? 71, dto.season ?? 2024);
   }
+
+  /** Fetch crests for the teams currently in play (Ao Vivo). */
+  @Post('sync-live-logos') syncLiveLogos() {
+    return this.service.syncLiveLogos();
+  }
 }

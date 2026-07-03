@@ -5,6 +5,14 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SportsFeedService } from '../sports-feed/sports-feed.service';
+import { TeamLogoCacheService } from '../sports-feed/team-logo-cache.service';
+import {
+  buildTeamLogoIndex,
+  matchTeamLogo,
+  teamKey,
+} from '../sports-feed/team-logo.match';
+import { normalizeText } from '../tipster/match-search.util';
 
 /** Shape of one row in API-Football's GET /teams response array. */
 interface ApiFootballTeamRow {
@@ -30,6 +38,22 @@ export interface SyncSummary {
   upserted: number;
 }
 
+export interface LiveLogoSyncSummary {
+  liveTeams: number;
+  alreadyMatched: number;
+  searched: number;
+  added: number;
+  notFound: number;
+  /** Left unsearched this run to protect the daily API quota. */
+  skippedForCap: number;
+}
+
+// Reserve/youth sides API-Football returns for a plain name search — never the
+// crest we want for a first-team live match.
+const RESERVE = /\b(ii|iii|b|u-?1\d|u-?2\d|sub-?\d+|reserves?|youth|academy)\b/i;
+// One live-logo sync fires at most this many /teams searches (free tier = 100/day).
+const SEARCH_CAP = 40;
+
 function apiKey(): string | undefined {
   return process.env.API_FOOTBALL_KEY;
 }
@@ -40,7 +64,11 @@ function apiHost(): string {
 
 @Injectable()
 export class AdminTeamsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sportsFeed: SportsFeedService,
+    private readonly logoCache: TeamLogoCacheService,
+  ) {}
 
   /** Catalog listing for the admin UI (optionally filtered by name). */
   list(q?: string) {
@@ -118,4 +146,128 @@ export class AdminTeamsService {
       upserted,
     };
   }
+
+  /**
+   * Populate crests for the teams currently in play: for each live team name we
+   * can't already resolve from the catalog, search API-Football, upsert the
+   * team and warm its logo into the image cache. Bounded by SEARCH_CAP so a
+   * single click can't burn the daily quota — run it again to pick up the rest.
+   */
+  async syncLiveLogos(): Promise<LiveLogoSyncSummary> {
+    const key = apiKey();
+    if (!key) {
+      throw new ServiceUnavailableException(
+        'API_FOOTBALL_KEY is not configured on the server',
+      );
+    }
+
+    const events = await this.sportsFeed.fetchLive();
+    const names = [
+      ...new Set(events.flatMap((e) => [e.homeTeam, e.awayTeam])),
+    ].filter(Boolean);
+
+    const catalog = await this.prisma.team.findMany({
+      select: { externalId: true, name: true, logoUrl: true },
+    });
+    const index = buildTeamLogoIndex(catalog);
+    const unmatched = names.filter((n) => !matchTeamLogo(n, index));
+
+    let searched = 0;
+    let added = 0;
+    let notFound = 0;
+    let skippedForCap = 0;
+
+    for (const name of unmatched) {
+      if (searched >= SEARCH_CAP) {
+        skippedForCap += 1;
+        continue;
+      }
+      searched += 1;
+      const best = await this.searchTeam(name, key);
+      if (!best) {
+        notFound += 1;
+        continue;
+      }
+      await this.prisma.team.upsert({
+        where: { externalId: best.id },
+        create: {
+          externalId: best.id,
+          name: best.name,
+          code: best.code,
+          country: best.country,
+          logoUrl: best.logo,
+        },
+        update: {
+          name: best.name,
+          code: best.code,
+          country: best.country,
+          logoUrl: best.logo,
+        },
+      });
+      await this.logoCache.warm(best.id, best.logo);
+      added += 1;
+    }
+
+    return {
+      liveTeams: names.length,
+      alreadyMatched: names.length - unmatched.length,
+      searched,
+      added,
+      notFound,
+      skippedForCap,
+    };
+  }
+
+  /** One API-Football team search; returns the best first-team match or null. */
+  private async searchTeam(
+    name: string,
+    key: string,
+  ): Promise<ApiFootballTeamRow['team'] | null> {
+    const query = searchQuery(name);
+    if (query.length < 3) return null;
+
+    let rows: ApiFootballTeamRow[];
+    try {
+      const res = await fetch(
+        `https://${apiHost()}/teams?search=${encodeURIComponent(query)}`,
+        { headers: { 'x-apisports-key': key } },
+      );
+      const body = (await res.json()) as ApiFootballTeamsResponse;
+      rows = body.response ?? [];
+    } catch {
+      // A transient blip on one team must not abort the whole batch — skip it
+      // (it will be retried on the next sync).
+      return null;
+    }
+
+    const candidates = rows.map((r) => r.team).filter((t) => t?.id && t.logo);
+    if (candidates.length === 0) return null;
+
+    // Prefer an exact key match; otherwise the shortest non-reserve name.
+    const wantedKey = teamKey(name);
+    const exact = candidates.find((t) => teamKey(t.name) === wantedKey);
+    if (exact) return exact;
+
+    return (
+      candidates
+        .filter((t) => !RESERVE.test(t.name))
+        .sort((a, b) => a.name.length - b.name.length)[0] ?? null
+    );
+  }
+}
+
+/** Order-preserving search query: drop club numbers and BR state suffixes. */
+function searchQuery(name: string): string {
+  return normalizeText(name)
+    .replace(/[.\-_/]/g, ' ')
+    .split(' ')
+    .filter((t) => t && !/^\d+$/.test(t))
+    .filter(
+      (t) =>
+        !/^(rj|sp|mg|rs|pr|ba|ce|go|pe|pa|am|ma|pb|rn|al|es|mt|ms|df|to|ap|ro|rr|pi)$/.test(
+          t,
+        ),
+    )
+    .join(' ')
+    .trim();
 }

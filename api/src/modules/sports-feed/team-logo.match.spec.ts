@@ -2,9 +2,15 @@ import {
   buildTeamLogoIndex,
   matchTeamLogo,
   teamKey,
+  type CatalogTeam,
 } from './team-logo.match';
 
 const L = (n: number) => `https://media.api-sports.io/football/teams/${n}.png`;
+const team = (externalId: number, name: string): CatalogTeam => ({
+  externalId,
+  name,
+  logoUrl: L(externalId),
+});
 
 describe('teamKey', () => {
   it('folds accents/case and strips club affixes + BR state suffixes', () => {
@@ -26,20 +32,18 @@ describe('teamKey', () => {
 
 describe('matchTeamLogo', () => {
   const index = buildTeamLogoIndex([
-    { name: 'Mjällby', logoUrl: L(1) },
-    { name: 'São Paulo', logoUrl: L(2) },
-    { name: 'Manchester United', logoUrl: L(3) },
-    { name: 'Manchester City', logoUrl: L(4) },
+    team(1, 'Mjällby'),
+    team(2, 'São Paulo'),
+    team(3, 'Manchester United'),
+    team(4, 'Manchester City'),
   ]);
 
   it('matches an exact (accent-insensitive) name', () => {
-    expect(matchTeamLogo('São Paulo', index)).toBe(L(2));
-    expect(matchTeamLogo('Sao Paulo', index)).toBe(L(2));
+    expect(matchTeamLogo('Sao Paulo', index)).toEqual({ externalId: 2, logoUrl: L(2) });
   });
 
   it('matches across affix/accent differences via the stripped key', () => {
-    // sportsbook "Mjallby AIF" → catalog "Mjällby"
-    expect(matchTeamLogo('Mjallby AIF', index)).toBe(L(1));
+    expect(matchTeamLogo('Mjallby AIF', index)).toEqual({ externalId: 1, logoUrl: L(1) });
   });
 
   it('returns null when there is no match', () => {
@@ -47,18 +51,12 @@ describe('matchTeamLogo', () => {
   });
 
   it('returns null for an ambiguous key rather than guess a wrong crest', () => {
-    const ambiguous = buildTeamLogoIndex([
-      { name: 'Nacional FC', logoUrl: L(10) },
-      { name: 'Nacional EC', logoUrl: L(11) }, // both → key "nacional"
-    ]);
+    const ambiguous = buildTeamLogoIndex([team(10, 'Nacional FC'), team(11, 'Nacional EC')]);
     expect(matchTeamLogo('Nacional', ambiguous)).toBeNull();
   });
 
   it('still resolves an exact name even if its key is ambiguous', () => {
-    const idx = buildTeamLogoIndex([
-      { name: 'Nacional', logoUrl: L(10) },
-      { name: 'Nacional EC', logoUrl: L(11) },
-    ]);
-    expect(matchTeamLogo('Nacional', idx)).toBe(L(10)); // exact name wins
+    const idx = buildTeamLogoIndex([team(10, 'Nacional'), team(11, 'Nacional EC')]);
+    expect(matchTeamLogo('Nacional', idx)).toEqual({ externalId: 10, logoUrl: L(10) });
   });
 });

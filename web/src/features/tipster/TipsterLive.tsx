@@ -82,6 +82,16 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
           <p className="tst-line tst-line--assistant tst-live__analysis">
             {result.message}
           </p>
+          {m.deepLink && (
+            <a
+              className="tst-live__esportiva"
+              href={m.deepLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Abrir na Esportiva Bet
+            </a>
+          )}
           <button
             type="button"
             className="tst-live__back"
@@ -194,10 +204,11 @@ function crestColor(name: string): string {
   return CREST_COLORS[h % CREST_COLORS.length];
 }
 function Crest({ name, logo }: { name: string; logo?: string | null }) {
-  if (logo) {
+  const [broken, setBroken] = useState(false);
+  if (logo && !broken) {
     return (
       <span className="tst-crest tst-crest--img" aria-hidden="true">
-        <img src={logo} alt="" loading="lazy" />
+        <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} />
       </span>
     );
   }

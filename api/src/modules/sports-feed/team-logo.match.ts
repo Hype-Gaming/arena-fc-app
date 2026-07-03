@@ -1,25 +1,30 @@
 // api/src/modules/sports-feed/team-logo.match.ts
 // Cross-matches a sportsbook team name (Altenar) against our API-Football team
-// catalog to attach a crest URL. Conservative on purpose: it only returns a
-// logo on a confident match (exact or affix-stripped key). An ambiguous key
-// (two different teams collapse to it) yields null, so we never show the WRONG
-// crest — the UI just falls back to the initials badge.
+// catalog. Conservative on purpose: it only resolves on a confident match
+// (exact name or affix-stripped key). An ambiguous key (two DIFFERENT teams
+// collapse to it) yields null, so we never show the WRONG crest — the UI falls
+// back to the initials badge.
 import { normalizeText } from '../tipster/match-search.util';
 
 export interface CatalogTeam {
+  externalId: number;
   name: string;
   logoUrl: string;
 }
 
+/** What a match resolves to: the catalog id (for the cache URL) + source logo. */
+export interface TeamLogoRef {
+  externalId: number;
+  logoUrl: string;
+}
+
 export interface TeamLogoIndex {
-  /** normalizeText(name) → logo, only where the name maps to a single logo. */
-  byName: Map<string, string>;
-  /** affix-stripped key → logo, only where the key is unambiguous. */
-  byKey: Map<string, string>;
+  byName: Map<string, TeamLogoRef>;
+  byKey: Map<string, TeamLogoRef>;
 }
 
 // Generic club affixes and Brazilian state suffixes that differ between the
-// sportsbook and the catalog ("Mjällby AIF" vs "Mjallby", "Cuiabá MT" vs
+// sportsbook and the catalog ("Mjällby AIF" vs "Mjällby", "Cuiabá MT" vs
 // "Cuiabá"). Kept conservative — words that distinguish clubs (united, city,
 // atletico…) are NEVER stripped.
 const AFFIXES = new Set([
@@ -44,29 +49,45 @@ export function teamKey(name: string): string {
 }
 
 export function buildTeamLogoIndex(teams: CatalogTeam[]): TeamLogoIndex {
-  const nameLogos = new Map<string, Set<string>>();
-  const keyLogos = new Map<string, Set<string>>();
-  const add = (map: Map<string, Set<string>>, k: string, logo: string) => {
-    if (!k || !logo) return;
-    (map.get(k) ?? map.set(k, new Set()).get(k)!).add(logo);
+  // Collect the distinct team ids seen per key; a key with >1 id is ambiguous.
+  const nameIds = new Map<string, Map<number, TeamLogoRef>>();
+  const keyIds = new Map<string, Map<number, TeamLogoRef>>();
+  const add = (
+    map: Map<string, Map<number, TeamLogoRef>>,
+    k: string,
+    t: CatalogTeam,
+  ) => {
+    if (!k || !t.logoUrl) return;
+    const m = map.get(k) ?? map.set(k, new Map()).get(k)!;
+    m.set(t.externalId, { externalId: t.externalId, logoUrl: t.logoUrl });
   };
 
   for (const t of teams) {
-    add(nameLogos, normalizeText(t.name), t.logoUrl);
-    add(keyLogos, teamKey(t.name), t.logoUrl);
+    add(nameIds, normalizeText(t.name), t);
+    add(keyIds, teamKey(t.name), t);
   }
 
-  // Keep only unambiguous keys (exactly one distinct logo).
-  const collapse = (map: Map<string, Set<string>>): Map<string, string> => {
-    const out = new Map<string, string>();
-    for (const [k, logos] of map) if (logos.size === 1) out.set(k, [...logos][0]);
+  const collapse = (
+    map: Map<string, Map<number, TeamLogoRef>>,
+  ): Map<string, TeamLogoRef> => {
+    const out = new Map<string, TeamLogoRef>();
+    for (const [k, ids] of map) {
+      if (ids.size === 1) out.set(k, [...ids.values()][0]);
+    }
     return out;
   };
 
-  return { byName: collapse(nameLogos), byKey: collapse(keyLogos) };
+  return { byName: collapse(nameIds), byKey: collapse(keyIds) };
 }
 
-/** Best-effort crest URL for a team name, or null when there's no safe match. */
-export function matchTeamLogo(name: string, index: TeamLogoIndex): string | null {
-  return index.byName.get(normalizeText(name)) ?? index.byKey.get(teamKey(name)) ?? null;
+/** Best-effort crest ref for a team name, or null when there's no safe match. */
+export function matchTeamLogo(
+  name: string,
+  index: TeamLogoIndex,
+): TeamLogoRef | null {
+  return (
+    index.byName.get(normalizeText(name)) ??
+    index.byKey.get(teamKey(name)) ??
+    null
+  );
 }

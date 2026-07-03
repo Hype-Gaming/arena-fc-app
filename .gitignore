@@ -10,3 +10,6 @@ web/dev-dist/
 *.tsbuildinfo
 .superpowers/
 *.timestamp-*.mjs
+
+# team-logo image cache
+.cache/

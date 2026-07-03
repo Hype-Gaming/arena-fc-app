@@ -86,6 +86,15 @@ export interface TeamSyncSummary {
   upserted: number;
 }
 
+export interface LiveLogoSyncSummary {
+  liveTeams: number;
+  alreadyMatched: number;
+  searched: number;
+  added: number;
+  notFound: number;
+  skippedForCap: number;
+}
+
 export const adminApi = {
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>
@@ -127,6 +136,8 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  syncLiveLogos: () =>
+    req<LiveLogoSyncSummary>('/admin/teams/sync-live-logos', { method: 'POST' }),
   listSportEvents: (q?: string) =>
     req<SportEvent[]>(`/admin/sport-events${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   syncSportEvents: () =>
