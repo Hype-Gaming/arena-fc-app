@@ -80,6 +80,12 @@ export function AdminBilhetes() {
     return teams.find((t) => t.name.toLowerCase() === n);
   }
 
+  /** Our cached, self-hosted crest URL for a catalog team (never a hotlink). */
+  function crestUrl(name: string): string | undefined {
+    const t = teamByName(name);
+    return t ? `/api/team-logos/${t.externalId}.png` : undefined;
+  }
+
   async function onSyncTeams() {
     setError(null);
     setSyncMsg(null);
@@ -169,8 +175,8 @@ export function AdminBilhetes() {
         categoria: form.categoria,
         homeTeam: form.homeTeam.trim(),
         awayTeam: form.awayTeam.trim(),
-        homeLogo: teamByName(form.homeTeam)?.logoUrl,
-        awayLogo: teamByName(form.awayTeam)?.logoUrl,
+        homeLogo: crestUrl(form.homeTeam),
+        awayLogo: crestUrl(form.awayTeam),
         competition: form.competition.trim() || undefined,
         startsAt: new Date(form.startsAt).toISOString(),
         odd: Number(form.odd),
@@ -293,23 +299,43 @@ export function AdminBilhetes() {
         </label>
         <label>
           Casa{' '}
-          <input
-            list="admin-teams"
-            value={form.homeTeam}
-            onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
-            placeholder="Espanha"
-            required
-          />
+          <span className="ab-team">
+            <input
+              list="admin-teams"
+              value={form.homeTeam}
+              onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
+              placeholder="Espanha"
+              required
+            />
+            {crestUrl(form.homeTeam) && (
+              <img
+                className="ab-crest"
+                src={crestUrl(form.homeTeam)}
+                alt=""
+                title="Escudo do catálogo será anexado"
+              />
+            )}
+          </span>
         </label>
         <label>
           Visitante{' '}
-          <input
-            list="admin-teams"
-            value={form.awayTeam}
-            onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
-            placeholder="Áustria"
-            required
-          />
+          <span className="ab-team">
+            <input
+              list="admin-teams"
+              value={form.awayTeam}
+              onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
+              placeholder="Áustria"
+              required
+            />
+            {crestUrl(form.awayTeam) && (
+              <img
+                className="ab-crest"
+                src={crestUrl(form.awayTeam)}
+                alt=""
+                title="Escudo do catálogo será anexado"
+              />
+            )}
+          </span>
         </label>
         <datalist id="admin-teams">
           {teams.map((tm) => (

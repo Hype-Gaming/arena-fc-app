@@ -1,4 +1,21 @@
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
+/** Exchange the refresh token for a fresh access token. Returns false if it
+ *  can't (no/expired refresh token → the user must log in again). */
+async function refreshTokens(): Promise<boolean> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return false;
+  const res = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) return false;
+  const t = (await res.json()) as { accessToken: string; refreshToken: string };
+  localStorage.setItem('accessToken', t.accessToken);
+  localStorage.setItem('refreshToken', t.refreshToken);
+  return true;
+}
+
+async function req<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
   const token = localStorage.getItem('accessToken');
   const res = await fetch(`/api${path}`, {
     ...init,
@@ -8,6 +25,11 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
+  // Access tokens are short-lived — silently refresh once and retry so a long
+  // admin session doesn't 401 on every action.
+  if (res.status === 401 && retry && (await refreshTokens())) {
+    return req<T>(path, init, false);
+  }
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
   return res.json() as Promise<T>;
 }

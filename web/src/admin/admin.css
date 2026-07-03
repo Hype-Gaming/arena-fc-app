@@ -145,6 +145,21 @@
   color: var(--ad-green);
 }
 
+/* team field with crest preview */
+.ab-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ab-crest {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  flex: none;
+}
+
 /* bilhete form */
 .admin-bilhetes__form {
   display: grid;
