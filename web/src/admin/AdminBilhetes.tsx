@@ -104,12 +104,12 @@ export function AdminBilhetes() {
     <section>
       <h2>Bilhetes</h2>
 
-      <p>
+      <p className="ab-sync">
         <button type="button" onClick={onSyncTeams} disabled={busy}>
           Sincronizar times (Brasileirão 2024)
-        </button>{' '}
+        </button>
         <small>{teams.length} times no catálogo</small>
-        {syncMsg && <em> — {syncMsg}</em>}
+        {syncMsg && <em>{syncMsg}</em>}
       </p>
 
       <form onSubmit={onCreate} className="admin-bilhetes__form">
@@ -188,26 +188,50 @@ export function AdminBilhetes() {
         {error && <p role="alert">{error}</p>}
       </form>
 
-      <ul className="admin-bilhetes__list">
-        {items.map((b) => (
-          <li key={b.id}>
-            <b>
-              {b.homeTeam} x {b.awayTeam}
-            </b>{' '}
-            — {b.categoria} — odd {Number(b.odd).toFixed(2)} —{' '}
-            {new Date(b.startsAt).toLocaleString('pt-BR')} — {b.resultado}
-            {b.publishedAt ? ' — publicado' : ' — rascunho'}
-            <span className="admin-bilhetes__actions">
-              <button onClick={() => onResult(b.id, 'green')}>Green</button>
-              <button onClick={() => onResult(b.id, 'red')}>Red</button>
-              <button onClick={() => onTogglePublish(b)}>
-                {b.publishedAt ? 'Despublicar' : 'Publicar'}
-              </button>
-              <button onClick={() => onDelete(b.id)}>Excluir</button>
-            </span>
-          </li>
-        ))}
-      </ul>
+      {items.length === 0 ? (
+        <p className="ab-empty">Nenhum bilhete criado ainda.</p>
+      ) : (
+        <ul className="admin-bilhetes__list">
+          {items.map((b) => (
+            <li key={b.id} className="ab-item">
+              <div className="ab-item__main">
+                <span className="ab-item__match">
+                  {b.homeTeam} x {b.awayTeam}
+                </span>
+                <span className="ab-item__meta">
+                  {b.competition ? `${b.competition} · ` : ''}
+                  {new Date(b.startsAt).toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </div>
+              <span className="ab-chip">{b.categoria}</span>
+              <span className="ab-odd">{Number(b.odd).toFixed(2)}</span>
+              <span className="ab-pill" data-res={b.resultado}>
+                {b.resultado === 'green'
+                  ? 'Verde'
+                  : b.resultado === 'red'
+                    ? 'Vermelho'
+                    : 'Pendente'}
+              </span>
+              <span className="ab-pill" data-pub={!!b.publishedAt}>
+                {b.publishedAt ? 'Publicado' : 'Rascunho'}
+              </span>
+              <span className="ab-actions">
+                <button onClick={() => onResult(b.id, 'green')}>Green</button>
+                <button onClick={() => onResult(b.id, 'red')}>Red</button>
+                <button onClick={() => onTogglePublish(b)}>
+                  {b.publishedAt ? 'Despublicar' : 'Publicar'}
+                </button>
+                <button onClick={() => onDelete(b.id)}>Excluir</button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
