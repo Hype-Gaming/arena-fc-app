@@ -125,9 +125,10 @@ function liveSample(): AltenarRaw {
         competitorIds: [144935, 115736],
         marketIds: [1631242256],
         champId: 8461,
-        catId: 1,
+        catId: 55,
       },
     ],
+    categories: [{ id: 55, name: 'Brasil', iso: 'BRA' }],
     competitors: [
       { id: 144935, name: 'Caac Brasil FC RJ' },
       { id: 115736, name: 'Barcelona EC RJ' },
@@ -161,6 +162,7 @@ describe('normalizeAltenarLive', () => {
       homeScore: 1,
       awayScore: 0,
       statusText: '1ª parte',
+      countryIso: 'BRA',
       homeLogo: null,
       awayLogo: null,
     });

@@ -142,6 +142,33 @@ describe('AdminTeamsService.syncLiveLogos', () => {
     expect(logoCache.warm).toHaveBeenCalledWith(158, 'https://x/158.png');
   });
 
+  it('prefers the same-country search result (country tiebreak)', async () => {
+    const prisma = makePrisma();
+    sportsFeed.fetchLive.mockResolvedValue([
+      { homeTeam: 'Barcelona EC RJ', awayTeam: 'Barcelona EC RJ', countryIso: 'BRA' },
+    ]);
+    fetchMock.mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          errors: [],
+          results: 2,
+          response: [
+            { team: { id: 529, name: 'Barcelona', code: 'BAR', country: 'Spain', logo: 'https://x/529.png' } },
+            { team: { id: 9001, name: 'Barcelona', code: null, country: 'Brazil', logo: 'https://x/9001.png' } },
+          ],
+        }),
+    });
+
+    const svc = new AdminTeamsService(prisma, sportsFeed, logoCache);
+    const summary = await svc.syncLiveLogos();
+
+    expect(summary).toMatchObject({ added: 1 });
+    // BRA event → the Brazilian Barcelona (9001), not Spain's (529).
+    expect((prisma.team.upsert as jest.Mock).mock.calls[0][0].where).toEqual({
+      externalId: 9001,
+    });
+  });
+
   it('counts a team the API can not find without upserting', async () => {
     const prisma = makePrisma();
     sportsFeed.fetchLive.mockResolvedValue([

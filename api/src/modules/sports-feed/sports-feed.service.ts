@@ -34,20 +34,20 @@ export class SportsFeedService {
     if (events.length === 0) return events;
 
     const teams = await this.prisma.team.findMany({
-      select: { externalId: true, name: true, logoUrl: true },
+      select: { externalId: true, name: true, logoUrl: true, country: true },
     });
     if (teams.length === 0) return events;
 
     const index = buildTeamLogoIndex(teams);
-    const logo = (name: string): string | null => {
-      const ref = matchTeamLogo(name, index);
+    const logo = (name: string, iso: string | null): string | null => {
+      const ref = matchTeamLogo(name, index, iso);
       // Point at our cached, self-hosted copy — never hotlink the source.
       return ref ? teamLogoUrl(ref.externalId) : null;
     };
     return events.map((e) => ({
       ...e,
-      homeLogo: logo(e.homeTeam) ?? e.homeLogo,
-      awayLogo: logo(e.awayTeam) ?? e.awayLogo,
+      homeLogo: logo(e.homeTeam, e.countryIso) ?? e.homeLogo,
+      awayLogo: logo(e.awayTeam, e.countryIso) ?? e.awayLogo,
     }));
   }
 

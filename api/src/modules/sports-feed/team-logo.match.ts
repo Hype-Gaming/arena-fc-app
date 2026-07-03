@@ -5,17 +5,22 @@
 // collapse to it) yields null, so we never show the WRONG crest — the UI falls
 // back to the initials badge.
 import { normalizeText } from '../tipster/match-search.util';
+import { countryToIso3 } from './country-iso';
 
 export interface CatalogTeam {
   externalId: number;
   name: string;
   logoUrl: string;
+  /** English country name from API-Football (used for the country tiebreak). */
+  country?: string | null;
 }
 
 /** What a match resolves to: the catalog id (for the cache URL) + source logo. */
 export interface TeamLogoRef {
   externalId: number;
   logoUrl: string;
+  /** ISO-3166 alpha-3 of the team's country, or null when unknown. */
+  countryIso: string | null;
 }
 
 export interface TeamLogoIndex {
@@ -59,7 +64,11 @@ export function buildTeamLogoIndex(teams: CatalogTeam[]): TeamLogoIndex {
   ) => {
     if (!k || !t.logoUrl) return;
     const m = map.get(k) ?? map.set(k, new Map()).get(k)!;
-    m.set(t.externalId, { externalId: t.externalId, logoUrl: t.logoUrl });
+    m.set(t.externalId, {
+      externalId: t.externalId,
+      logoUrl: t.logoUrl,
+      countryIso: countryToIso3(t.country),
+    });
   };
 
   for (const t of teams) {
@@ -80,14 +89,25 @@ export function buildTeamLogoIndex(teams: CatalogTeam[]): TeamLogoIndex {
   return { byName: collapse(nameIds), byKey: collapse(keyIds) };
 }
 
-/** Best-effort crest ref for a team name, or null when there's no safe match. */
+/**
+ * Best-effort crest ref for a team name, or null when there's no safe match.
+ * `countryIso` (from the live event) breaks generic single-word collisions:
+ * an affix-stripped key match whose team is from a different country is
+ * rejected (e.g. "Barcelona EC RJ" [BRA] won't take Spain's Barcelona).
+ * An exact full-name match is trusted regardless of country.
+ */
 export function matchTeamLogo(
   name: string,
   index: TeamLogoIndex,
+  countryIso?: string | null,
 ): TeamLogoRef | null {
-  return (
-    index.byName.get(normalizeText(name)) ??
-    index.byKey.get(teamKey(name)) ??
-    null
-  );
+  const exact = index.byName.get(normalizeText(name));
+  if (exact) return exact;
+
+  const keyed = index.byKey.get(teamKey(name));
+  if (!keyed) return null;
+  if (countryIso && keyed.countryIso && countryIso !== keyed.countryIso) {
+    return null; // same name, different country → don't guess a wrong crest
+  }
+  return keyed;
 }

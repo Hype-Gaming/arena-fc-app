@@ -8,6 +8,8 @@ export interface AltenarRaw {
   markets?: { id: number; typeId: number; name: string; oddIds: number[] }[];
   odds?: { id: number; price: number; name: string; competitorId?: number }[];
   champs?: { id: number; name: string }[];
+  /** Soccer categories are countries; `iso` is ISO-3166 alpha-3 (e.g. "BRA"). */
+  categories?: { id: number; name: string; iso?: string }[];
 }
 
 interface AltenarEvent {
@@ -145,6 +147,7 @@ export function normalizeAltenarLive(
   const marketById = new Map((raw.markets ?? []).map((m) => [m.id, m]));
   const oddById = new Map((raw.odds ?? []).map((o) => [o.id, o]));
   const champById = new Map((raw.champs ?? []).map((c) => [c.id, c]));
+  const catById = new Map((raw.categories ?? []).map((c) => [c.id, c]));
 
   const out: NormalizedLiveEvent[] = [];
 
@@ -180,6 +183,7 @@ export function normalizeAltenarLive(
       homeScore: Number(ev.score?.[0] ?? 0),
       awayScore: Number(ev.score?.[1] ?? 0),
       statusText: (ev.ls ?? '').trim() || 'Ao vivo',
+      countryIso: (catById.get(ev.catId)?.iso ?? '').toUpperCase() || null,
       // Crests are attached downstream from the team catalog (provider has none).
       homeLogo: null,
       awayLogo: null,

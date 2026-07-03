@@ -6,10 +6,15 @@ import {
 } from './team-logo.match';
 
 const L = (n: number) => `https://media.api-sports.io/football/teams/${n}.png`;
-const team = (externalId: number, name: string): CatalogTeam => ({
-  externalId,
-  name,
-  logoUrl: L(externalId),
+const team = (
+  externalId: number,
+  name: string,
+  country?: string,
+): CatalogTeam => ({ externalId, name, logoUrl: L(externalId), country });
+const ref = (n: number, countryIso: string | null = null) => ({
+  externalId: n,
+  logoUrl: L(n),
+  countryIso,
 });
 
 describe('teamKey', () => {
@@ -39,11 +44,11 @@ describe('matchTeamLogo', () => {
   ]);
 
   it('matches an exact (accent-insensitive) name', () => {
-    expect(matchTeamLogo('Sao Paulo', index)).toEqual({ externalId: 2, logoUrl: L(2) });
+    expect(matchTeamLogo('Sao Paulo', index)).toEqual(ref(2));
   });
 
   it('matches across affix/accent differences via the stripped key', () => {
-    expect(matchTeamLogo('Mjallby AIF', index)).toEqual({ externalId: 1, logoUrl: L(1) });
+    expect(matchTeamLogo('Mjallby AIF', index)).toEqual(ref(1));
   });
 
   it('returns null when there is no match', () => {
@@ -57,6 +62,16 @@ describe('matchTeamLogo', () => {
 
   it('still resolves an exact name even if its key is ambiguous', () => {
     const idx = buildTeamLogoIndex([team(10, 'Nacional'), team(11, 'Nacional EC')]);
-    expect(matchTeamLogo('Nacional', idx)).toEqual({ externalId: 10, logoUrl: L(10) });
+    expect(matchTeamLogo('Nacional', idx)).toEqual(ref(10, null));
+  });
+
+  it('rejects a key match from a different country (Barcelona BRA ≠ Spain)', () => {
+    const idx = buildTeamLogoIndex([team(20, 'Barcelona', 'Spain')]);
+    // A Brazilian "Barcelona EC RJ" (BRA) must NOT take Spain's Barcelona.
+    expect(matchTeamLogo('Barcelona EC RJ', idx, 'BRA')).toBeNull();
+    // Same event country (ESP) → it resolves.
+    expect(matchTeamLogo('Barcelona', idx, 'ESP')).toEqual(ref(20, 'ESP'));
+    // No country context → name-only behaviour (resolves).
+    expect(matchTeamLogo('Barcelona', idx)).toEqual(ref(20, 'ESP'));
   });
 });

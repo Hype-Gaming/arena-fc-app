@@ -12,6 +12,7 @@ import {
   matchTeamLogo,
   teamKey,
 } from '../sports-feed/team-logo.match';
+import { countryToIso3 } from '../sports-feed/country-iso';
 import { normalizeText } from '../tipster/match-search.util';
 
 /** Shape of one row in API-Football's GET /teams response array. */
@@ -162,15 +163,22 @@ export class AdminTeamsService {
     }
 
     const events = await this.sportsFeed.fetchLive();
-    const names = [
-      ...new Set(events.flatMap((e) => [e.homeTeam, e.awayTeam])),
-    ].filter(Boolean);
+    // Remember each team's country (from its live event) for the search tiebreak.
+    const isoByName = new Map<string, string | null>();
+    for (const e of events) {
+      for (const n of [e.homeTeam, e.awayTeam]) {
+        if (n && !isoByName.has(n)) isoByName.set(n, e.countryIso);
+      }
+    }
+    const names = [...isoByName.keys()];
 
     const catalog = await this.prisma.team.findMany({
-      select: { externalId: true, name: true, logoUrl: true },
+      select: { externalId: true, name: true, logoUrl: true, country: true },
     });
     const index = buildTeamLogoIndex(catalog);
-    const unmatched = names.filter((n) => !matchTeamLogo(n, index));
+    const unmatched = names.filter(
+      (n) => !matchTeamLogo(n, index, isoByName.get(n)),
+    );
 
     let searched = 0;
     let added = 0;
@@ -183,7 +191,7 @@ export class AdminTeamsService {
         continue;
       }
       searched += 1;
-      const best = await this.searchTeam(name, key);
+      const best = await this.searchTeam(name, isoByName.get(name) ?? null, key);
       if (!best) {
         notFound += 1;
         continue;
@@ -221,6 +229,7 @@ export class AdminTeamsService {
   /** One API-Football team search; returns the best first-team match or null. */
   private async searchTeam(
     name: string,
+    iso: string | null,
     key: string,
   ): Promise<ApiFootballTeamRow['team'] | null> {
     const query = searchQuery(name);
@@ -240,8 +249,17 @@ export class AdminTeamsService {
       return null;
     }
 
-    const candidates = rows.map((r) => r.team).filter((t) => t?.id && t.logo);
+    let candidates = rows.map((r) => r.team).filter((t) => t?.id && t.logo);
     if (candidates.length === 0) return null;
+
+    // Country tiebreak: when the live event tells us the country, keep only
+    // same-country candidates (so a "Barcelona" in Brazil can't take Spain's).
+    if (iso) {
+      const sameCountry = candidates.filter(
+        (t) => countryToIso3(t.country) === iso,
+      );
+      if (sameCountry.length > 0) candidates = sameCountry;
+    }
 
     // Prefer an exact key match; otherwise the shortest non-reserve name.
     const wantedKey = teamKey(name);
