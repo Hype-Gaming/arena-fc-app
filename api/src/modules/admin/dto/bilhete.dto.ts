@@ -18,6 +18,8 @@ export class CreateBilheteDto {
   @IsString() awayTeam!: string;
   @IsOptional() @IsString() homeColor?: string;
   @IsOptional() @IsString() awayColor?: string;
+  @IsOptional() @IsString() homeLogo?: string;
+  @IsOptional() @IsString() awayLogo?: string;
   @IsOptional() @IsString() competition?: string;
   @IsISO8601() startsAt!: string;
   @IsNumber() @IsPositive() odd!: number;
@@ -32,6 +34,8 @@ export class UpdateBilheteDto {
   @IsOptional() @IsString() awayTeam?: string;
   @IsOptional() @IsString() homeColor?: string;
   @IsOptional() @IsString() awayColor?: string;
+  @IsOptional() @IsString() homeLogo?: string;
+  @IsOptional() @IsString() awayLogo?: string;
   @IsOptional() @IsString() competition?: string;
   @IsOptional() @IsISO8601() startsAt?: string;
   @IsOptional() @IsNumber() @IsPositive() odd?: number;

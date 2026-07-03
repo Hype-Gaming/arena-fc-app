@@ -16,6 +16,7 @@ interface Team {
   name: string;
   short: string;
   color: string;
+  logo?: string | null;
 }
 
 interface RailCard {
@@ -43,6 +44,8 @@ interface FeedResponse {
     awayTeam: string;
     homeColor: string | null;
     awayColor: string | null;
+    homeLogo: string | null;
+    awayLogo: string | null;
     competition: string | null;
     startsAt: string;
     odd: number;
@@ -128,8 +131,14 @@ function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
     id: b.id,
     cat: b.categoria,
     tierLabel: b.tierLabel,
-    home: t(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
-    away: t(b.awayTeam, shortName(b.awayTeam), b.awayColor ?? fallbackColor(b.awayTeam)),
+    home: {
+      ...t(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
+      logo: b.homeLogo,
+    },
+    away: {
+      ...t(b.awayTeam, shortName(b.awayTeam), b.awayColor ?? fallbackColor(b.awayTeam)),
+      logo: b.awayLogo,
+    },
     koMs: new Date(b.startsAt).getTime(),
     odd: b.odd,
     resultado: b.resultado,
@@ -360,6 +369,13 @@ export function BilhetesScreen({ api }: Props = {}) {
 }
 
 function Crest({ team }: { team: Team }) {
+  if (team.logo) {
+    return (
+      <span className="spt-crest spt-crest--img" aria-hidden="true">
+        <img src={team.logo} alt="" loading="lazy" />
+      </span>
+    );
+  }
   return (
     <span
       className="spt-crest"

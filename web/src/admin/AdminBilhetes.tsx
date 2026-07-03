@@ -4,6 +4,7 @@ import {
   adminApi,
   type AdminBilhete,
   type BilheteCategoria,
+  type Team,
 } from './adminApi';
 
 const CATEGORIAS: { key: BilheteCategoria; label: string }[] = [
@@ -27,14 +28,38 @@ const EMPTY = {
 
 export function AdminBilhetes() {
   const [items, setItems] = useState<AdminBilhete[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState<string | null>(null);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function refresh() {
     adminApi.listBilhetes().then(setItems).catch(() => setItems([]));
+    adminApi.listTeams().then(setTeams).catch(() => setTeams([]));
   }
   useEffect(refresh, []);
+
+  /** Catalog match by exact name → auto-fills the crest logo on create. */
+  function teamByName(name: string): Team | undefined {
+    const n = name.trim().toLowerCase();
+    return teams.find((t) => t.name.toLowerCase() === n);
+  }
+
+  async function onSyncTeams() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const s = await adminApi.syncTeams({});
+      setSyncMsg(`Times sincronizados: ${s.upserted} (liga ${s.league}, temporada ${s.season})`);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -45,6 +70,8 @@ export function AdminBilhetes() {
         categoria: form.categoria,
         homeTeam: form.homeTeam.trim(),
         awayTeam: form.awayTeam.trim(),
+        homeLogo: teamByName(form.homeTeam)?.logoUrl,
+        awayLogo: teamByName(form.awayTeam)?.logoUrl,
         competition: form.competition.trim() || undefined,
         startsAt: new Date(form.startsAt).toISOString(),
         odd: Number(form.odd),
@@ -77,6 +104,14 @@ export function AdminBilhetes() {
     <section>
       <h2>Bilhetes</h2>
 
+      <p>
+        <button type="button" onClick={onSyncTeams} disabled={busy}>
+          Sincronizar times (Brasileirão 2024)
+        </button>{' '}
+        <small>{teams.length} times no catálogo</small>
+        {syncMsg && <em> — {syncMsg}</em>}
+      </p>
+
       <form onSubmit={onCreate} className="admin-bilhetes__form">
         <label>
           Categoria{' '}
@@ -96,6 +131,7 @@ export function AdminBilhetes() {
         <label>
           Casa{' '}
           <input
+            list="admin-teams"
             value={form.homeTeam}
             onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
             placeholder="Espanha"
@@ -105,12 +141,18 @@ export function AdminBilhetes() {
         <label>
           Visitante{' '}
           <input
+            list="admin-teams"
             value={form.awayTeam}
             onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
             placeholder="Áustria"
             required
           />
         </label>
+        <datalist id="admin-teams">
+          {teams.map((tm) => (
+            <option key={tm.id} value={tm.name} />
+          ))}
+        </datalist>
         <label>
           Competição{' '}
           <input

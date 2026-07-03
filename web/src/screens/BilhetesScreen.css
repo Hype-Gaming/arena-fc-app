@@ -286,6 +286,15 @@
   background: var(--crest, #33465a);
   box-shadow: 0 0 0 3px #fff, 0 0 0 4px rgba(0, 0, 0, 0.35);
 }
+.spt-crest--img {
+  background: #fff;
+  overflow: hidden;
+}
+.spt-crest--img img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
 
 /* odd row */
 .spt-card__row {

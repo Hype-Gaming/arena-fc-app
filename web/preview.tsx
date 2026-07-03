@@ -14,6 +14,52 @@ const which = params.get('screen') ?? 'bilhetes';
 const mockApi = {
   get: (path: string) => {
     if (path === '/me') return Promise.resolve({ planKey: 'premium', creditBalance: 2 });
+    if (path === '/bilhetes') {
+      return Promise.resolve({
+        plan: { key: 'premium', rank: 1 },
+        categorias: [
+          { key: 'safes', label: 'Odds Safes', count: 2, locked: false },
+          { key: 'pro', label: 'Odds Pró', count: 1, locked: false },
+          { key: 'ultra', label: 'Odds Ultra', count: 0, locked: false },
+          { key: 'alavancagem', label: 'Alavancagem', count: 1, locked: true },
+          { key: 'multiplas', label: 'Múltiplas', count: 1, locked: true },
+          { key: 'secundario', label: 'Merc. Secundário', count: 3, locked: true },
+          { key: 'ligas', label: 'Ligas Americanas', count: 0, locked: true },
+        ],
+        bilhetes: [
+          {
+            id: 'b1', categoria: 'safes', tierLabel: 'Básico', titulo: 'Bilhete Especial',
+            homeTeam: 'Flamengo', awayTeam: 'Palmeiras',
+            homeColor: null, awayColor: null,
+            homeLogo: 'https://media.api-sports.io/football/teams/127.png',
+            awayLogo: 'https://media.api-sports.io/football/teams/121.png',
+            competition: 'Brasileirão',
+            startsAt: new Date(Date.now() + 2.2 * 3_600_000).toISOString(),
+            odd: 1.85, resultado: 'pending',
+          },
+          {
+            id: 'b2', categoria: 'safes', tierLabel: 'Básico', titulo: 'Bilhete Especial',
+            homeTeam: 'Botafogo', awayTeam: 'Bahia',
+            homeColor: null, awayColor: null,
+            homeLogo: 'https://media.api-sports.io/football/teams/120.png',
+            awayLogo: 'https://media.api-sports.io/football/teams/118.png',
+            competition: 'Brasileirão',
+            startsAt: new Date(Date.now() + 6.5 * 3_600_000).toISOString(),
+            odd: 1.62, resultado: 'pending',
+          },
+          {
+            id: 'b3', categoria: 'pro', tierLabel: 'Pró', titulo: 'Bilhete Especial',
+            homeTeam: 'Internacional', awayTeam: 'Grêmio',
+            homeColor: null, awayColor: null,
+            homeLogo: 'https://media.api-sports.io/football/teams/119.png',
+            awayLogo: 'https://media.api-sports.io/football/teams/130.png',
+            competition: 'Brasileirão',
+            startsAt: new Date(Date.now() + 26 * 3_600_000).toISOString(),
+            odd: 2.1, resultado: 'pending',
+          },
+        ],
+      });
+    }
     return Promise.resolve({});
   },
 } as never;
@@ -57,7 +103,7 @@ function View() {
   if (which === 'home') return <HomeScreen />;
   if (which === 'planos') return <PlanosScreen api={mockApi} />;
   if (which === 'tipster') return <TipsterPage api={mockApi} />;
-  return <BilhetesScreen />;
+  return <BilhetesScreen api={mockApi} />;
 }
 
 const wide = which === 'planos' || which === 'tipster' || which === 'bilhetes';

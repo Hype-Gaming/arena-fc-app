@@ -291,8 +291,10 @@ model Bilhete {
   categoria   BilheteCategoria
   homeTeam    String
   awayTeam    String
-  homeColor   String? // crest accent hex until real team logos exist
+  homeColor   String? // crest accent hex fallback when there is no logo
   awayColor   String?
+  homeLogo    String? // snapshot of the catalog logo URL at creation time
+  awayLogo    String?
   competition String?
   startsAt    DateTime
   odd         Decimal          @db.Decimal(6, 2)
@@ -301,6 +303,23 @@ model Bilhete {
   createdAt   DateTime         @default(now())
 
   @@index([categoria, startsAt])
+}
+
+// Team catalog cached from the external football API (one sync request per
+// league/season; the admin picks teams from here to get name+logo for free).
+model Team {
+  id         String   @id @default(cuid())
+  externalId Int      @unique // API-Football team id
+  name       String
+  code       String? // 3-letter short code when the provider has one
+  country    String?
+  logoUrl    String
+  leagueName String?
+  season     Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([name])
 }
 
 model TutorialStep {

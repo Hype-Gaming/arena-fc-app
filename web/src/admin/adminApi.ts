@@ -40,10 +40,28 @@ export interface CreateBilheteInput {
   awayTeam: string;
   homeColor?: string;
   awayColor?: string;
+  homeLogo?: string;
+  awayLogo?: string;
   competition?: string;
   startsAt: string;
   odd: number;
   publish?: boolean;
+}
+
+export interface Team {
+  id: string;
+  externalId: number;
+  name: string;
+  code: string | null;
+  country: string | null;
+  logoUrl: string;
+}
+
+export interface TeamSyncSummary {
+  league: number;
+  season: number;
+  fetched: number;
+  upserted: number;
 }
 
 export const adminApi = {
@@ -80,6 +98,13 @@ export const adminApi = {
     }),
   deleteBilhete: (id: string) =>
     req(`/admin/bilhetes/${id}`, { method: 'DELETE' }),
+  listTeams: (q?: string) =>
+    req<Team[]>(`/admin/teams${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  syncTeams: (data: { league?: number; season?: number } = {}) =>
+    req<TeamSyncSummary>('/admin/teams/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   publishTutorial: (steps: { title: string; body: string; imageUrl?: string }[]) =>
     req('/tutorial/versions', { method: 'POST', body: JSON.stringify({ steps }) }),
 };

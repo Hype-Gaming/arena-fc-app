@@ -12,6 +12,8 @@ export interface BilheteCardDto {
   awayTeam: string;
   homeColor: string | null;
   awayColor: string | null;
+  homeLogo: string | null;
+  awayLogo: string | null;
   competition: string | null;
   startsAt: Date;
   odd: number;
@@ -91,6 +93,8 @@ export class BilhetesService {
         awayTeam: b.awayTeam,
         homeColor: b.homeColor,
         awayColor: b.awayColor,
+        homeLogo: b.homeLogo,
+        awayLogo: b.awayLogo,
         competition: b.competition,
         startsAt: b.startsAt,
         odd: Number(b.odd),
