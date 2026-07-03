@@ -131,7 +131,41 @@ export class BillingService {
       await this.grantPlan(userId, product, _event, tx);
       return;
     }
+    if (product.grantType === 'ia_unlimited') {
+      await this.grantIaUnlimited(userId, product.grantPeriodDays, tx);
+      return;
+    }
     throw new Error(`Unsupported grantType: ${product.grantType}`);
+  }
+
+  /**
+   * "Acesso ilimitado" pass: analyses stop consuming credits for a window of
+   * grantPeriodDays. We extend User.iaUnlimitedUntil rather than moving credits
+   * — buying again while a pass is still active stacks onto the remaining time
+   * instead of shrinking it.
+   */
+  private async grantIaUnlimited(
+    userId: string,
+    periodDays: number | null,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    if (periodDays == null || periodDays <= 0) {
+      throw new Error('ia_unlimited product requires a positive grantPeriodDays');
+    }
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { iaUnlimitedUntil: true },
+    });
+    const now = new Date();
+    const base =
+      user?.iaUnlimitedUntil && user.iaUnlimitedUntil > now
+        ? user.iaUnlimitedUntil
+        : now;
+    const until = new Date(base.getTime() + periodDays * 24 * 60 * 60 * 1000);
+    await tx.user.update({
+      where: { id: userId },
+      data: { iaUnlimitedUntil: until },
+    });
   }
 
   private async grantPlan(

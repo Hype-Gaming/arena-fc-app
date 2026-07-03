@@ -9,17 +9,22 @@ type Tab = 'chat' | 'aovivo' | 'tutorial';
 
 interface MeProfile {
   creditBalance: number;
+  iaUnlimited?: boolean;
 }
 
 export function TipsterPage({ api }: { api: ApiClient }) {
   const [tab, setTab] = useState<Tab>('chat');
   const [credits, setCredits] = useState<number | null>(null);
+  const [unlimited, setUnlimited] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
 
   useEffect(() => {
     api
       .get<MeProfile>('/me')
-      .then((me) => setCredits(me.creditBalance))
+      .then((me) => {
+        setCredits(me.creditBalance);
+        setUnlimited(!!me.iaUnlimited);
+      })
       .catch(() => setCredits(null));
   }, [api]);
 
@@ -33,15 +38,26 @@ export function TipsterPage({ api }: { api: ApiClient }) {
           <h1>IA Tipster</h1>
           <span className="tst-head__beta">BETA</span>
         </div>
-        {credits !== null && (
+        {unlimited ? (
           <button
             type="button"
-            className="tst-head__credits"
+            className="tst-head__credits tst-head__credits--unlimited"
             onClick={() => setBuyOpen(true)}
-            title="Comprar créditos IA"
+            title="Acesso ilimitado ativo"
           >
-            <CoinsIcon /> {credits} {credits === 1 ? 'crédito' : 'créditos'}
+            <InfinityIcon /> Ilimitado
           </button>
+        ) : (
+          credits !== null && (
+            <button
+              type="button"
+              className="tst-head__credits"
+              onClick={() => setBuyOpen(true)}
+              title="Comprar créditos IA"
+            >
+              <CoinsIcon /> {credits} {credits === 1 ? 'crédito' : 'créditos'}
+            </button>
+          )
         )}
       </header>
 

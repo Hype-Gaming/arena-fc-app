@@ -77,6 +77,20 @@
   outline: 2px solid rgba(234, 192, 100, 0.7);
   outline-offset: 2px;
 }
+.tst-head__credits--unlimited {
+  color: #241a02;
+  font-weight: 700;
+  border-color: transparent;
+  background: linear-gradient(135deg, #f0c65a, #d9a520);
+}
+.tst-head__credits--unlimited svg {
+  color: #241a02;
+}
+.tst-head__credits--unlimited:hover {
+  filter: brightness(1.04);
+  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  border-color: transparent;
+}
 .tst-head__credits svg {
   color: var(--tst-gold);
 }

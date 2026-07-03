@@ -44,6 +44,14 @@ export class TipsterService {
       throw new NotFoundException('No entradas available for this match');
     }
 
+    // Active "acesso ilimitado" pass → analyses are free (no credit debit).
+    const owner = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { iaUnlimitedUntil: true },
+    });
+    const unlimited =
+      !!owner?.iaUnlimitedUntil && owner.iaUnlimitedUntil > new Date();
+
     const principal = entradas[0];
     const message = composeAnalysisMessage(
       {
@@ -64,17 +72,29 @@ export class TipsterService {
       // Money moves ONLY through CreditsService.applyTransaction. We pass the
       // active transaction client as the SECOND positional arg so the debit is
       // atomic with the chat persistence: a failed debit aborts the whole tx,
-      // leaving neither a charge nor an orphan analysis.
-      const credit = await this.credits.applyTransaction(
-        {
-          userId,
-          type: 'unlock',
-          amount: -principal.costInCredits,
-          refType: 'tipster_analyze',
-          refId: principal.id,
-        },
-        tx,
-      );
+      // leaving neither a charge nor an orphan analysis. With an active
+      // unlimited pass we skip the debit entirely — the balance is untouched.
+      let balanceAfter: number;
+      if (unlimited) {
+        const latest = await tx.creditTransaction.findFirst({
+          where: { userId },
+          orderBy: { seq: 'desc' },
+          select: { balanceAfter: true },
+        });
+        balanceAfter = latest?.balanceAfter ?? 0;
+      } else {
+        const credit = await this.credits.applyTransaction(
+          {
+            userId,
+            type: 'unlock',
+            amount: -principal.costInCredits,
+            refType: 'tipster_analyze',
+            refId: principal.id,
+          },
+          tx,
+        );
+        balanceAfter = credit.balanceAfter;
+      }
 
       const session = await tx.chatSession.create({ data: { userId } });
 
@@ -99,7 +119,7 @@ export class TipsterService {
         sessionId: session.id,
         message,
         entradaId: principal.id,
-        balanceAfter: credit.balanceAfter,
+        balanceAfter,
       };
     });
   }

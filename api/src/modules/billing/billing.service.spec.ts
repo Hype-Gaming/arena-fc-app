@@ -31,6 +31,8 @@ function makeModule(overrides: {
   findOrCreateByEmail?: jest.Mock;
   planFindUnique?: jest.Mock;
   subscriptionUpsert?: jest.Mock;
+  userFindUnique?: jest.Mock;
+  userUpdate?: jest.Mock;
 }) {
   const webhookCreate =
     overrides.webhookCreate ??
@@ -41,12 +43,17 @@ function makeModule(overrides: {
     jest.fn().mockResolvedValue({ key: 'premium', monthlyCredits: 50 });
   const subscriptionUpsert =
     overrides.subscriptionUpsert ?? jest.fn().mockResolvedValue({ id: 'sub_1' });
+  const userFindUnique =
+    overrides.userFindUnique ?? jest.fn().mockResolvedValue({ iaUnlimitedUntil: null });
+  const userUpdate = overrides.userUpdate ?? jest.fn().mockResolvedValue({});
 
   // The interactive transaction client passed to the callback. It exposes the
-  // same models the tx body touches: webhookEvent.create + subscription.upsert.
+  // same models the tx body touches: webhookEvent.create + subscription.upsert
+  // + user.findUnique/update (ia_unlimited grant).
   const txClient = {
     webhookEvent: { create: webhookCreate },
     subscription: { upsert: subscriptionUpsert },
+    user: { findUnique: userFindUnique, update: userUpdate },
   };
 
   const prisma = {
@@ -91,6 +98,8 @@ function makeModule(overrides: {
       registry,
       webhookCreate,
       subscriptionUpsert,
+      userFindUnique,
+      userUpdate,
       txClient,
     }));
 }
@@ -348,5 +357,69 @@ describe('BillingService plan grant', () => {
     expect(create.currentPeriodEnd).toBeNull();
     expect(update.currentPeriodEnd).toBeNull();
     expect(create.planKey).toBe('diamante');
+  });
+});
+
+describe('BillingService ia_unlimited grant', () => {
+  beforeEach(() => {
+    adapter.verifySignature.mockReset().mockReturnValue(true);
+    adapter.parse
+      .mockReset()
+      .mockReturnValue({ ...norm, externalProductId: 'prod_unlimited' });
+  });
+
+  const unlimitedProduct = (grantPeriodDays: number | null) => ({
+    id: 'pu',
+    provider: 'lastlink',
+    externalProductId: 'prod_unlimited',
+    grantType: 'ia_unlimited',
+    grantCredits: null,
+    grantPlanKey: null,
+    grantPeriodDays,
+    active: true,
+  });
+
+  it('opens a ~30-day pass from now for a fresh buyer (no money moved)', async () => {
+    const userUpdate = jest.fn().mockResolvedValue({});
+    const { service, credits, userUpdate: upd } = await makeModule({
+      userUpdate,
+      userFindUnique: jest.fn().mockResolvedValue({ iaUnlimitedUntil: null }),
+      productFindFirst: jest.fn().mockResolvedValue(unlimitedProduct(30)),
+    });
+
+    const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    expect(result.outcome).toBe('processed');
+    expect(credits.applyTransaction).not.toHaveBeenCalled(); // entitlement, not credits
+    const { where, data } = upd.mock.calls[0][0];
+    expect(where).toEqual({ id: 'user_1' });
+    const days = (data.iaUnlimitedUntil.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThanOrEqual(30);
+  });
+
+  it('stacks onto the remaining time when a pass is still active', async () => {
+    const remaining = new Date(Date.now() + 10 * 86_400_000); // 10 days left
+    const { service, userUpdate } = await makeModule({
+      userFindUnique: jest.fn().mockResolvedValue({ iaUnlimitedUntil: remaining }),
+      productFindFirst: jest.fn().mockResolvedValue(unlimitedProduct(30)),
+    });
+
+    await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    const { data } = userUpdate.mock.calls[0][0];
+    // 10 remaining + 30 granted ≈ 40 days out (not reset to 30).
+    const days = (data.iaUnlimitedUntil.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(39.9);
+    expect(days).toBeLessThanOrEqual(40);
+  });
+
+  it('rejects an ia_unlimited product with no positive period', async () => {
+    const { service } = await makeModule({
+      productFindFirst: jest.fn().mockResolvedValue(unlimitedProduct(null)),
+    });
+    await expect(
+      service.processWebhook('lastlink', Buffer.from('{}'), {}),
+    ).rejects.toThrow(/grantPeriodDays/);
   });
 });

@@ -11,15 +11,15 @@ import { PrismaClient, GrantType } from '@prisma/client';
  * in the LastLink adapter) before going live. Display name/price live on the
  * frontend (see web/src/lib/creditPacks.ts); the DB only needs the grant.
  *
- * Credit packs are wired here. The "acesso ilimitado" passes are intentionally
- * NOT seeded yet — an unlimited-for-N-days entitlement is not modelled in the
- * schema; add them once that mechanism is decided.
+ * Credit packs grant a fixed credit amount; the "acesso ilimitado" passes grant
+ * an ia_unlimited window of grantPeriodDays (analyses stop consuming credits).
  */
 interface ProductSeed {
   provider: string;
   externalProductId: string;
   grantType: GrantType;
   grantCredits?: number;
+  grantPeriodDays?: number;
 }
 
 export const PRODUCT_SEEDS: ProductSeed[] = [
@@ -35,6 +35,18 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantType: 'credits',
     grantCredits: 9,
   },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-ilimitado-1-mes',
+    grantType: 'ia_unlimited',
+    grantPeriodDays: 30,
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-ilimitado-3-meses',
+    grantType: 'ia_unlimited',
+    grantPeriodDays: 90,
+  },
 ];
 
 /** Idempotently upsert products by their (provider, externalProductId) key. */
@@ -45,6 +57,7 @@ export async function seedProducts(
     const data = {
       grantType: p.grantType,
       grantCredits: p.grantCredits ?? null,
+      grantPeriodDays: p.grantPeriodDays ?? null,
       active: true,
     };
     await prisma.product.upsert({

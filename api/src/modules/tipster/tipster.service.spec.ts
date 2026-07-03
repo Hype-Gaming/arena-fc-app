@@ -9,6 +9,8 @@ const prismaMock = {
   entrada: { findMany: jest.fn() },
   chatSession: { create: jest.fn() },
   chatMessage: { create: jest.fn() },
+  user: { findUnique: jest.fn() },
+  creditTransaction: { findFirst: jest.fn() },
   $transaction: jest.fn(),
 };
 
@@ -85,6 +87,8 @@ describe('TipsterService.analyze', () => {
     prismaMock.chatSession.create.mockResolvedValue({ id: 's1', userId: 'u1', createdAt: new Date() });
     prismaMock.chatMessage.create.mockResolvedValue({ id: 'msg', sessionId: 's1' });
     creditsMock.applyTransaction.mockResolvedValue({ id: 'ct1', balanceAfter: 7 });
+    // Default: no unlimited pass → analyses take the credit-debit path.
+    prismaMock.user.findUnique.mockResolvedValue({ iaUnlimitedUntil: null });
   });
 
   it('throws NotFound when the match does not exist', async () => {
@@ -139,6 +143,22 @@ describe('TipsterService.analyze', () => {
       balanceAfter: 7,
     });
     expect(result.message).toContain('São Paulo x Palmeiras');
+  });
+
+  it('skips the credit debit when an unlimited pass is active, keeping the balance', async () => {
+    prismaMock.match.findUnique.mockResolvedValue(match);
+    prismaMock.entrada.findMany.mockResolvedValue(entradas);
+    prismaMock.user.findUnique.mockResolvedValue({
+      iaUnlimitedUntil: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    });
+    // current balance is read from the latest credit row inside the tx
+    prismaMock.creditTransaction.findFirst.mockResolvedValue({ balanceAfter: 42 });
+
+    const result = await service.analyze('u1', 'm1');
+
+    expect(creditsMock.applyTransaction).not.toHaveBeenCalled(); // free analysis
+    expect(prismaMock.chatMessage.create).toHaveBeenCalledTimes(2); // still persisted
+    expect(result).toMatchObject({ sessionId: 's1', entradaId: 'e1', balanceAfter: 42 });
   });
 
   it('does not persist chat when the debit fails (propagates the error)', async () => {
