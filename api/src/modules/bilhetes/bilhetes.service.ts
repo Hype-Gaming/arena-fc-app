@@ -18,6 +18,7 @@ export interface BilheteCardDto {
   startsAt: Date;
   odd: number;
   resultado: string;
+  deepLink: string | null;
 }
 
 export interface BilhetesFeedDto {
@@ -99,6 +100,7 @@ export class BilhetesService {
         startsAt: b.startsAt,
         odd: Number(b.odd),
         resultado: b.resultado,
+        deepLink: b.eventDeepLink,
       }));
 
     return { plan, categorias, bilhetes };

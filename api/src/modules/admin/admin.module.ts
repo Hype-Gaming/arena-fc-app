@@ -17,9 +17,11 @@ import { AdminBilhetesController } from './bilhetes.controller';
 import { AdminBilhetesService } from './bilhetes.service';
 import { AdminTeamsController } from './teams.controller';
 import { AdminTeamsService } from './teams.service';
+import { AdminSportEventsController } from './sport-events.controller';
+import { SportsFeedModule } from '../sports-feed/sports-feed.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, GamificationModule],
+  imports: [PrismaModule, AuthModule, GamificationModule, SportsFeedModule],
   controllers: [
     CategoriesController,
     MatchesController,
@@ -28,6 +30,7 @@ import { AdminTeamsService } from './teams.service';
     UsersViewController,
     AdminBilhetesController,
     AdminTeamsController,
+    AdminSportEventsController,
   ],
   providers: [
     AdminRoleGuard,

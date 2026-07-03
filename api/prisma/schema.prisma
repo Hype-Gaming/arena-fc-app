@@ -304,8 +304,35 @@ model Bilhete {
   resultado   BilheteResultado @default(pending)
   publishedAt DateTime?
   createdAt   DateTime         @default(now())
+  // Deep link that opens this fixture on the sportsbook (Esportiva/Altenar),
+  // snapshotted at creation. The "Adicionar" button sends the user straight to
+  // the event so they place the bet on their own account.
+  eventDeepLink   String?
+  eventExternalId String?
 
   @@index([categoria, startsAt])
+}
+
+// A fixture pulled from the sportsbook feed (Altenar/Esportiva today; the
+// official endpoint later — same normalized shape, swapped behind a provider).
+// Cached so the admin picks a real event (teams, kickoff, 1X2 odds, deep link)
+// instead of typing it.
+model SportEvent {
+  id          String   @id @default(cuid())
+  provider    String // "altenar" now; "esportiva" when the official feed lands
+  externalId  String // provider event id
+  homeTeam    String
+  awayTeam    String
+  competition String?
+  startsAt    DateTime
+  oddHome     Decimal? @db.Decimal(6, 2)
+  oddDraw     Decimal? @db.Decimal(6, 2)
+  oddAway     Decimal? @db.Decimal(6, 2)
+  deepLink    String
+  syncedAt    DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([startsAt])
 }
 
 // Team catalog cached from the external football API (one sync request per

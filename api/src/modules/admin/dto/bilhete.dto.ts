@@ -23,7 +23,16 @@ export class CreateBilheteDto {
   @IsOptional() @IsString() competition?: string;
   @IsISO8601() startsAt!: string;
   @IsNumber() @IsPositive() odd!: number;
+  @IsOptional() @IsString() eventDeepLink?: string;
+  @IsOptional() @IsString() eventExternalId?: string;
   /** Create-and-publish in one go (default true — admin usually wants it live). */
+  @IsOptional() @IsBoolean() publish?: boolean;
+}
+
+export class ImportBetslipDto {
+  /** JSON copied from the Esportiva localStorage key WSDK_esportiva_betSelections. */
+  @IsString() json!: string;
+  @IsIn(Object.values(BilheteCategoria)) categoria!: BilheteCategoria;
   @IsOptional() @IsBoolean() publish?: boolean;
 }
 

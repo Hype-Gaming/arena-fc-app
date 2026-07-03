@@ -1,14 +1,44 @@
 // api/src/modules/admin/bilhetes.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { BilheteCategoria } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateBilheteDto,
   UpdateBilheteDto,
 } from './dto/bilhete.dto';
+import { parseBetslip } from './betslip.parse';
 
 @Injectable()
 export class AdminBilhetesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Create one bilhete per selection in a pasted Esportiva betslip JSON
+   * (WSDK_esportiva_betSelections). Lets the admin build the ticket on the
+   * sportsbook and mirror it here with the exact odds.
+   */
+  async importBetslip(json: string, categoria: BilheteCategoria, publish?: boolean) {
+    const selections = parseBetslip(json);
+    const publishedAt = publish === false ? null : new Date();
+    const created = [];
+    for (const s of selections) {
+      created.push(
+        await this.prisma.bilhete.create({
+          data: {
+            categoria,
+            homeTeam: s.homeTeam,
+            awayTeam: s.awayTeam,
+            competition: null,
+            startsAt: s.startsAt ?? new Date(),
+            odd: s.odd,
+            eventExternalId: s.externalId,
+            publishedAt,
+          },
+        }),
+      );
+    }
+    return { imported: created.length, bilhetes: created };
+  }
 
   list() {
     return this.prisma.bilhete.findMany({ orderBy: { startsAt: 'asc' } });

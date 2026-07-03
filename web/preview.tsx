@@ -35,7 +35,7 @@ const mockApi = {
             awayLogo: 'https://media.api-sports.io/football/teams/121.png',
             competition: 'Brasileirão',
             startsAt: new Date(Date.now() + 2.2 * 3_600_000).toISOString(),
-            odd: 1.85, resultado: 'pending',
+            odd: 1.85, resultado: 'pending', deepLink: null,
           },
           {
             id: 'b2', categoria: 'safes', tierLabel: 'Básico', titulo: 'Bilhete Especial',
@@ -45,7 +45,7 @@ const mockApi = {
             awayLogo: 'https://media.api-sports.io/football/teams/118.png',
             competition: 'Brasileirão',
             startsAt: new Date(Date.now() + 6.5 * 3_600_000).toISOString(),
-            odd: 1.62, resultado: 'pending',
+            odd: 1.62, resultado: 'pending', deepLink: null,
           },
           {
             id: 'b3', categoria: 'pro', tierLabel: 'Pró', titulo: 'Bilhete Especial',
@@ -55,7 +55,7 @@ const mockApi = {
             awayLogo: 'https://media.api-sports.io/football/teams/130.png',
             competition: 'Brasileirão',
             startsAt: new Date(Date.now() + 26 * 3_600_000).toISOString(),
-            odd: 2.1, resultado: 'pending',
+            odd: 2.1, resultado: 'pending', deepLink: null,
           },
         ],
       });

@@ -29,6 +29,8 @@ interface RailCard {
   koMs: number;
   odd: number;
   resultado: 'pending' | 'green' | 'red';
+  /** opens the fixture on the sportsbook; null → fall back to the iframe */
+  deepLink: string | null;
 }
 
 /** Server shape of GET /bilhetes. */
@@ -50,6 +52,7 @@ interface FeedResponse {
     startsAt: string;
     odd: number;
     resultado: 'pending' | 'green' | 'red';
+    deepLink: string | null;
   }[];
 }
 
@@ -109,6 +112,7 @@ function buildMockCards(): RailCard[] {
     koMs: now + m.inHours * 3_600_000,
     odd: m.odd,
     resultado: 'pending' as const,
+    deepLink: null,
   }));
 }
 
@@ -142,6 +146,7 @@ function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
     koMs: new Date(b.startsAt).getTime(),
     odd: b.odd,
     resultado: b.resultado,
+    deepLink: b.deepLink,
   };
 }
 
@@ -335,9 +340,12 @@ export function BilhetesScreen({ api }: Props = {}) {
                   <button
                     type="button"
                     className="spt-card__add"
-                    onClick={() =>
-                      bookRef.current?.scrollIntoView({ behavior: 'smooth' })
-                    }
+                    onClick={() => {
+                      // Send the user straight to the fixture on the sportsbook
+                      // to place the bet; fall back to the embedded book.
+                      if (c.deepLink) window.open(c.deepLink, '_blank');
+                      else bookRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }}
                   >
                     Adicionar
                   </button>

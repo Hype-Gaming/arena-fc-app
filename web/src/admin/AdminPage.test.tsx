@@ -11,6 +11,7 @@ vi.mock('./adminApi', () => ({
     listEntradas: vi.fn().mockResolvedValue([]),
     listBilhetes: vi.fn().mockResolvedValue([]),
     listTeams: vi.fn().mockResolvedValue([]),
+    listSportEvents: vi.fn().mockResolvedValue([]),
   },
 }));
 

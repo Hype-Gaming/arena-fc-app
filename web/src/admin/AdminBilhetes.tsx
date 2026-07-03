@@ -4,6 +4,7 @@ import {
   adminApi,
   type AdminBilhete,
   type BilheteCategoria,
+  type SportEvent,
   type Team,
 } from './adminApi';
 
@@ -24,7 +25,17 @@ const EMPTY = {
   competition: '',
   startsAt: '',
   odd: '',
+  eventDeepLink: '',
+  eventExternalId: '',
 };
+
+/** ISO instant → the local value a <input type="datetime-local"> expects. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 /** Common API-Football league ids for the sync selector. */
 const LEAGUES = [
@@ -46,9 +57,12 @@ const SEASONS = [2024, 2023, 2022];
 export function AdminBilhetes() {
   const [items, setItems] = useState<AdminBilhete[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [events, setEvents] = useState<SportEvent[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [league, setLeague] = useState(LEAGUES[0].id);
   const [season, setSeason] = useState(SEASONS[0]);
+  const [betslip, setBetslip] = useState('');
+  const [betslipCat, setBetslipCat] = useState<BilheteCategoria>('safes');
   const [error, setError] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,6 +70,7 @@ export function AdminBilhetes() {
   function refresh() {
     adminApi.listBilhetes().then(setItems).catch(() => setItems([]));
     adminApi.listTeams().then(setTeams).catch(() => setTeams([]));
+    adminApi.listSportEvents().then(setEvents).catch(() => setEvents([]));
   }
   useEffect(refresh, []);
 
@@ -80,6 +95,52 @@ export function AdminBilhetes() {
     }
   }
 
+  async function onSyncEvents() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const s = await adminApi.syncSportEvents();
+      setSyncMsg(`Jogos sincronizados: ${s.upserted} (${s.provider})`);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Picking a synced fixture fills teams, kickoff, 1X2 home odd and deep link. */
+  function onPickEvent(eventId: string) {
+    const ev = events.find((e) => e.id === eventId);
+    if (!ev) return;
+    setForm((f) => ({
+      ...f,
+      homeTeam: ev.homeTeam,
+      awayTeam: ev.awayTeam,
+      competition: ev.competition ?? '',
+      startsAt: toLocalInput(ev.startsAt),
+      odd: ev.oddHome != null ? String(Number(ev.oddHome)) : f.odd,
+      eventDeepLink: ev.deepLink,
+      eventExternalId: ev.externalId,
+    }));
+  }
+
+  async function onImportBetslip() {
+    setError(null);
+    setBusy(true);
+    try {
+      const r = await adminApi.importBetslip({ json: betslip, categoria: betslipCat });
+      setSyncMsg(`Bilhetes importados do betslip: ${r.imported}`);
+      setBetslip('');
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -94,6 +155,8 @@ export function AdminBilhetes() {
         competition: form.competition.trim() || undefined,
         startsAt: new Date(form.startsAt).toISOString(),
         odd: Number(form.odd),
+        eventDeepLink: form.eventDeepLink || undefined,
+        eventExternalId: form.eventExternalId || undefined,
       });
       setForm(EMPTY);
       refresh();
@@ -159,7 +222,34 @@ export function AdminBilhetes() {
         {syncMsg && <em>{syncMsg}</em>}
       </p>
 
+      <p className="ab-sync">
+        <button type="button" onClick={onSyncEvents} disabled={busy}>
+          Sincronizar jogos (Esportiva)
+        </button>
+        <small>{events.length} jogos disponíveis</small>
+      </p>
+
       <form onSubmit={onCreate} className="admin-bilhetes__form">
+        {events.length > 0 && (
+          <label>
+            Puxar jogo{' '}
+            <select
+              defaultValue=""
+              onChange={(e) => onPickEvent(e.target.value)}
+              aria-label="Puxar jogo da Esportiva"
+            >
+              <option value="" disabled>
+                Escolha um jogo…
+              </option>
+              {events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.homeTeam} x {ev.awayTeam}
+                  {ev.oddHome != null ? ` — ${Number(ev.oddHome).toFixed(2)}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label>
           Categoria{' '}
           <select
@@ -234,6 +324,42 @@ export function AdminBilhetes() {
         </button>
         {error && <p role="alert">{error}</p>}
       </form>
+
+      <div className="ab-betslip">
+        <h3>Importar do betslip da Esportiva</h3>
+        <p className="ab-hint">
+          Monte a aposta na Esportiva, cole aqui o JSON de{' '}
+          <code>WSDK_esportiva_betSelections</code> (localStorage) e cada seleção
+          vira um bilhete.
+        </p>
+        <textarea
+          value={betslip}
+          onChange={(e) => setBetslip(e.target.value)}
+          placeholder='[{"eventName":"Botafogo vs. Santos","odd":1.91,...}]'
+          rows={4}
+        />
+        <div className="ab-betslip__actions">
+          <select
+            value={betslipCat}
+            onChange={(e) => setBetslipCat(e.target.value as BilheteCategoria)}
+            aria-label="Categoria do import"
+          >
+            {CATEGORIAS.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="ab-primary"
+            onClick={onImportBetslip}
+            disabled={busy || betslip.trim() === ''}
+          >
+            Importar betslip
+          </button>
+        </div>
+      </div>
 
       {items.length === 0 ? (
         <p className="ab-empty">Nenhum bilhete criado ainda.</p>

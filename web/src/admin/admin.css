@@ -176,6 +176,57 @@
   margin: 0;
 }
 
+/* betslip import */
+.ab-betslip {
+  margin: 4px 0 18px;
+  padding: 14px;
+  border: 1px dashed var(--ad-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.ab-betslip h3 {
+  margin: 0 0 6px;
+  font-family: var(--ad-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ad-gold-soft);
+}
+.ab-hint {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--ad-muted);
+}
+.ab-hint code {
+  color: var(--ad-text);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.ab-betslip textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--ad-line);
+  outline: none;
+}
+.ab-betslip textarea:focus {
+  border-color: rgba(234, 192, 100, 0.6);
+}
+.ab-betslip__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
 /* bilhete list */
 .admin-bilhetes__list {
   list-style: none;

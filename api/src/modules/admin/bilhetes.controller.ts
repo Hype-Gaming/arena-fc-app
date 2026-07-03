@@ -7,6 +7,7 @@ import { AdminRoleGuard } from './admin-role.guard';
 import { AdminBilhetesService } from './bilhetes.service';
 import {
   CreateBilheteDto,
+  ImportBetslipDto,
   PublishBilheteDto,
   SetBilheteResultDto,
   UpdateBilheteDto,
@@ -19,6 +20,9 @@ export class AdminBilhetesController {
 
   @Get() list() { return this.service.list(); }
   @Post() create(@Body() dto: CreateBilheteDto) { return this.service.create(dto); }
+  @Post('import-betslip') importBetslip(@Body() dto: ImportBetslipDto) {
+    return this.service.importBetslip(dto.json, dto.categoria, dto.publish);
+  }
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdateBilheteDto) {
     return this.service.update(id, dto);
   }

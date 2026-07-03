@@ -45,7 +45,29 @@ export interface CreateBilheteInput {
   competition?: string;
   startsAt: string;
   odd: number;
+  eventDeepLink?: string;
+  eventExternalId?: string;
   publish?: boolean;
+}
+
+export interface SportEvent {
+  id: string;
+  provider: string;
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  startsAt: string;
+  oddHome: string | number | null;
+  oddDraw: string | number | null;
+  oddAway: string | number | null;
+  deepLink: string;
+}
+
+export interface SportEventSyncSummary {
+  provider: string;
+  fetched: number;
+  upserted: number;
 }
 
 export interface Team {
@@ -102,6 +124,15 @@ export const adminApi = {
     req<Team[]>(`/admin/teams${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   syncTeams: (data: { league?: number; season?: number } = {}) =>
     req<TeamSyncSummary>('/admin/teams/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  listSportEvents: (q?: string) =>
+    req<SportEvent[]>(`/admin/sport-events${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  syncSportEvents: () =>
+    req<SportEventSyncSummary>('/admin/sport-events/sync', { method: 'POST' }),
+  importBetslip: (data: { json: string; categoria: BilheteCategoria; publish?: boolean }) =>
+    req<{ imported: number }>('/admin/bilhetes/import-betslip', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
