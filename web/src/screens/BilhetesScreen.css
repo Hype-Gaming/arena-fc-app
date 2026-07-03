@@ -350,23 +350,6 @@
 .spt-card__add:active {
   transform: translateY(1px);
 }
-.spt-card__icon {
-  flex: none;
-  width: 42px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  border: 1px solid rgba(234, 192, 100, 0.5);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--s-gold-soft);
-  font-family: var(--s-display);
-  font-weight: 700;
-  font-size: 15px;
-}
-.spt-card__icon:hover {
-  background: rgba(234, 192, 100, 0.08);
-}
 
 .spt-empty {
   margin: 26px 0;
@@ -408,7 +391,6 @@
 .spt-pill:focus-visible,
 .spt-chip:focus-visible,
 .spt-card__add:focus-visible,
-.spt-card__icon:focus-visible,
 .spt-top__back:focus-visible {
   outline: 2px solid rgba(234, 192, 100, 0.7);
   outline-offset: 2px;

@@ -31,16 +31,11 @@ export interface SyncSummary {
 }
 
 function apiKey(): string | undefined {
-  // Canonical name first; also accept the historical typo used in .env files.
-  return process.env.API_FOOTBALL_KEY ?? process.env.API_FOOTEBALL_KEY;
+  return process.env.API_FOOTBALL_KEY;
 }
 
 function apiHost(): string {
-  return (
-    process.env.API_FOOTBALL_URL ??
-    process.env.API_FOOTEBALL_URL ??
-    'v3.football.api-sports.io'
-  );
+  return process.env.API_FOOTBALL_URL ?? 'v3.football.api-sports.io';
 }
 
 @Injectable()

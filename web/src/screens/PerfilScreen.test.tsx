@@ -40,10 +40,11 @@ const gamification = {
   ],
 };
 
-function makeApi() {
+function makeApi(meOverride?: Partial<typeof me>) {
+  const profile = { ...me, ...meOverride };
   return {
     get: vi.fn((path: string) => {
-      if (path === '/me') return Promise.resolve(me);
+      if (path === '/me') return Promise.resolve(profile);
       if (path === '/gamification/me') return Promise.resolve(gamification);
       return Promise.reject(new Error(`unexpected ${path}`));
     }),
@@ -76,6 +77,39 @@ describe('PerfilScreen', () => {
       'data-unlocked',
       'false',
     );
+  });
+
+  it('treats a Diamante plan as paid (no free styling)', async () => {
+    render(
+      <PerfilScreen
+        api={makeApi({ planKey: 'diamante', planName: 'Diamante' }) as never}
+        onLogout={vi.fn()}
+      />,
+    );
+
+    const badge = await screen.findByText(/plano diamante/i);
+    expect(badge.className).toContain('ppf-badge--plan');
+    expect(badge.className).not.toContain('is-free');
+  });
+
+  it('expands to show every achievement with its description', async () => {
+    const user = userEvent.setup();
+    render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
+
+    await screen.findByText('a@b.com');
+    // collapsed: descriptions are not shown
+    expect(
+      screen.queryByText('Destrave sua primeira entrada.'),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('button', { name: /ver todas as conquistas/i }),
+    );
+
+    expect(
+      screen.getByText('Destrave sua primeira entrada.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Destrave 10 entradas.')).toBeInTheDocument();
   });
 
   it('opens the checkout URL in a new tab when Upgrade is clicked', async () => {

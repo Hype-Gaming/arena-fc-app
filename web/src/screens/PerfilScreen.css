@@ -61,6 +61,13 @@
   font-weight: 600;
   font-size: 14px;
   color: var(--pf-muted);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.ppf-count:hover {
+  color: var(--pf-gold);
 }
 .ppf-desc {
   margin: 0 0 14px;
@@ -73,6 +80,16 @@
   text-align: center;
   font-size: 12px;
   color: #5f6d80;
+}
+.ppf-hint--btn {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.ppf-hint--btn:hover {
+  color: var(--pf-gold);
 }
 
 /* ---- user header ---- */
@@ -201,6 +218,55 @@
   .ppf-ach {
     grid-template-columns: repeat(6, 1fr);
   }
+}
+
+/* expanded full list */
+.ppf-ach__full {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ppf-ach__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #0b1420;
+  border: 1px solid var(--pf-line);
+}
+.ppf-ach__rowicon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #46586c;
+}
+.ppf-ach__row[data-unlocked='true'] .ppf-ach__rowicon {
+  background: rgba(232, 183, 74, 0.14);
+  color: var(--pf-gold);
+}
+.ppf-ach__rowtext {
+  min-width: 0;
+}
+.ppf-ach__rowtext b {
+  display: block;
+  font-size: 13px;
+  color: #eef3f8;
+}
+.ppf-ach__row[data-unlocked='false'] .ppf-ach__rowtext b {
+  color: var(--pf-muted);
+}
+.ppf-ach__rowtext span {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--pf-muted);
 }
 
 /* ---- plan row ---- */

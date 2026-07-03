@@ -57,20 +57,8 @@ describe('AdminTeamsService.sync', () => {
 
   it('throws 503 when no API key is configured', async () => {
     delete process.env.API_FOOTBALL_KEY;
-    delete process.env.API_FOOTEBALL_KEY;
     const svc = new AdminTeamsService(makePrisma());
     await expect(svc.sync(71, 2024)).rejects.toBeInstanceOf(ServiceUnavailableException);
-  });
-
-  it('accepts the legacy API_FOOTEBALL_KEY env name', async () => {
-    delete process.env.API_FOOTBALL_KEY;
-    process.env.API_FOOTEBALL_KEY = 'legacy';
-    fetchMock.mockResolvedValue({
-      json: () => Promise.resolve({ errors: [], results: 0, response: [] }),
-    });
-    const svc = new AdminTeamsService(makePrisma());
-    await svc.sync(71, 2024);
-    expect(fetchMock.mock.calls[0][1].headers['x-apisports-key']).toBe('legacy');
   });
 
   it('surfaces provider errors as 502 (e.g. season outside the free window)', async () => {

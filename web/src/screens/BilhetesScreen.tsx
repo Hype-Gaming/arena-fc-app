@@ -349,12 +349,6 @@ export function BilhetesScreen({ api }: Props = {}) {
                   >
                     Adicionar
                   </button>
-                  <button type="button" className="spt-card__icon" aria-label="Como funciona">
-                    ?
-                  </button>
-                  <button type="button" className="spt-card__icon" aria-label="Estatísticas">
-                    <ChartBars />
-                  </button>
                 </div>
               </article>
             ))}
@@ -442,13 +436,6 @@ function Clock() {
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
-function ChartBars() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 21h18M7 21V9M12 21V3M17 21v-6" />
     </svg>
   );
 }

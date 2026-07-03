@@ -59,6 +59,7 @@ const ACH_SLOTS = 7; // icons shown before the "+N" overflow chip
 export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [gam, setGam] = useState<GamificationProfile | null>(null);
+  const [showAllAch, setShowAllAch] = useState(false);
 
   useEffect(() => {
     api.get<MeProfile>('/me').then(setMe);
@@ -73,7 +74,7 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
     );
   }
 
-  const isPremium = me.planKey === 'premium';
+  const isPaid = me.planKey !== 'free';
   const next = gam.nextLevelXp ?? gam.xp;
   const span = Math.max(1, next - gam.currentLevelFloor);
   const pct = Math.min(
@@ -98,7 +99,7 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
             <div className="ppf-badges">
               <span
                 className={
-                  isPremium ? 'ppf-badge ppf-badge--plan' : 'ppf-badge ppf-badge--plan is-free'
+                  isPaid ? 'ppf-badge ppf-badge--plan' : 'ppf-badge ppf-badge--plan is-free'
                 }
               >
                 <Star /> Plano {me.planName}
@@ -123,7 +124,6 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
                 <div className="ppf-xp__fill" style={{ width: `${pct}%` }} />
               </div>
             </div>
-            <div className="ppf-hint">Toque para ver detalhes completos</div>
           </div>
         </section>
 
@@ -133,27 +133,60 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
             <h2>
               <Trophy /> Conquistas
             </h2>
-            <span className="ppf-count">
-              {unlockedCount}/{gam.achievements.length} →
-            </span>
+            <button
+              type="button"
+              className="ppf-count"
+              onClick={() => setShowAllAch((v) => !v)}
+              aria-expanded={showAllAch}
+            >
+              {unlockedCount}/{gam.achievements.length} {showAllAch ? '▲' : '→'}
+            </button>
           </div>
-          <div className="ppf-ach">
-            {shown.map((a) => (
-              <div
-                key={a.key}
-                className="ppf-ach__item"
-                data-unlocked={a.unlocked}
-                aria-label={a.name}
-                title={a.name}
-              >
-                {a.unlocked ? <Medal /> : <Lock />}
-              </div>
-            ))}
-            {overflow > 0 && (
-              <div className="ppf-ach__item ppf-ach__more">+{overflow}</div>
-            )}
-          </div>
-          <div className="ppf-hint">Toque para ver todas as conquistas</div>
+
+          {showAllAch ? (
+            <ul className="ppf-ach__full">
+              {gam.achievements.map((a) => (
+                <li
+                  key={a.key}
+                  className="ppf-ach__row"
+                  data-unlocked={a.unlocked}
+                >
+                  <span className="ppf-ach__rowicon" aria-hidden="true">
+                    {a.unlocked ? <Medal /> : <Lock />}
+                  </span>
+                  <div className="ppf-ach__rowtext">
+                    <b>{a.name}</b>
+                    <span>{a.description}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="ppf-ach">
+              {shown.map((a) => (
+                <div
+                  key={a.key}
+                  className="ppf-ach__item"
+                  data-unlocked={a.unlocked}
+                  aria-label={a.name}
+                  title={a.name}
+                >
+                  {a.unlocked ? <Medal /> : <Lock />}
+                </div>
+              ))}
+              {overflow > 0 && (
+                <div className="ppf-ach__item ppf-ach__more">+{overflow}</div>
+              )}
+            </div>
+          )}
+
+          <button
+            type="button"
+            className="ppf-hint ppf-hint--btn"
+            onClick={() => setShowAllAch((v) => !v)}
+          >
+            {showAllAch ? 'Recolher' : 'Toque para ver todas as conquistas'}
+          </button>
         </section>
 
         {/* plan */}
