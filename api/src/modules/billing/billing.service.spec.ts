@@ -280,6 +280,7 @@ describe('BillingService plan grant', () => {
         grantType: 'plan',
         grantCredits: null,
         grantPlanKey: 'premium',
+        grantPeriodDays: 30,
         active: true,
       }),
     });
@@ -300,6 +301,14 @@ describe('BillingService plan grant', () => {
         update: expect.objectContaining({ planKey: 'premium', status: 'active' }),
       }),
     );
+
+    // grantPeriodDays=30 must land as a real ~30-day expiry (not Invalid Date).
+    const { currentPeriodEnd } = subscriptionUpsert.mock.calls[0][0].create;
+    expect(currentPeriodEnd).toBeInstanceOf(Date);
+    const days = (currentPeriodEnd.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29.9);
+    expect(days).toBeLessThanOrEqual(30);
+
     expect(credits.applyTransaction).toHaveBeenCalledWith(
       {
         userId: 'user_1',
@@ -311,5 +320,33 @@ describe('BillingService plan grant', () => {
       txClient,
     );
     expect(result.outcome).toBe('processed');
+  });
+
+  it('grants a lifetime (VIDA) subscription with no expiry when grantPeriodDays is null', async () => {
+    const subscriptionUpsert = jest.fn().mockResolvedValue({ id: 'sub_2' });
+    const { service } = await makeModule({
+      subscriptionUpsert,
+      planFindUnique: jest
+        .fn()
+        .mockResolvedValue({ key: 'diamante', monthlyCredits: 120 }),
+      productFindFirst: jest.fn().mockResolvedValue({
+        id: 'p3',
+        provider: 'lastlink',
+        externalProductId: 'prod_premium',
+        grantType: 'plan',
+        grantCredits: null,
+        grantPlanKey: 'diamante',
+        grantPeriodDays: null,
+        active: true,
+      }),
+    });
+
+    const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    expect(result.outcome).toBe('processed');
+    const { create, update } = subscriptionUpsert.mock.calls[0][0];
+    expect(create.currentPeriodEnd).toBeNull();
+    expect(update.currentPeriodEnd).toBeNull();
+    expect(create.planKey).toBe('diamante');
   });
 });

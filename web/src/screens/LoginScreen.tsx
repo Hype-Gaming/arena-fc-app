@@ -2,6 +2,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { ApiClient } from '../lib/apiClient';
 import type { Tokens } from '../lib/tokenStorage';
+import { CHECKOUT_URL } from '../lib/checkout';
 import './LoginScreen.css';
 
 interface Props {
@@ -9,9 +10,6 @@ interface Props {
   onLogin: (tokens: Tokens) => void;
 }
 
-const CHECKOUT_URL =
-  (import.meta.env.VITE_CHECKOUT_URL as string | undefined) ??
-  'https://lastlink.com';
 const SUPPORT_URL =
   (import.meta.env.VITE_SUPPORT_URL as string | undefined) ??
   'https://wa.me/5500000000000';

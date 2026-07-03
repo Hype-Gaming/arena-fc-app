@@ -1,6 +1,7 @@
 // web/src/screens/PlanosScreen.tsx
 import { useEffect, useState } from 'react';
 import type { ApiClient } from '../lib/apiClient';
+import { checkoutUrlFor } from '../lib/checkout';
 import './PlanosScreen.css';
 
 interface MeProfile {
@@ -83,9 +84,6 @@ const PLANS: Plan[] = [
   },
 ];
 
-const env = import.meta.env as Record<string, string | undefined>;
-const CHECKOUT_URL = env.VITE_CHECKOUT_URL ?? 'https://lastlink.com';
-
 interface Props {
   api: Pick<ApiClient, 'get'>;
 }
@@ -120,7 +118,7 @@ export function PlanosScreen({ api }: Props) {
                 plan={plan}
                 state={state}
                 onUpgrade={() =>
-                  window.open(`${CHECKOUT_URL}?plano=${plan.key}`, '_blank')
+                  window.open(checkoutUrlFor(plan.key), '_blank')
                 }
               />
             );

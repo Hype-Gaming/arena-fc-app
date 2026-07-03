@@ -206,6 +206,9 @@ model Product {
   grantType         GrantType
   grantCredits      Int?
   grantPlanKey      PlanKey?
+  // Subscription length granted by a 'plan' product, in days.
+  // null = lifetime ("VIDA" checkout products — no expiry).
+  grantPeriodDays   Int?
   active            Boolean   @default(true)
 
   @@unique([provider, externalProductId])

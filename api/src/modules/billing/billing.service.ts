@@ -108,6 +108,7 @@ export class BillingService {
       grantType: string;
       grantCredits: number | null;
       grantPlanKey: string | null;
+      grantPeriodDays: number | null;
     },
     eventId: string,
     _event: NormalizedWebhook,
@@ -127,7 +128,7 @@ export class BillingService {
       return;
     }
     if (product.grantType === 'plan') {
-      await this.grantPlan(userId, product.grantPlanKey ?? '', _event, tx);
+      await this.grantPlan(userId, product, _event, tx);
       return;
     }
     throw new Error(`Unsupported grantType: ${product.grantType}`);
@@ -135,10 +136,11 @@ export class BillingService {
 
   private async grantPlan(
     userId: string,
-    planKey: string,
+    product: { grantPlanKey: string | null; grantPeriodDays: number | null },
     event: NormalizedWebhook,
     tx: Prisma.TransactionClient,
   ): Promise<void> {
+    const planKey = product.grantPlanKey ?? '';
     const plan = await this.prisma.plan.findUnique({
       where: { key: planKey as never },
     });
@@ -146,8 +148,14 @@ export class BillingService {
       throw new Error(`Plan not found: ${planKey}`);
     }
 
-    const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    // null grantPeriodDays = lifetime product ("VIDA"): no expiry is tracked,
+    // and MeService/BilhetesService treat a null currentPeriodEnd as always
+    // active. `== null` also covers undefined from partial mocks/rows.
+    const periodDays = product.grantPeriodDays;
+    const periodEnd =
+      periodDays == null
+        ? null
+        : new Date(Date.now() + periodDays * 24 * 60 * 60 * 1000);
 
     const subscription = await tx.subscription.upsert({
       where: { userId },

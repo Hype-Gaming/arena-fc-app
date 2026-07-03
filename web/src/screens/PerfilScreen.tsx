@@ -1,6 +1,7 @@
 // web/src/screens/PerfilScreen.tsx
 import { useEffect, useState } from 'react';
 import type { ApiClient } from '../lib/apiClient';
+import { CHECKOUT_URL } from '../lib/checkout';
 import './PerfilScreen.css';
 
 interface MeProfile {
@@ -34,7 +35,6 @@ interface Props {
 }
 
 const env = import.meta.env as Record<string, string | undefined>;
-const CHECKOUT_URL = env.VITE_CHECKOUT_URL ?? 'https://lastlink.com';
 const SUPPORT_URL = env.VITE_SUPPORT_URL ?? 'https://wa.me/5500000000000';
 const FEEDBACK_URL = env.VITE_FEEDBACK_URL ?? 'mailto:contato@premierfc.app';
 

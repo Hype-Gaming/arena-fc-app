@@ -13,6 +13,13 @@ export class ProductsService {
     if (dto.grantType === 'plan' && !dto.grantPlanKey) {
       throw new BadRequestException('grantPlanKey required for plan product');
     }
+    // Lifetime must be an explicit choice, never an accident: omitting the
+    // field would otherwise silently grant a never-expiring subscription.
+    if (dto.grantType === 'plan' && dto.grantPeriodDays === undefined) {
+      throw new BadRequestException(
+        'grantPeriodDays required for plan products: days as a number, or null for lifetime (VIDA)',
+      );
+    }
     return this.prisma.product.create({ data: dto as any });
   }
 

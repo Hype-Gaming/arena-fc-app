@@ -8,11 +8,14 @@ export class CreateProductDto {
   @IsIn(GRANT_TYPES) grantType!: (typeof GRANT_TYPES)[number];
   @IsOptional() @IsInt() @Min(1) grantCredits!: number | null;
   @IsOptional() @IsString() grantPlanKey!: string | null;
+  /** Subscription length in days for 'plan' products; omit/null = lifetime (VIDA). */
+  @IsOptional() @IsInt() @Min(1) grantPeriodDays?: number | null;
   @IsBoolean() active!: boolean;
 }
 
 export class UpdateProductDto {
   @IsOptional() @IsInt() @Min(1) grantCredits?: number | null;
   @IsOptional() @IsString() grantPlanKey?: string | null;
+  @IsOptional() @IsInt() @Min(1) grantPeriodDays?: number | null;
   @IsOptional() @IsBoolean() active?: boolean;
 }

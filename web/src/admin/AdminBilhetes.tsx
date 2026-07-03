@@ -26,10 +26,29 @@ const EMPTY = {
   odd: '',
 };
 
+/** Common API-Football league ids for the sync selector. */
+const LEAGUES = [
+  { id: 71, label: 'Brasileirão Série A' },
+  { id: 72, label: 'Brasileirão Série B' },
+  { id: 13, label: 'Libertadores' },
+  { id: 39, label: 'Premier League' },
+  { id: 140, label: 'La Liga' },
+  { id: 135, label: 'Serie A (Itália)' },
+  { id: 78, label: 'Bundesliga' },
+  { id: 61, label: 'Ligue 1' },
+  { id: 2, label: 'Champions League' },
+  { id: 1, label: 'Copa do Mundo' },
+];
+
+/** Free API-Football plan only serves these seasons. */
+const SEASONS = [2024, 2023, 2022];
+
 export function AdminBilhetes() {
   const [items, setItems] = useState<AdminBilhete[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [form, setForm] = useState(EMPTY);
+  const [league, setLeague] = useState(LEAGUES[0].id);
+  const [season, setSeason] = useState(SEASONS[0]);
   const [error, setError] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,7 +70,7 @@ export function AdminBilhetes() {
     setSyncMsg(null);
     setBusy(true);
     try {
-      const s = await adminApi.syncTeams({});
+      const s = await adminApi.syncTeams({ league, season });
       setSyncMsg(`Times sincronizados: ${s.upserted} (liga ${s.league}, temporada ${s.season})`);
       refresh();
     } catch (err) {
@@ -105,8 +124,36 @@ export function AdminBilhetes() {
       <h2>Bilhetes</h2>
 
       <p className="ab-sync">
+        <label>
+          Liga{' '}
+          <select
+            value={league}
+            onChange={(e) => setLeague(Number(e.target.value))}
+            aria-label="Liga"
+          >
+            {LEAGUES.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Temporada{' '}
+          <select
+            value={season}
+            onChange={(e) => setSeason(Number(e.target.value))}
+            aria-label="Temporada"
+          >
+            {SEASONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" onClick={onSyncTeams} disabled={busy}>
-          Sincronizar times (Brasileirão 2024)
+          Sincronizar times
         </button>
         <small>{teams.length} times no catálogo</small>
         {syncMsg && <em>{syncMsg}</em>}

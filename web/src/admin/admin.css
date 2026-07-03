@@ -126,6 +126,20 @@
   font-size: 13px;
   color: var(--ad-muted);
 }
+.ab-sync label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--ad-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ad-muted);
+}
+.ab-sync select {
+  height: 34px;
+}
 .ab-sync em {
   font-style: normal;
   color: var(--ad-green);
