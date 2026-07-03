@@ -35,7 +35,7 @@ export function TopBar() {
         <div className="topbar__right">
           <button
             type="button"
-            className="topbar__pill topbar__pill--secondary"
+            className="topbar__pill"
             onClick={() => navigate('/tipster')}
           >
             <Sparkles /> Criar Odds

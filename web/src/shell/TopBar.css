@@ -87,13 +87,6 @@
     transition: none;
   }
 }
-/* Phones can't fit logo + two pills; "Criar Odds" duplicates the bottom-nav
-   IA Tipster tab, so drop it and keep the primary Planos action. */
-@media (max-width: 560px) {
-  .topbar__pill--secondary {
-    display: none;
-  }
-}
 @media (max-width: 430px) {
   .topbar__hex {
     width: 38px;
