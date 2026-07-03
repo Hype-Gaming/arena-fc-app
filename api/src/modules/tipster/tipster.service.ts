@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
+import { InsufficientCreditsError } from '../credits/errors';
 import { rankMatches } from './match-search.util';
-import { composeAnalysisMessage } from './response-composer';
+import {
+  AI_ANALYSIS_PROVIDER,
+  AiAnalysisProvider,
+} from './ai/ai-analysis.types';
 
 export interface AnalyzeResult {
   sessionId: string;
@@ -19,6 +23,8 @@ export class TipsterService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly credits: CreditsService,
+    @Inject(AI_ANALYSIS_PROVIDER)
+    private readonly ai: AiAnalysisProvider,
   ) {}
 
   async searchMatches(q: string) {
@@ -53,20 +59,35 @@ export class TipsterService {
       !!owner?.iaUnlimitedUntil && owner.iaUnlimitedUntil > new Date();
 
     const principal = entradas[0];
-    const message = composeAnalysisMessage(
-      {
-        homeTeam: match.homeTeam,
-        awayTeam: match.awayTeam,
-        competition: match.competition,
-      },
-      entradas.map((e) => ({
+
+    // Affordability pre-check: never spend a (paid) AI call on a user who
+    // can't cover it. The debit inside the tx is still the source of truth for
+    // races; this just short-circuits the common broke-user case.
+    if (!unlimited) {
+      const balance = await this.credits.getBalance(userId);
+      if (balance < principal.costInCredits) {
+        throw new InsufficientCreditsError(
+          userId,
+          balance,
+          -principal.costInCredits,
+        );
+      }
+    }
+
+    // The AI runs OUTSIDE the transaction — a network call must not hold the
+    // per-user advisory lock / DB tx open for its full latency.
+    const message = await this.ai.analyze({
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      competition: match.competition,
+      candidates: entradas.map((e) => ({
         id: e.id,
         market: e.market,
         selection: e.selection,
         odd: Number(e.odd),
         justification: e.justification,
       })),
-    );
+    });
 
     return this.prisma.$transaction(async (tx) => {
       // Money moves ONLY through CreditsService.applyTransaction. We pass the

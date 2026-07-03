@@ -3,6 +3,9 @@ import { NotFoundException } from '@nestjs/common';
 import { TipsterService } from './tipster.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
+import { InsufficientCreditsError } from '../credits/errors';
+import { AI_ANALYSIS_PROVIDER } from './ai/ai-analysis.types';
+import { MockAnalysisProvider } from './ai/mock.provider';
 
 const prismaMock = {
   match: { findMany: jest.fn(), findUnique: jest.fn() },
@@ -14,7 +17,10 @@ const prismaMock = {
   $transaction: jest.fn(),
 };
 
-const creditsMock = { applyTransaction: jest.fn() };
+const creditsMock = { applyTransaction: jest.fn(), getBalance: jest.fn() };
+// Real deterministic provider so message assertions match the shipped output;
+// spied so we can assert it is NOT called on the pre-check short-circuit.
+const aiProvider = new MockAnalysisProvider();
 
 describe('TipsterService.searchMatches', () => {
   let service: TipsterService;
@@ -26,6 +32,7 @@ describe('TipsterService.searchMatches', () => {
         TipsterService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: CreditsService, useValue: creditsMock },
+        { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
       ],
     }).compile();
     service = moduleRef.get(TipsterService);
@@ -78,6 +85,7 @@ describe('TipsterService.analyze', () => {
         TipsterService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: CreditsService, useValue: creditsMock },
+        { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
       ],
     }).compile();
     service = moduleRef.get(TipsterService);
@@ -87,7 +95,8 @@ describe('TipsterService.analyze', () => {
     prismaMock.chatSession.create.mockResolvedValue({ id: 's1', userId: 'u1', createdAt: new Date() });
     prismaMock.chatMessage.create.mockResolvedValue({ id: 'msg', sessionId: 's1' });
     creditsMock.applyTransaction.mockResolvedValue({ id: 'ct1', balanceAfter: 7 });
-    // Default: no unlimited pass → analyses take the credit-debit path.
+    // Default: affordable balance and no unlimited pass → normal debit path.
+    creditsMock.getBalance.mockResolvedValue(100);
     prismaMock.user.findUnique.mockResolvedValue({ iaUnlimitedUntil: null });
   });
 
@@ -143,6 +152,20 @@ describe('TipsterService.analyze', () => {
       balanceAfter: 7,
     });
     expect(result.message).toContain('São Paulo x Palmeiras');
+  });
+
+  it('short-circuits with InsufficientCredits before calling the AI when the balance is too low', async () => {
+    prismaMock.match.findUnique.mockResolvedValue(match);
+    prismaMock.entrada.findMany.mockResolvedValue(entradas); // cost 3
+    creditsMock.getBalance.mockResolvedValue(1); // below cost
+    const aiSpy = jest.spyOn(aiProvider, 'analyze');
+
+    await expect(service.analyze('u1', 'm1')).rejects.toBeInstanceOf(
+      InsufficientCreditsError,
+    );
+    expect(aiSpy).not.toHaveBeenCalled(); // no paid AI call wasted
+    expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
+    aiSpy.mockRestore();
   });
 
   it('skips the credit debit when an unlimited pass is active, keeping the balance', async () => {
