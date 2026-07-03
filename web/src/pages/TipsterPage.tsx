@@ -1,5 +1,5 @@
 // web/src/pages/TipsterPage.tsx — IA Tipster screen: header, tabs, chat
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
 import { TipsterChat } from '../features/tipster/TipsterChat';
@@ -80,17 +80,166 @@ export function TipsterPage({ api }: { api: ApiClient }) {
           <span>As análises ao vivo aparecem aqui durante os jogos.</span>
         </div>
       )}
-      {tab === 'tutorial' && (
-        <div className="tst-placeholder">
-          <BookIcon />
-          <p>Como usar o IA Tipster</p>
-          <span>
-            Digite o nome de dois times (ex.: São Paulo x Palmeiras), confirme o
-            jogo encontrado e receba a análise. Cada análise consome 1 crédito.
-          </span>
-        </div>
-      )}
+      {tab === 'tutorial' && <TutorialGuide />}
     </section>
+  );
+}
+
+/* ---- Tutorial guide (Como usar a IA Tipster) ---- */
+function TutorialGuide() {
+  const steps = [
+    {
+      title: 'Escolha o jogo',
+      body: "Na aba Chat, digite os times (ex.: 'Flamengo x Palmeiras'). No Ao Vivo, escolha um jogo da lista.",
+    },
+    {
+      title: 'Gere a análise',
+      body: 'A IA estuda forma, histórico, lesões e estatísticas em segundos. Cada análise consome 1 crédito.',
+    },
+    {
+      title: 'Aposte na Esportiva Bet',
+      body: 'Com a análise em mãos, abra direto o evento na Esportiva Bet pra montar sua aposta.',
+    },
+  ];
+
+  const tabs = [
+    {
+      icon: <ChatIcon />,
+      label: 'Chat',
+      body: 'Pra qualquer jogo dos próximos 15 dias. Você escolhe o que analisar.',
+    },
+    {
+      icon: <RadioIcon />,
+      label: 'Ao Vivo',
+      body: 'Pra partidas rolando agora. Análise atualizada com o que tá acontecendo no jogo.',
+    },
+  ];
+
+  const credits = [
+    {
+      icon: <CalendarIcon />,
+      title: 'Cota semanal',
+      body: 'Você recebe créditos toda semana de acordo com seu plano. Reset toda segunda.',
+      price: 'Grátis',
+    },
+    {
+      icon: <PackageIcon />,
+      title: 'Pacotes extras',
+      body: 'Comprou? Vira saldo permanente. Use quando quiser, não expira.',
+      price: 'A partir de R$ 29,90',
+    },
+    {
+      icon: <InfinityIcon />,
+      title: 'Acesso ilimitado',
+      body: 'Análises sem contar créditos por 1 ou 3 meses. Pra quem usa muito.',
+      price: 'A partir de R$ 89,90',
+    },
+  ];
+
+  const tips = [
+    {
+      icon: <ThumbsUpIcon />,
+      title: 'Use os feedbacks 👍 👎',
+      body: 'Eles ajudam a IA a aprender o que funciona pra você. Análise ruim? Polegar pra baixo + reporte.',
+    },
+    {
+      icon: <RefreshIcon />,
+      title: 'Repita análises do mesmo jogo',
+      body: 'Próximo ao apito, dados mudam (escalações, lesões). Vale gerar de novo se mudou contexto.',
+    },
+    {
+      icon: <ExternalLinkIcon />,
+      title: 'Abra direto na Esportiva Bet',
+      body: "O botão 'Abrir Esportiva Bet' já te leva no evento certo do jogo analisado. Sem cliques extras.",
+    },
+  ];
+
+  return (
+    <div className="tst-guide">
+      <header className="tst-guide__hero">
+        <span className="tst-guide__badge" aria-hidden="true">
+          <SparkSmall />
+        </span>
+        <h2>Como usar a IA Tipster</h2>
+        <p>
+          Análises inteligentes de futebol em segundos, baseadas em dados reais.
+          Aqui vai um guia rápido pra você tirar o máximo.
+        </p>
+      </header>
+
+      <section className="tst-guide__block">
+        <h3 className="tst-guide__eyebrow">
+          <SparkSmall /> Em 3 passos
+        </h3>
+        <ol className="tst-guide__steps">
+          {steps.map((s, i) => (
+            <li key={s.title} className="tst-step">
+              <span className="tst-step__num">{i + 1}</span>
+              <div>
+                <p className="tst-step__title">{s.title}</p>
+                <p className="tst-step__body">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="tst-guide__block">
+        <h3 className="tst-guide__eyebrow">
+          <RadioIcon /> Quando usar cada aba
+        </h3>
+        <div className="tst-guide__cols">
+          {tabs.map((t) => (
+            <div key={t.label} className="tst-usecard">
+              <span className="tst-usecard__icon">{t.icon}</span>
+              <p className="tst-usecard__label">{t.label}</p>
+              <p className="tst-usecard__body">{t.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="tst-guide__block">
+        <h3 className="tst-guide__eyebrow">
+          <CoinsIcon /> Como funcionam os créditos
+        </h3>
+        <ul className="tst-guide__rows">
+          {credits.map((c) => (
+            <li key={c.title} className="tst-row">
+              <span className="tst-row__icon">{c.icon}</span>
+              <div className="tst-row__text">
+                <p className="tst-row__title">{c.title}</p>
+                <p className="tst-row__body">{c.body}</p>
+              </div>
+              <span className="tst-row__price">{c.price}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="tst-guide__block">
+        <h3 className="tst-guide__eyebrow">
+          <SparkSmall /> Dicas avançadas
+        </h3>
+        <ul className="tst-guide__rows">
+          {tips.map((t) => (
+            <li key={t.title} className="tst-row">
+              <span className="tst-row__icon">{t.icon}</span>
+              <div className="tst-row__text">
+                <p className="tst-row__title">{t.title}</p>
+                <p className="tst-row__body">{t.body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p className="tst-guide__note">
+        <CheckIcon /> A IA Tipster é uma ferramenta de orientação baseada em
+        dados estatísticos. Use como apoio à sua análise — nenhuma análise é
+        garantia de resultado. Jogue com responsabilidade.
+      </p>
+    </div>
   );
 }
 
@@ -183,5 +332,74 @@ function BookIcon() {
       <path d="M12 7v14" />
       <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
     </svg>
+  );
+}
+function Svg({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+function CalendarIcon() {
+  return (
+    <Svg>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </Svg>
+  );
+}
+function PackageIcon() {
+  return (
+    <Svg>
+      <path d="M16.5 9.4 7.5 4.21M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" />
+    </Svg>
+  );
+}
+function InfinityIcon() {
+  return (
+    <Svg>
+      <path d="M12 12c-2-2.67-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.33-6 4Z" />
+    </Svg>
+  );
+}
+function ThumbsUpIcon() {
+  return (
+    <Svg>
+      <path d="M7 10v12M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z" />
+    </Svg>
+  );
+}
+function RefreshIcon() {
+  return (
+    <Svg>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5" />
+    </Svg>
+  );
+}
+function ExternalLinkIcon() {
+  return (
+    <Svg>
+      <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </Svg>
+  );
+}
+function CheckIcon() {
+  return (
+    <Svg>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </Svg>
   );
 }

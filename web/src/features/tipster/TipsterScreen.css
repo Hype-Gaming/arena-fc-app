@@ -396,6 +396,243 @@
   line-height: 1.5;
 }
 
+/* ---- tutorial guide (Como usar a IA Tipster) ---- */
+.tst-guide {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 2px 24px;
+}
+
+.tst-guide__hero {
+  text-align: center;
+  padding: 12px 8px 8px;
+}
+.tst-guide__badge {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--tst-gold);
+  background: rgba(224, 179, 65, 0.12);
+  border: 1px solid rgba(224, 179, 65, 0.3);
+  margin-bottom: 12px;
+}
+.tst-guide__badge svg {
+  width: 20px;
+  height: 20px;
+}
+.tst-guide__hero h2 {
+  margin: 0 0 8px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.01em;
+  color: #fff;
+}
+.tst-guide__hero p {
+  margin: 0 auto;
+  max-width: 380px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--tst-muted);
+}
+
+.tst-guide__block {
+  margin-top: 24px;
+}
+.tst-guide__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tst-gold-soft);
+}
+.tst-guide__eyebrow svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* 3 passos */
+.tst-guide__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tst-step {
+  display: flex;
+  gap: 12px;
+  background: var(--tst-card);
+  border: 1px solid var(--tst-line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.tst-step__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--tst-gold);
+  background: rgba(224, 179, 65, 0.12);
+  border: 1px solid rgba(224, 179, 65, 0.35);
+}
+.tst-step__title {
+  margin: 2px 0 4px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+.tst-step__body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tst-muted);
+}
+
+/* quando usar cada aba */
+.tst-guide__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tst-usecard {
+  background: var(--tst-card);
+  border: 1px solid var(--tst-line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.tst-usecard__icon {
+  display: inline-grid;
+  place-items: center;
+  color: var(--tst-gold);
+  margin-bottom: 8px;
+}
+.tst-usecard__icon svg {
+  width: 16px;
+  height: 16px;
+}
+.tst-usecard__label {
+  margin: 0 0 5px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.tst-usecard__body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tst-muted);
+}
+
+/* credit / tip rows */
+.tst-guide__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tst-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--tst-card);
+  border: 1px solid var(--tst-line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.tst-row__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--tst-gold);
+  margin-top: 1px;
+}
+.tst-row__icon svg {
+  width: 17px;
+  height: 17px;
+}
+.tst-row__text {
+  flex: 1;
+  min-width: 0;
+}
+.tst-row__title {
+  margin: 0 0 4px;
+  font-family: var(--tst-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.tst-row__body {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--tst-muted);
+}
+.tst-row__price {
+  flex: none;
+  align-self: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--tst-gold-soft);
+  white-space: nowrap;
+}
+
+/* disclaimer */
+.tst-guide__note {
+  display: flex;
+  gap: 9px;
+  margin: 24px 0 0;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--tst-line);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tst-muted);
+}
+.tst-guide__note svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: var(--tst-gold);
+}
+
+@media (max-width: 380px) {
+  .tst-guide__cols {
+    grid-template-columns: 1fr;
+  }
+  .tst-row {
+    flex-wrap: wrap;
+  }
+  .tst-row__price {
+    width: 100%;
+    text-align: left;
+    padding-left: 29px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tst-tab,
   .tst-suggest__item,
