@@ -27,6 +27,9 @@ export interface LiveMatch {
   oddDraw: number | null;
   oddAway: number | null;
   deepLink: string;
+  /** Licensed crest URLs when a logo source is wired; absent → initials badge. */
+  homeLogo?: string | null;
+  awayLogo?: string | null;
 }
 
 function authHeaders(): Record<string, string> {

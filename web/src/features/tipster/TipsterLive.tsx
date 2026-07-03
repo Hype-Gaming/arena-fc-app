@@ -67,11 +67,16 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
       <div className="tst-live">
         <div className="tst-live__result">
           <div className="tst-live__rhead">
-            <span className="tst-live__min">
-              <LiveDot /> {m.minute || m.statusText}
+            <span className="tst-live__badge">
+              <LiveDot /> AO VIVO
+              {m.minute && <i> · {m.minute}</i>}
             </span>
             <span className="tst-live__rteams">
-              {m.homeTeam} {m.homeScore}–{m.awayScore} {m.awayTeam}
+              <Crest name={m.homeTeam} logo={m.homeLogo} /> {m.homeTeam}{' '}
+              <b>
+                {m.homeScore}–{m.awayScore}
+              </b>{' '}
+              {m.awayTeam} <Crest name={m.awayTeam} logo={m.awayLogo} />
             </span>
           </div>
           <p className="tst-line tst-line--assistant tst-live__analysis">
@@ -93,15 +98,17 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
     <div className="tst-live">
       <div className="tst-live__bar">
         <span className="tst-live__count">
-          {loading ? 'Buscando…' : `${list.length} ao vivo`}
+          {loading ? 'Buscando…' : `${list.length} jogos ao vivo`}
         </span>
         <button
           type="button"
           className="tst-live__refresh"
           onClick={refresh}
           disabled={loading}
+          aria-label="Atualizar"
+          title="Atualizar"
         >
-          <RefreshIcon /> Atualizar
+          <RefreshIcon />
         </button>
       </div>
 
@@ -128,35 +135,80 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
       ) : (
         <ul className="tst-live__list">
           {list.map((m) => (
-            <li key={m.externalId} className="tst-live__item">
-              <div className="tst-live__head">
-                <span className="tst-live__comp">{m.competition ?? 'Ao vivo'}</span>
-                <span className="tst-live__min">
-                  <LiveDot /> {m.minute || m.statusText}
-                </span>
-              </div>
-              <div className="tst-live__teams">
-                <span className="tst-live__team">{m.homeTeam}</span>
-                <span className="tst-live__score">
-                  {m.homeScore} <i>–</i> {m.awayScore}
-                </span>
-                <span className="tst-live__team tst-live__team--away">
-                  {m.awayTeam}
-                </span>
-              </div>
+            <li key={m.externalId}>
               <button
                 type="button"
-                className="tst-live__btn"
+                className="tst-live__card"
                 onClick={() => onAnalyze(m)}
                 disabled={busyId === m.externalId}
+                aria-label={`Analisar ${m.homeTeam} x ${m.awayTeam} ao vivo`}
               >
-                {busyId === m.externalId ? 'Analisando…' : 'Analisar ao vivo'}
+                <div className="tst-live__top">
+                  <span className="tst-live__comp">
+                    {m.competition ?? 'Ao vivo'}
+                  </span>
+                  <span className="tst-live__badge">
+                    <LiveDot /> AO VIVO
+                    <i> · {m.minute || m.statusText}</i>
+                  </span>
+                </div>
+
+                <div className="tst-live__row">
+                  <div className="tst-live__side">
+                    <Crest name={m.homeTeam} logo={m.homeLogo} />
+                    <span className="tst-live__name">{m.homeTeam}</span>
+                  </div>
+                  <span className="tst-live__score">
+                    {m.homeScore} <i>–</i> {m.awayScore}
+                  </span>
+                  <div className="tst-live__side tst-live__side--away">
+                    <span className="tst-live__name">{m.awayTeam}</span>
+                    <Crest name={m.awayTeam} logo={m.awayLogo} />
+                  </div>
+                </div>
+
+                <span className="tst-live__hint">
+                  {busyId === m.externalId ? 'Analisando…' : 'Toque para análise IA'}
+                </span>
               </button>
             </li>
           ))}
         </ul>
       )}
     </div>
+  );
+}
+
+/* ---- crest: licensed logo when present, else a coloured initials badge ---- */
+const CREST_COLORS = [
+  '#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400',
+  '#16a085', '#2c3e50', '#c0932b', '#0b6f37', '#a93226',
+];
+function crestCode(name: string): string {
+  const clean = name.replace(/[^\p{L}\p{N}]/gu, '');
+  return clean.slice(0, 3).toUpperCase() || '?';
+}
+function crestColor(name: string): string {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
+  return CREST_COLORS[h % CREST_COLORS.length];
+}
+function Crest({ name, logo }: { name: string; logo?: string | null }) {
+  if (logo) {
+    return (
+      <span className="tst-crest tst-crest--img" aria-hidden="true">
+        <img src={logo} alt="" loading="lazy" />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="tst-crest"
+      style={{ ['--c' as string]: crestColor(name) }}
+      aria-hidden="true"
+    >
+      {crestCode(name)}
+    </span>
   );
 }
 
@@ -167,8 +219,8 @@ function LiveDot() {
 function RefreshIcon() {
   return (
     <svg
-      width="13"
-      height="13"
+      width="15"
+      height="15"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

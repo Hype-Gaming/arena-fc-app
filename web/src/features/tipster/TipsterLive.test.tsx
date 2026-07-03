@@ -28,8 +28,9 @@ describe('TipsterLive', () => {
     render(<TipsterLive matches={[match]} />);
     expect(screen.getByText('Bayern')).toBeInTheDocument();
     expect(screen.getByText('Werder')).toBeInTheDocument();
-    expect(screen.getByText("30'")).toBeInTheDocument();
-    expect(screen.getByText('1 ao vivo')).toBeInTheDocument();
+    expect(screen.getByText(/30'/)).toBeInTheDocument();
+    expect(screen.getByText('1 jogos ao vivo')).toBeInTheDocument();
+    expect(screen.getByText(/toque para análise ia/i)).toBeInTheDocument();
   });
 
   it('analyzes a live match and shows the AI analysis, updating the balance', async () => {
@@ -42,7 +43,7 @@ describe('TipsterLive', () => {
     const onBalance = vi.fn();
 
     render(<TipsterLive matches={[match]} onBalance={onBalance} />);
-    fireEvent.click(screen.getByRole('button', { name: /analisar ao vivo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /analisar bayern x werder/i }));
 
     await waitFor(() => expect(spy).toHaveBeenCalledWith('x1'));
     expect(await screen.findByText(/ENTRADA PRINCIPAL/)).toBeInTheDocument();
@@ -56,7 +57,7 @@ describe('TipsterLive', () => {
     const onBuyCredits = vi.fn();
 
     render(<TipsterLive matches={[match]} onBuyCredits={onBuyCredits} />);
-    fireEvent.click(screen.getByRole('button', { name: /analisar ao vivo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /analisar bayern x werder/i }));
 
     expect(await screen.findByText(/sem créditos/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /comprar créditos/i }));
