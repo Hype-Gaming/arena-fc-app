@@ -16,7 +16,11 @@ const EVENT: NormalizedEvent = {
 };
 
 function makeProvider(events: NormalizedEvent[]): SportsFeedProvider {
-  return { name: 'altenar', fetchUpcoming: jest.fn().mockResolvedValue(events) };
+  return {
+    name: 'altenar',
+    fetchUpcoming: jest.fn().mockResolvedValue(events),
+    fetchLive: jest.fn().mockResolvedValue([]),
+  };
 }
 
 function makePrisma() {
@@ -46,6 +50,21 @@ describe('SportsFeedService.sync', () => {
       oddHome: 1.9,
       deepLink: 'https://esportiva.bet.br/e/16027580',
     });
+  });
+});
+
+describe('SportsFeedService.fetchLive', () => {
+  it('delegates to the provider (live is ephemeral, never cached)', async () => {
+    const prisma = makePrisma();
+    const provider = makeProvider([]);
+    (provider.fetchLive as jest.Mock).mockResolvedValue([{ externalId: 'l1' }]);
+    const svc = new SportsFeedService(prisma, provider);
+
+    const live = await svc.fetchLive();
+
+    expect(provider.fetchLive).toHaveBeenCalled();
+    expect(prisma.sportEvent.findMany).not.toHaveBeenCalled();
+    expect(live).toEqual([{ externalId: 'l1' }]);
   });
 });
 

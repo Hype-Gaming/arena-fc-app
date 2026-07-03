@@ -4,6 +4,7 @@ import { TipsterService } from './tipster.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { InsufficientCreditsError } from '../credits/errors';
+import { SportsFeedService } from '../sports-feed/sports-feed.service';
 import { AI_ANALYSIS_PROVIDER } from './ai/ai-analysis.types';
 import { MockAnalysisProvider } from './ai/mock.provider';
 
@@ -18,6 +19,7 @@ const prismaMock = {
 };
 
 const creditsMock = { applyTransaction: jest.fn(), getBalance: jest.fn() };
+const sportsFeedMock = { fetchLive: jest.fn() };
 // Real deterministic provider so message assertions match the shipped output;
 // spied so we can assert it is NOT called on the pre-check short-circuit.
 const aiProvider = new MockAnalysisProvider();
@@ -32,6 +34,7 @@ describe('TipsterService.searchMatches', () => {
         TipsterService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: CreditsService, useValue: creditsMock },
+        { provide: SportsFeedService, useValue: sportsFeedMock },
         { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
       ],
     }).compile();
@@ -85,6 +88,7 @@ describe('TipsterService.analyze', () => {
         TipsterService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: CreditsService, useValue: creditsMock },
+        { provide: SportsFeedService, useValue: sportsFeedMock },
         { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
       ],
     }).compile();
@@ -98,6 +102,7 @@ describe('TipsterService.analyze', () => {
     // Default: affordable balance and no unlimited pass → normal debit path.
     creditsMock.getBalance.mockResolvedValue(100);
     prismaMock.user.findUnique.mockResolvedValue({ iaUnlimitedUntil: null });
+    sportsFeedMock.fetchLive.mockResolvedValue([]);
   });
 
   it('throws NotFound when the match does not exist', async () => {
@@ -193,5 +198,100 @@ describe('TipsterService.analyze', () => {
     expect(prismaMock.chatMessage.create).not.toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ role: 'assistant' }) }),
     );
+  });
+});
+
+describe('TipsterService.analyzeLive', () => {
+  let service: TipsterService;
+
+  const liveEvent = {
+    externalId: 'x1',
+    homeTeam: 'Bayern',
+    awayTeam: 'Werder',
+    competition: 'Bundesliga',
+    startsAt: new Date(),
+    oddHome: 1.5,
+    oddDraw: 3.4,
+    oddAway: 6.0,
+    deepLink: 'https://x/x1',
+    minute: "30'",
+    homeScore: 1,
+    awayScore: 0,
+    statusText: '2ª parte',
+  };
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        TipsterService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: CreditsService, useValue: creditsMock },
+        { provide: SportsFeedService, useValue: sportsFeedMock },
+        { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
+      ],
+    }).compile();
+    service = moduleRef.get(TipsterService);
+
+    prismaMock.$transaction.mockImplementation(async (cb: any) => cb(prismaMock));
+    prismaMock.chatSession.create.mockResolvedValue({ id: 's9', userId: 'u1' });
+    prismaMock.chatMessage.create.mockResolvedValue({ id: 'msg' });
+    creditsMock.applyTransaction.mockResolvedValue({ id: 'ct', balanceAfter: 5 });
+    creditsMock.getBalance.mockResolvedValue(100);
+    prismaMock.user.findUnique.mockResolvedValue({ iaUnlimitedUntil: null });
+  });
+
+  it('analyzes the picked live match, debits the flat cost, entradaId null', async () => {
+    sportsFeedMock.fetchLive.mockResolvedValue([liveEvent]);
+
+    const result = await service.analyzeLive('u1', 'x1');
+
+    expect(creditsMock.applyTransaction).toHaveBeenCalledWith(
+      {
+        userId: 'u1',
+        type: 'unlock',
+        amount: -1, // LIVE_ANALYSIS_COST
+        refType: 'tipster_live',
+        refId: 'x1',
+      },
+      prismaMock,
+    );
+    const assistantCall = prismaMock.chatMessage.create.mock.calls.find(
+      ([arg]: any[]) => arg.data.role === 'assistant',
+    );
+    expect(assistantCall[0].data.entradaId).toBeNull();
+    expect(result).toMatchObject({ entradaId: null, balanceAfter: 5 });
+    expect(result.message).toContain('Bayern x Werder');
+  });
+
+  it('throws NotFound when the live match is no longer in the feed', async () => {
+    sportsFeedMock.fetchLive.mockResolvedValue([liveEvent]);
+    await expect(service.analyzeLive('u1', 'gone')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFound when every 1X2 leg is suspended (no candidates)', async () => {
+    sportsFeedMock.fetchLive.mockResolvedValue([
+      { ...liveEvent, oddHome: null, oddDraw: null, oddAway: null },
+    ]);
+    await expect(service.analyzeLive('u1', 'x1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
+  });
+
+  it('is free under an active unlimited pass (no debit)', async () => {
+    sportsFeedMock.fetchLive.mockResolvedValue([liveEvent]);
+    prismaMock.user.findUnique.mockResolvedValue({
+      iaUnlimitedUntil: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+    });
+    prismaMock.creditTransaction.findFirst.mockResolvedValue({ balanceAfter: 9 });
+
+    const result = await service.analyzeLive('u1', 'x1');
+
+    expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
+    expect(result.balanceAfter).toBe(9);
   });
 });

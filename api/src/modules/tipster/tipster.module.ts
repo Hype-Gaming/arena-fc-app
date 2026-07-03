@@ -4,12 +4,13 @@ import { TipsterService } from './tipster.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { CreditsModule } from '../credits/credits.module';
 import { AuthModule } from '../auth/auth.module';
+import { SportsFeedModule } from '../sports-feed/sports-feed.module';
 import { AI_ANALYSIS_PROVIDER } from './ai/ai-analysis.types';
 import { MockAnalysisProvider } from './ai/mock.provider';
 import { DeepSeekAnalysisProvider } from './ai/deepseek.provider';
 
 @Module({
-  imports: [PrismaModule, CreditsModule, AuthModule],
+  imports: [PrismaModule, CreditsModule, AuthModule, SportsFeedModule],
   controllers: [TipsterController],
   providers: [
     TipsterService,

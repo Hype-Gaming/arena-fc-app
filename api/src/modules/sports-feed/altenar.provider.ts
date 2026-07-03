@@ -1,7 +1,15 @@
 // api/src/modules/sports-feed/altenar.provider.ts
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { NormalizedEvent, SportsFeedProvider } from './sports-feed.types';
-import { AltenarRaw, normalizeAltenar } from './altenar.normalize';
+import {
+  NormalizedEvent,
+  NormalizedLiveEvent,
+  SportsFeedProvider,
+} from './sports-feed.types';
+import {
+  AltenarRaw,
+  normalizeAltenar,
+  normalizeAltenarLive,
+} from './altenar.normalize';
 
 const SOCCER_SPORT_ID = 66;
 
@@ -36,7 +44,10 @@ export class AltenarFeedProvider implements SportsFeedProvider {
   private deepLink = (eventId: number): string =>
     this.deepLinkTemplate().replace('{id}', String(eventId));
 
-  async fetchUpcoming(): Promise<NormalizedEvent[]> {
+  private async fetchRaw(
+    path: string,
+    extra: Record<string, string> = {},
+  ): Promise<AltenarRaw> {
     const params = new URLSearchParams({
       culture: 'pt-BR',
       timezoneOffset: '180',
@@ -45,25 +56,33 @@ export class AltenarFeedProvider implements SportsFeedProvider {
       numFormat: 'en-GB',
       countryCode: 'BR',
       sportId: String(SOCCER_SPORT_ID),
-      period: '0',
-      categoryIds: '',
-      championshipIds: '',
+      ...extra,
     });
-
-    let raw: AltenarRaw;
     try {
-      const res = await fetch(`${this.base()}/GetEvents?${params.toString()}`, {
+      const res = await fetch(`${this.base()}/${path}?${params.toString()}`, {
         headers: { Referer: 'https://esportiva.bet.br/' },
       });
       if (!res.ok) {
         throw new BadGatewayException(`Altenar feed returned ${res.status}`);
       }
-      raw = (await res.json()) as AltenarRaw;
+      return (await res.json()) as AltenarRaw;
     } catch (err) {
       if (err instanceof BadGatewayException) throw err;
       throw new BadGatewayException('Could not reach the sportsbook feed');
     }
+  }
 
+  async fetchUpcoming(): Promise<NormalizedEvent[]> {
+    const raw = await this.fetchRaw('GetEvents', {
+      period: '0',
+      categoryIds: '',
+      championshipIds: '',
+    });
     return normalizeAltenar(raw, this.deepLink);
+  }
+
+  async fetchLive(): Promise<NormalizedLiveEvent[]> {
+    const raw = await this.fetchRaw('GetLiveEvents');
+    return normalizeAltenarLive(raw, this.deepLink);
   }
 }

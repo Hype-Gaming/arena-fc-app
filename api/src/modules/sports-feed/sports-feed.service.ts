@@ -21,6 +21,11 @@ export class SportsFeedService {
     private readonly provider: SportsFeedProvider,
   ) {}
 
+  /** Live (in-play) matches straight from the provider — ephemeral, not cached. */
+  fetchLive() {
+    return this.provider.fetchLive();
+  }
+
   /** Cached fixtures for the admin picker (soonest first, optional name filter). */
   list(q?: string) {
     return this.prisma.sportEvent.findMany({

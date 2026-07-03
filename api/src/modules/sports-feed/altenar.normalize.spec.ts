@@ -1,5 +1,9 @@
 // api/src/modules/sports-feed/altenar.normalize.spec.ts
-import { normalizeAltenar, AltenarRaw } from './altenar.normalize';
+import {
+  normalizeAltenar,
+  normalizeAltenarLive,
+  AltenarRaw,
+} from './altenar.normalize';
 
 const NOW = new Date('2026-07-10T00:00:00Z');
 const link = (id: number) => `https://esportiva.bet.br/e/${id}`;
@@ -103,5 +107,87 @@ describe('normalizeAltenar', () => {
 
   it('returns [] for an empty payload', () => {
     expect(normalizeAltenar({}, link, NOW)).toEqual([]);
+  });
+});
+
+// Mirrors the live shape confirmed against Altenar's GetLiveEvents.
+function liveSample(): AltenarRaw {
+  return {
+    events: [
+      {
+        id: 16946643,
+        name: 'Caac Brasil FC RJ vs. Barcelona EC RJ',
+        startDate: '2026-07-03T17:18:00Z',
+        status: 1,
+        liveTime: "25'",
+        ls: '1ª parte',
+        score: [1, 0],
+        competitorIds: [144935, 115736],
+        marketIds: [1631242256],
+        champId: 8461,
+        catId: 1,
+      },
+    ],
+    competitors: [
+      { id: 144935, name: 'Caac Brasil FC RJ' },
+      { id: 115736, name: 'Barcelona EC RJ' },
+    ],
+    markets: [
+      { id: 1631242256, typeId: 1, name: 'Vencedor do encontro', oddIds: [1, 2, 3] },
+    ],
+    odds: [
+      { id: 1, price: 1.8, name: 'Caac Brasil FC RJ', competitorId: 144935 },
+      { id: 2, price: 3.2, name: 'Empate' },
+      { id: 3, price: 4.5, name: 'Barcelona EC RJ', competitorId: 115736 },
+    ],
+    champs: [{ id: 8461, name: 'Carioca, Série C' }],
+  };
+}
+
+describe('normalizeAltenarLive', () => {
+  it('maps a live event with score, minute, status and 1X2 odds', () => {
+    const [ev] = normalizeAltenarLive(liveSample(), link);
+    expect(ev).toEqual({
+      externalId: '16946643',
+      homeTeam: 'Caac Brasil FC RJ',
+      awayTeam: 'Barcelona EC RJ',
+      competition: 'Carioca, Série C',
+      startsAt: new Date('2026-07-03T17:18:00Z'),
+      oddHome: 1.8,
+      oddDraw: 3.2,
+      oddAway: 4.5,
+      deepLink: 'https://esportiva.bet.br/e/16946643',
+      minute: "25'",
+      homeScore: 1,
+      awayScore: 0,
+      statusText: '1ª parte',
+    });
+  });
+
+  it('treats suspended (price 0) legs as null and defaults missing labels', () => {
+    const raw = liveSample();
+    raw.odds = [
+      { id: 1, price: 0, name: 'Caac Brasil FC RJ', competitorId: 144935 },
+      { id: 2, price: 0, name: 'Empate' },
+      { id: 3, price: 0, name: 'Barcelona EC RJ', competitorId: 115736 },
+    ];
+    raw.events![0].ls = '';
+    raw.events![0].liveTime = undefined;
+    const [ev] = normalizeAltenarLive(raw, link);
+    expect(ev.oddHome).toBeNull();
+    expect(ev.oddDraw).toBeNull();
+    expect(ev.oddAway).toBeNull();
+    expect(ev.statusText).toBe('Ao vivo');
+    expect(ev.minute).toBe('');
+  });
+
+  it('keeps every in-play event regardless of status/start (no prematch filter)', () => {
+    const raw = liveSample();
+    raw.events!.push({ ...raw.events![0], id: 2, score: [2, 2] });
+    expect(normalizeAltenarLive(raw, link)).toHaveLength(2);
+  });
+
+  it('returns [] for an empty payload', () => {
+    expect(normalizeAltenarLive({}, link)).toEqual([]);
   });
 });

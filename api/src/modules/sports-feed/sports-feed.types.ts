@@ -16,6 +16,16 @@ export interface NormalizedEvent {
   deepLink: string;
 }
 
+/** A live (in-play) fixture: the fixture plus its current state. */
+export interface NormalizedLiveEvent extends NormalizedEvent {
+  /** Elapsed-time label as the book shows it, e.g. "25'". */
+  minute: string;
+  homeScore: number;
+  awayScore: number;
+  /** Human status label, e.g. "1ª parte" / "Intervalo". */
+  statusText: string;
+}
+
 /**
  * A sportsbook fixtures+odds source. Altenar/Esportiva today; the official
  * Esportiva endpoint later — swap the binding in SportsFeedModule, nothing
@@ -26,6 +36,8 @@ export interface SportsFeedProvider {
   readonly name: string;
   /** Upcoming prematch soccer events with 1X2 odds and deep links. */
   fetchUpcoming(): Promise<NormalizedEvent[]>;
+  /** Soccer matches in play right now, with score/minute and 1X2 odds. */
+  fetchLive(): Promise<NormalizedLiveEvent[]>;
 }
 
 export const SPORTS_FEED_PROVIDER = Symbol('SPORTS_FEED_PROVIDER');

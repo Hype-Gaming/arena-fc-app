@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { TipsterService } from './tipster.service';
 import { MatchSearchQueryDto } from './dto/match-search-query.dto';
 import { AnalyzeDto } from './dto/analyze.dto';
+import { AnalyzeLiveDto } from './dto/analyze-live.dto';
 
 @Controller('tipster')
 @UseGuards(JwtAuthGuard)
@@ -19,5 +20,19 @@ export class TipsterController {
   @Post('analyze')
   async analyze(@CurrentUser() user: AuthUser, @Body() body: AnalyzeDto) {
     return this.tipster.analyze(user.userId, body.matchId);
+  }
+
+  @Get('live')
+  async live() {
+    const matches = await this.tipster.liveMatches();
+    return { matches };
+  }
+
+  @Post('analyze-live')
+  async analyzeLive(
+    @CurrentUser() user: AuthUser,
+    @Body() body: AnalyzeLiveDto,
+  ) {
+    return this.tipster.analyzeLive(user.userId, body.externalId);
   }
 }

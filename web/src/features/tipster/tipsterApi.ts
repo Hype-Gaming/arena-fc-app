@@ -10,8 +10,23 @@ export interface TipsterMatch {
 export interface AnalyzeResponse {
   sessionId: string;
   message: string;
-  entradaId: string;
+  entradaId: string | null;
   balanceAfter: number;
+}
+
+export interface LiveMatch {
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  minute: string;
+  homeScore: number;
+  awayScore: number;
+  statusText: string;
+  oddHome: number | null;
+  oddDraw: number | null;
+  oddAway: number | null;
+  deepLink: string;
 }
 
 function authHeaders(): Record<string, string> {
@@ -74,6 +89,25 @@ export async function analyzeMatch(matchId: string): Promise<AnalyzeResponse> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ matchId }),
+  });
+  return unwrap<AnalyzeResponse>(res);
+}
+
+/** Matches in play right now (from the sportsbook feed). */
+export async function liveMatches(): Promise<LiveMatch[]> {
+  const res = await fetch('/api/tipster/live', {
+    method: 'GET',
+    headers: { ...authHeaders() },
+  });
+  const body = await unwrap<{ matches: LiveMatch[] }>(res);
+  return body.matches;
+}
+
+export async function analyzeLive(externalId: string): Promise<AnalyzeResponse> {
+  const res = await fetch('/api/tipster/analyze-live', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ externalId }),
   });
   return unwrap<AnalyzeResponse>(res);
 }

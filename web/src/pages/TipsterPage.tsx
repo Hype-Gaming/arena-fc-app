@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { ApiClient } from '../lib/apiClient';
 import { TipsterChat } from '../features/tipster/TipsterChat';
+import { TipsterLive } from '../features/tipster/TipsterLive';
 import { BuyCreditsModal } from '../features/tipster/BuyCreditsModal';
 import '../features/tipster/TipsterScreen.css';
 
@@ -95,11 +96,10 @@ export function TipsterPage({ api }: { api: ApiClient }) {
         />
       )}
       {tab === 'aovivo' && (
-        <div className="tst-placeholder">
-          <RadioIcon />
-          <p>Nenhuma partida ao vivo agora.</p>
-          <span>As análises ao vivo aparecem aqui durante os jogos.</span>
-        </div>
+        <TipsterLive
+          onBuyCredits={() => setBuyOpen(true)}
+          onBalance={(b) => setCredits(b)}
+        />
       )}
       {tab === 'tutorial' && <TutorialGuide />}
 
