@@ -22,28 +22,28 @@ export interface CreditPack {
 export const CREDIT_PACKS: CreditPack[] = [
   {
     id: 'premier-6-creditos-ia',
-    name: 'Premier 6 Creditos IA',
+    name: 'Arena 6 Creditos IA',
     sub: '6 créditos',
     priceLabel: 'R$ 29,90',
     kind: 'credits',
   },
   {
     id: 'premier-9-creditos-ia',
-    name: 'Premier 9 Creditos IA',
+    name: 'Arena 9 Creditos IA',
     sub: '9 créditos',
     priceLabel: 'R$ 39,90',
     kind: 'credits',
   },
   {
     id: 'premier-ilimitado-1-mes',
-    name: 'Premier Crédito IA ilimitado por 1 mês',
+    name: 'Arena Crédito IA ilimitado por 1 mês',
     sub: '30 dias ilimitados',
     priceLabel: 'R$ 99,00',
     kind: 'unlimited',
   },
   {
     id: 'premier-ilimitado-3-meses',
-    name: 'Premier Crédito IA ilimitado por 3 meses',
+    name: 'Arena Crédito IA ilimitado por 3 meses',
     sub: '90 dias ilimitados',
     priceLabel: 'R$ 149,90',
     kind: 'unlimited',

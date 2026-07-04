@@ -11,7 +11,7 @@
   /* canonical design tokens */
   --color-bg: #0a0e1a;
   --color-surface: #131a2b;
-  --color-gold: #d4af37;
+  --color-accent: #8ce60a; /* Arena neon green */
   --color-green: #1db954;
   --color-text: #f5f5f5;
   --color-muted: #8a93a6;
@@ -35,7 +35,7 @@ body {
    the sticky top bar / composer. */
 .app-shell { min-height: 100vh; display: flex; flex-direction: column; overflow-x: clip; }
 .app-content { flex: 1; min-width: 0; padding: 16px 16px 80px; }
-.page h1 { color: var(--color-gold); }
+.page h1 { color: var(--color-accent); }
 .sportsbook-frame {
   display: block;
   width: 100%;
@@ -54,7 +54,7 @@ body {
 .nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   min-width: 76px;
-  color: #eac064; opacity: 0.62;
+  color: #a6ee42; opacity: 0.62;
   text-decoration: none;
   font-family: 'Barlow Condensed', sans-serif;
   font-weight: 700; font-size: 11px; letter-spacing: 0.06em;
@@ -63,7 +63,7 @@ body {
 .nav-item svg { display: block; }
 .nav-item:hover { opacity: 0.85; }
 .nav-item--active { opacity: 1; }
-.nav-item--active svg { filter: drop-shadow(0 0 6px rgba(234, 192, 100, 0.55)); }
+.nav-item--active svg { filter: drop-shadow(0 0 6px rgba(166, 238, 66, 0.55)); }
 
 /* cards + CTAs shared by the app screens */
 .card {

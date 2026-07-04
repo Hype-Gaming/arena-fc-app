@@ -186,7 +186,7 @@
   color: #12061f;
 }
 .plan[data-accent='premium'][data-state='upgrade'] .plan__cta {
-  background: linear-gradient(135deg, #f6cd52, #d9a520);
+  background: linear-gradient(135deg, #f6cd52, #5fa30a);
   color: #241a02;
 }
 .plan[data-accent='diamante'][data-state='upgrade'] .plan__cta {

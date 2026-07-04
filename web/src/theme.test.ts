@@ -9,10 +9,10 @@ const css = readFileSync(
 );
 
 describe('theme.css design tokens', () => {
-  it('defines the dark/gold/green palette as CSS variables', () => {
+  it('defines the dark/accent/green palette as CSS variables', () => {
     expect(css).toContain('--color-bg: #0a0e1a');
     expect(css).toContain('--color-surface: #131a2b');
-    expect(css).toContain('--color-gold: #d4af37');
+    expect(css).toContain('--color-accent: #8ce60a'); // Arena neon green
     expect(css).toContain('--color-green: #1db954');
     expect(css).toContain('--radius-card: 16px');
   });

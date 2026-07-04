@@ -3,8 +3,8 @@
   --s-bg: #0a1420;
   --s-card: #0e1c2e;
   --s-line: rgba(255, 255, 255, 0.07);
-  --s-gold: #e0b341;
-  --s-gold-soft: #eac064;
+  --s-gold: #8ce60a;
+  --s-gold-soft: #a6ee42;
   --s-blue: #4f8fe0;
   --s-purple: #a78bfa;
   --s-text: #eef3f8;
@@ -160,8 +160,8 @@
 }
 .spt-card__tier[data-tone='pro'] {
   color: var(--s-gold-soft);
-  border-color: rgba(234, 192, 100, 0.6);
-  background: rgba(234, 192, 100, 0.12);
+  border-color: rgba(166, 238, 66, 0.6);
+  background: rgba(166, 238, 66, 0.12);
 }
 .spt-card__tier[data-tone='ultra'] {
   color: var(--s-purple);
@@ -277,7 +277,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #241a02;
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
 }
 .spt-card__add:hover {
   filter: brightness(1.05);
@@ -325,7 +325,7 @@
 
 .spt-chip:focus-visible,
 .spt-card__add:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 

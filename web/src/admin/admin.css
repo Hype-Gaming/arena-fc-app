@@ -4,8 +4,8 @@
   --ad-card: #101f31;
   --ad-card-2: #0b1826;
   --ad-line: rgba(255, 255, 255, 0.08);
-  --ad-gold: #e0b341;
-  --ad-gold-soft: #eac064;
+  --ad-gold: #8ce60a;
+  --ad-gold-soft: #a6ee42;
   --ad-green: #35d08a;
   --ad-red: #f0616d;
   --ad-blue: #4f8fe0;
@@ -72,7 +72,7 @@
 }
 .admin input:focus,
 .admin select:focus {
-  border-color: rgba(234, 192, 100, 0.6);
+  border-color: rgba(166, 238, 66, 0.6);
 }
 .admin select option {
   background: var(--ad-card-2);
@@ -101,7 +101,7 @@
 .admin .ab-primary {
   border: 0;
   color: #241a02;
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
 }
 .admin button[type='submit']:hover,
 .admin .ab-primary:hover {
@@ -233,7 +233,7 @@
   outline: none;
 }
 .ab-betslip textarea:focus {
-  border-color: rgba(234, 192, 100, 0.6);
+  border-color: rgba(166, 238, 66, 0.6);
 }
 .ab-betslip__actions {
   display: flex;

@@ -13,8 +13,8 @@
 }
 
 .bcm {
-  --bcm-gold: #e0b341;
-  --bcm-gold-soft: #eac064;
+  --bcm-gold: #8ce60a;
+  --bcm-gold-soft: #a6ee42;
   --bcm-card: rgba(255, 255, 255, 0.04);
   --bcm-line: rgba(255, 255, 255, 0.09);
   --bcm-muted: #8092a5;
@@ -47,12 +47,12 @@
   border-radius: 50%;
   cursor: pointer;
   color: var(--bcm-gold);
-  background: rgba(224, 179, 65, 0.08);
-  border: 1px solid rgba(224, 179, 65, 0.4);
+  background: rgba(140, 230, 10, 0.08);
+  border: 1px solid rgba(140, 230, 10, 0.4);
   transition: background 0.15s ease;
 }
 .bcm__close:hover {
-  background: rgba(224, 179, 65, 0.18);
+  background: rgba(140, 230, 10, 0.18);
 }
 
 .bcm__title {
@@ -112,11 +112,11 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .bcm-row:hover {
-  border-color: rgba(234, 192, 100, 0.5);
-  background: rgba(234, 192, 100, 0.06);
+  border-color: rgba(166, 238, 66, 0.5);
+  background: rgba(166, 238, 66, 0.06);
 }
 .bcm-row:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 .bcm-row__text {

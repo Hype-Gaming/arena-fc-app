@@ -26,10 +26,11 @@ export function TopBar() {
           <button
             type="button"
             className="topbar__logo"
-            aria-label="Início"
+            aria-label="Arena FC — Início"
             onClick={() => navigate('/')}
           >
-            <HexBadge />
+            <ArenaBadge />
+            <ArenaWordmark className="topbar__wordmark" />
           </button>
         </div>
         <div className="topbar__right">
@@ -71,30 +72,40 @@ function ArrowLeft() {
     </svg>
   );
 }
-function HexBadge() {
+export function ArenaBadge({ className = 'topbar__hex' }: { className?: string }) {
   return (
-    <svg className="topbar__hex" viewBox="0 0 100 100" aria-hidden="true">
+    <svg className={className} viewBox="0 0 100 100" aria-hidden="true">
       <polygon
         points="26,8 74,8 98,50 74,92 26,92 2,50"
-        fill="#0c1a27"
-        stroke="#e0b341"
-        strokeWidth="6"
+        fill="#ffffff"
+        stroke="#ffffff"
+        strokeWidth="9"
         strokeLinejoin="round"
       />
-      <text
-        x="47"
-        y="53"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="'Barlow Condensed', sans-serif"
-        fontWeight="900"
-        fontSize="52"
-        fill="#e0b341"
+      {/* Stroke-based italic "A" — no font dependency, crisp at any size. */}
+      <g
+        transform="skewX(-8) translate(6 0)"
+        stroke="#18232f"
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
       >
-        P
-      </text>
-      <circle cx="64" cy="37" r="5" fill="#e0b341" />
+        <path d="M50 26 L33 74 M50 26 L67 74" />
+        <path d="M40 58 L60 58" />
+      </g>
     </svg>
+  );
+}
+const HexBadge = ArenaBadge;
+
+/** "ARENA FC" wordmark — neon-green ARENA + white FC, italic. */
+export function ArenaWordmark({ className = '' }: { className?: string }) {
+  return (
+    <span className={`brandmark ${className}`.trim()} aria-label="Arena FC">
+      <span className="brandmark__arena">ARENA</span>
+      <span className="brandmark__fc">FC</span>
+    </span>
   );
 }
 function Sparkles() {

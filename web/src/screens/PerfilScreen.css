@@ -1,7 +1,7 @@
 /* web/src/screens/PerfilScreen.css — Perfil, matched to brand reference */
 .pf-perfil {
   --pf-green: #1fd07a;
-  --pf-gold: #e8b74a;
+  --pf-gold: #8ce60a;
   --pf-card: #101a28;
   --pf-card-2: #0d1521;
   --pf-text: #eef3f8;
@@ -147,8 +147,8 @@
 }
 .ppf-badge--plan {
   color: var(--pf-gold);
-  border-color: rgba(232, 183, 74, 0.5);
-  background: rgba(232, 183, 74, 0.1);
+  border-color: rgba(140, 230, 10, 0.5);
+  background: rgba(140, 230, 10, 0.1);
 }
 .ppf-badge--plan.is-free {
   color: var(--pf-muted);
@@ -184,7 +184,7 @@
 .ppf-xp__fill {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #e8b74a 0%, #1fd07a 100%);
+  background: linear-gradient(90deg, #8ce60a 0%, #1fd07a 100%);
   transition: width 0.5s ease;
 }
 
@@ -204,8 +204,8 @@
   color: #46586c;
 }
 .ppf-ach__item[data-unlocked='true'] {
-  background: rgba(232, 183, 74, 0.14);
-  border-color: rgba(232, 183, 74, 0.6);
+  background: rgba(140, 230, 10, 0.14);
+  border-color: rgba(140, 230, 10, 0.6);
   color: var(--pf-gold);
 }
 .ppf-ach__more {
@@ -249,7 +249,7 @@
   color: #46586c;
 }
 .ppf-ach__row[data-unlocked='true'] .ppf-ach__rowicon {
-  background: rgba(232, 183, 74, 0.14);
+  background: rgba(140, 230, 10, 0.14);
   color: var(--pf-gold);
 }
 .ppf-ach__rowtext {

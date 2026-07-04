@@ -18,7 +18,7 @@ export function AdminPage() {
     <main className="admin">
       <div className="admin__inner">
         <h1>
-          Backoffice <span>Premier FC</span>
+          Backoffice <span>Arena FC</span>
         </h1>
 
         <AdminBilhetes />

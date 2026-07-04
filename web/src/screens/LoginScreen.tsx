@@ -76,53 +76,18 @@ function Sparkles() {
   );
 }
 
-function HexLogo() {
-  return (
-    <svg className="pf-logo" viewBox="0 0 100 100" aria-hidden="true">
-      <polygon
-        points="26,8 74,8 98,50 74,92 26,92 2,50"
-        fill="#0c1a27"
-        stroke="#e0b341"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-      <polygon
-        points="30,14 70,14 90,50 70,86 30,86 10,50"
-        fill="none"
-        stroke="rgba(224,179,65,0.35)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <text
-        x="47"
-        y="53"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="'Barlow Condensed', sans-serif"
-        fontWeight="900"
-        fontSize="52"
-        fill="#e0b341"
-      >
-        P
-      </text>
-      <circle cx="64" cy="37" r="5" fill="#e0b341" />
-    </svg>
-  );
-}
-
 function Brand() {
   return (
     <header className="pf-brand">
-      <div className="pf-brand__lockup">
-        <HexLogo />
-        <div className="pf-wordmark">
-          <span className="pf-wordmark__premier">PREMIER</span>
-          <span className="pf-wordmark__fc">FC</span>
-          <span className="pf-wordmark__app">APP</span>
-        </div>
-      </div>
+      <img
+        className="pf-brand__img"
+        src="/arena-fc-logo.svg"
+        alt="Arena FC"
+        width={280}
+        height={78}
+      />
       <div className="pf-tagline">
-        RUMO AO <b>HEXA</b>
+        ENTRE NA <b>ARENA</b>
       </div>
     </header>
   );
@@ -278,7 +243,7 @@ export function LoginScreen({ api, onLogin }: Props) {
                 type="submit"
                 disabled={busy || email.trim() === ''}
               >
-                {busy ? 'Enviando…' : 'Acessar o Premier'}
+                {busy ? 'Enviando…' : 'Acessar a Arena'}
               </button>
             </form>
 

@@ -25,16 +25,16 @@ describe('BuyCreditsModal', () => {
       screen.getByRole('heading', { name: /comprar créditos ia/i }),
     ).toBeInTheDocument();
 
-    expect(screen.getByText('Premier 6 Creditos IA')).toBeInTheDocument();
+    expect(screen.getByText('Arena 6 Creditos IA')).toBeInTheDocument();
     expect(screen.getByText('R$ 29,90')).toBeInTheDocument();
-    expect(screen.getByText('Premier 9 Creditos IA')).toBeInTheDocument();
+    expect(screen.getByText('Arena 9 Creditos IA')).toBeInTheDocument();
     expect(screen.getByText('R$ 39,90')).toBeInTheDocument();
     expect(
-      screen.getByText('Premier Crédito IA ilimitado por 1 mês'),
+      screen.getByText('Arena Crédito IA ilimitado por 1 mês'),
     ).toBeInTheDocument();
     expect(screen.getByText('R$ 99,00')).toBeInTheDocument();
     expect(
-      screen.getByText('Premier Crédito IA ilimitado por 3 meses'),
+      screen.getByText('Arena Crédito IA ilimitado por 3 meses'),
     ).toBeInTheDocument();
     expect(screen.getByText('R$ 149,90')).toBeInTheDocument();
   });
@@ -43,7 +43,7 @@ describe('BuyCreditsModal', () => {
     const user = userEvent.setup();
     render(<BuyCreditsModal open onClose={vi.fn()} />);
 
-    await user.click(screen.getByText('Premier 6 Creditos IA'));
+    await user.click(screen.getByText('Arena 6 Creditos IA'));
 
     expect(window.open).toHaveBeenCalledTimes(1);
     const [url, target] = (window.open as ReturnType<typeof vi.fn>).mock

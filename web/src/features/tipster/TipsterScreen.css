@@ -1,7 +1,7 @@
 /* web/src/features/tipster/TipsterScreen.css — IA Tipster screen */
 .tst {
-  --tst-gold: #e0b341;
-  --tst-gold-soft: #eac064;
+  --tst-gold: #8ce60a;
+  --tst-gold-soft: #a6ee42;
   --tst-card: rgba(255, 255, 255, 0.04);
   --tst-line: rgba(255, 255, 255, 0.08);
   --tst-text: #eef3f8;
@@ -70,25 +70,25 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .tst-head__credits:hover {
-  border-color: rgba(234, 192, 100, 0.5);
-  background: rgba(234, 192, 100, 0.08);
+  border-color: rgba(166, 238, 66, 0.5);
+  background: rgba(166, 238, 66, 0.08);
 }
 .tst-head__credits:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 .tst-head__credits--unlimited {
   color: #241a02;
   font-weight: 700;
   border-color: transparent;
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
 }
 .tst-head__credits--unlimited svg {
   color: #241a02;
 }
 .tst-head__credits--unlimited:hover {
   filter: brightness(1.04);
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
   border-color: transparent;
 }
 .tst-head__credits svg {
@@ -198,11 +198,11 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .tst-suggest__item:hover {
-  border-color: rgba(234, 192, 100, 0.4);
+  border-color: rgba(166, 238, 66, 0.4);
   background: rgba(255, 255, 255, 0.06);
 }
 .tst-suggest__item:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 .tst-suggest__teams {
@@ -251,8 +251,8 @@
 }
 .tst-line--user {
   align-self: flex-end;
-  background: rgba(234, 192, 100, 0.14);
-  border: 1px solid rgba(234, 192, 100, 0.35);
+  background: rgba(166, 238, 66, 0.14);
+  border: 1px solid rgba(166, 238, 66, 0.35);
   color: #fff;
 }
 .tst-line--assistant {
@@ -266,7 +266,7 @@
 .tst-confirm {
   margin: 10px 0;
   background: var(--tst-card);
-  border: 1px solid rgba(234, 192, 100, 0.4);
+  border: 1px solid rgba(166, 238, 66, 0.4);
   border-radius: 12px;
   padding: 14px;
   text-align: center;
@@ -297,7 +297,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #241a02;
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
 }
 .tst-confirm__btn:disabled {
   opacity: 0.5;
@@ -364,7 +364,7 @@
   color: rgba(255, 255, 255, 0.45);
 }
 .tst-composer__input:focus {
-  border-color: rgba(234, 192, 100, 0.6);
+  border-color: rgba(166, 238, 66, 0.6);
 }
 .tst-composer__send {
   flex: none;
@@ -376,7 +376,7 @@
   border: 0;
   border-radius: 10px;
   color: #241a02;
-  background: linear-gradient(135deg, #f0c65a, #d9a520);
+  background: linear-gradient(135deg, #9ee61e, #5fa30a);
 }
 .tst-composer__send:disabled {
   opacity: 0.5;
@@ -387,7 +387,7 @@
 }
 .tst-composer__send:focus-visible,
 .tst-tab:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 
@@ -439,8 +439,8 @@
   height: 44px;
   border-radius: 50%;
   color: var(--tst-gold);
-  background: rgba(224, 179, 65, 0.12);
-  border: 1px solid rgba(224, 179, 65, 0.3);
+  background: rgba(140, 230, 10, 0.12);
+  border: 1px solid rgba(140, 230, 10, 0.3);
   margin-bottom: 12px;
 }
 .tst-guide__badge svg {
@@ -511,8 +511,8 @@
   font-weight: 700;
   font-size: 14px;
   color: var(--tst-gold);
-  background: rgba(224, 179, 65, 0.12);
-  border: 1px solid rgba(224, 179, 65, 0.35);
+  background: rgba(140, 230, 10, 0.12);
+  border: 1px solid rgba(140, 230, 10, 0.35);
 }
 .tst-step__title {
   margin: 2px 0 4px;
@@ -691,7 +691,7 @@
   cursor: not-allowed;
 }
 .tst-live__refresh:hover:not(:disabled) {
-  border-color: rgba(234, 192, 100, 0.5);
+  border-color: rgba(166, 238, 66, 0.5);
 }
 
 .tst-live__list {
@@ -716,7 +716,7 @@
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .tst-live__card:hover:not(:disabled) {
-  border-color: rgba(234, 192, 100, 0.4);
+  border-color: rgba(166, 238, 66, 0.4);
   background: rgba(255, 255, 255, 0.05);
 }
 .tst-live__card:disabled {
@@ -724,7 +724,7 @@
   cursor: progress;
 }
 .tst-live__card:focus-visible {
-  outline: 2px solid rgba(234, 192, 100, 0.7);
+  outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
 }
 .tst-live__top {

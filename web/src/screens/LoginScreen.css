@@ -3,8 +3,8 @@
   /* palette (exact values from the reference) */
   --pf-bg: #0a1420;
   --pf-card-bg: #112236;
-  --pf-gold: #e0b341; /* labels, card border */
-  --pf-gold-soft: #eac064; /* PRO badge, gold odds, active dot */
+  --pf-gold: #8ce60a; /* labels, card border */
+  --pf-gold-soft: #a6ee42; /* PRO badge, gold odds, active dot */
   --pf-green: #00ff7f; /* IA accents, stats */
   --pf-purple: #7c3aed; /* ULTRA badge */
   --pf-muted: #94a3b8;
@@ -68,44 +68,10 @@
   margin-bottom: 24px;
   text-align: center;
 }
-.pf-brand__lockup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.pf-logo {
-  width: 52px;
-  height: 52px;
-  filter: drop-shadow(0 0 14px rgba(224, 179, 65, 0.35));
-}
-.pf-wordmark {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  font-family: var(--pf-display);
-  font-style: italic;
-}
-.pf-wordmark__premier {
-  font-weight: 900;
-  font-size: 34px;
-  letter-spacing: 0.01em;
-  color: #fff;
-}
-.pf-wordmark__fc {
-  font-weight: 900;
-  font-size: 34px;
-  color: transparent;
-  -webkit-text-stroke: 1.6px var(--pf-gold);
-}
-.pf-wordmark__app {
-  font-weight: 800;
-  font-size: 15px;
-  color: var(--pf-gold);
-  border: 1.6px solid var(--pf-gold);
-  border-radius: 6px;
-  padding: 2px 8px;
-  transform: translateY(-4px);
+.pf-brand__img {
+  width: min(280px, 74%);
+  height: auto;
+  filter: drop-shadow(0 0 18px rgba(140, 230, 10, 0.35));
 }
 .pf-tagline {
   margin-top: 6px;
@@ -141,14 +107,14 @@
 .pf-card {
   position: relative;
   background-color: var(--pf-card-bg);
-  border: 1.5px solid rgba(224, 179, 65, 0.45);
+  border: 1.5px solid rgba(140, 230, 10, 0.45);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 0 20px rgba(224, 179, 65, 0.15);
+  box-shadow: 0 0 20px rgba(140, 230, 10, 0.15);
 }
 .pf-card--shine {
-  border-color: rgba(224, 179, 65, 0.85);
-  box-shadow: 0 0 24px rgba(224, 179, 65, 0.22);
+  border-color: rgba(140, 230, 10, 0.85);
+  box-shadow: 0 0 24px rgba(140, 230, 10, 0.22);
 }
 /* rotating gold shine on the featured card */
 @property --copa-angle {
@@ -169,11 +135,11 @@
   padding: 1.5px;
   background: conic-gradient(
     from var(--copa-angle),
-    rgba(224, 179, 65, 0) 0deg,
-    rgba(224, 179, 65, 0) 230deg,
+    rgba(140, 230, 10, 0) 0deg,
+    rgba(140, 230, 10, 0) 230deg,
     rgba(245, 215, 122, 0.9) 300deg,
     #fff3c9 330deg,
-    rgba(224, 179, 65, 0) 360deg
+    rgba(140, 230, 10, 0) 360deg
   );
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
@@ -213,7 +179,7 @@
   color: var(--pf-green);
 }
 .pf-pill[data-tone='pro'] {
-  background-color: rgba(234, 192, 100, 0.25);
+  background-color: rgba(166, 238, 66, 0.25);
   border: 1.5px solid var(--pf-gold-soft);
   color: var(--pf-gold-soft);
 }
@@ -277,8 +243,8 @@
 }
 .pf-card__foot[data-tone='pro'],
 .pf-card__foot[data-tone='ultra'] {
-  background-color: rgba(234, 192, 100, 0.08);
-  border-top: 1px solid rgba(234, 192, 100, 0.15);
+  background-color: rgba(166, 238, 66, 0.08);
+  border-top: 1px solid rgba(166, 238, 66, 0.15);
   color: var(--pf-gold-soft);
 }
 

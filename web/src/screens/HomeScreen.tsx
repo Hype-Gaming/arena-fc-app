@@ -133,7 +133,7 @@ export function HomeScreen() {
 
         <footer className="home-footer">
           <div className="home-footer__brand">
-            Premier <span>FC</span> <Icon name="gear" />
+            Arena <span>FC</span> <Icon name="gear" />
           </div>
           <p className="home-footer__line">Análises processadas continuamente</p>
           <p className="home-footer__fine">
