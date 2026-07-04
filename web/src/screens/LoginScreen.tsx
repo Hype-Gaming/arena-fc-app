@@ -79,13 +79,7 @@ function Sparkles() {
 function Brand() {
   return (
     <header className="pf-brand">
-      <img
-        className="pf-brand__img"
-        src="/arena-fc-logo.svg"
-        alt="Arena FC"
-        width={280}
-        height={78}
-      />
+      <img className="pf-brand__img" src="/arenafc-logo.png" alt="Arena FC" />
       <div className="pf-tagline">
         ENTRE NA <b>ARENA</b>
       </div>
