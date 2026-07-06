@@ -117,6 +117,15 @@ export interface LiveLogoSyncSummary {
   skippedForCap: number;
 }
 
+export interface EsportivaLeagueSyncSummary {
+  leaguesInFeed: number;
+  synced: number;
+  failed: number;
+  teamsUpserted: number;
+  skippedForCap: number;
+  unmapped: string[];
+}
+
 export const adminApi = {
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>
@@ -160,6 +169,10 @@ export const adminApi = {
     }),
   syncLiveLogos: () =>
     req<LiveLogoSyncSummary>('/admin/teams/sync-live-logos', { method: 'POST' }),
+  syncEsportivaLeagues: () =>
+    req<EsportivaLeagueSyncSummary>('/admin/teams/sync-esportiva-leagues', {
+      method: 'POST',
+    }),
   listSportEvents: (q?: string) =>
     req<SportEvent[]>(`/admin/sport-events${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   syncSportEvents: () =>

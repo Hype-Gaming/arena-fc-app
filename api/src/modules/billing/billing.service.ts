@@ -108,6 +108,7 @@ export class BillingService {
       grantType: string;
       grantCredits: number | null;
       grantPlanKey: string | null;
+      grantCategory: string | null;
       grantPeriodDays: number | null;
     },
     eventId: string,
@@ -133,6 +134,10 @@ export class BillingService {
     }
     if (product.grantType === 'ia_unlimited') {
       await this.grantIaUnlimited(userId, product.grantPeriodDays, tx);
+      return;
+    }
+    if (product.grantType === 'category_access') {
+      await this.grantCategoryAccess(userId, product, _event, tx);
       return;
     }
     throw new Error(`Unsupported grantType: ${product.grantType}`);
@@ -165,6 +170,64 @@ export class BillingService {
     await tx.user.update({
       where: { id: userId },
       data: { iaUnlimitedUntil: until },
+    });
+  }
+
+  /**
+   * Standalone category product: opens one bilhete category without changing
+   * the subscription. A null grantPeriodDays means lifetime access; buying a
+   * timed product while active extends from the current expiry.
+   */
+  private async grantCategoryAccess(
+    userId: string,
+    product: { grantCategory: string | null; grantPeriodDays: number | null },
+    event: NormalizedWebhook,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const categoria = product.grantCategory;
+    if (!categoria) {
+      throw new Error('category_access product requires grantCategory');
+    }
+
+    const existing = await tx.userCategoryAccess.findUnique({
+      where: {
+        userId_categoria: {
+          userId,
+          categoria: categoria as never,
+        },
+      },
+      select: { expiresAt: true },
+    });
+
+    const periodDays = product.grantPeriodDays;
+    const expiresAt =
+      periodDays == null
+        ? null
+        : new Date(
+            Math.max(existing?.expiresAt?.getTime() ?? 0, Date.now()) +
+              periodDays * 24 * 60 * 60 * 1000,
+          );
+
+    await tx.userCategoryAccess.upsert({
+      where: {
+        userId_categoria: {
+          userId,
+          categoria: categoria as never,
+        },
+      },
+      create: {
+        userId,
+        categoria: categoria as never,
+        provider: event.provider,
+        externalId: event.externalId,
+        expiresAt,
+      },
+      update: {
+        provider: event.provider,
+        externalId: event.externalId,
+        purchasedAt: new Date(),
+        expiresAt,
+      },
     });
   }
 

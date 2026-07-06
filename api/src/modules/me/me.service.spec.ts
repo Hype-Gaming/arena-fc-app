@@ -4,9 +4,19 @@ import { CreditsService } from '../credits/credits.service';
 import { MeService } from './me.service';
 
 function makePrismaMock() {
+  const tx = {
+    telegramUnlock: { update: jest.fn() },
+    subscription: { upsert: jest.fn() },
+  };
   return {
     user: { findUniqueOrThrow: jest.fn() },
     subscription: { findUnique: jest.fn() },
+    telegramUnlock: {
+      findUnique: jest.fn(),
+      upsert: jest.fn(),
+    },
+    $transaction: jest.fn((cb: (txClient: any) => unknown) => cb(tx)),
+    __tx: tx,
   };
 }
 
@@ -138,5 +148,69 @@ describe('MeService', () => {
 
     expect(me.planKey).toBe('free');
     expect(me.planName).toBe('Livre');
+  });
+
+  it('starts the Telegram unlock timer once for the user', async () => {
+    const clickedAt = new Date();
+    prisma.telegramUnlock.upsert.mockResolvedValue({
+      userId: 'u8',
+      clickedAt,
+      unlockedAt: null,
+    });
+
+    const status = await service.startTelegramUnlock('u8');
+
+    expect(prisma.telegramUnlock.upsert).toHaveBeenCalledWith({
+      where: { userId: 'u8' },
+      create: { userId: 'u8' },
+      update: {},
+    });
+    expect(status.startedAt).toBe(clickedAt.toISOString());
+    expect(status.planKey).toBe('diamante');
+    expect(status.eligible).toBe(false);
+  });
+
+  it('does not grant Diamante before the Telegram wait is complete', async () => {
+    prisma.telegramUnlock.findUnique.mockResolvedValue({
+      userId: 'u9',
+      clickedAt: new Date(),
+      unlockedAt: null,
+    });
+
+    const status = await service.claimTelegramUnlock('u9');
+
+    expect(status.eligible).toBe(false);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('grants Diamante after the Telegram wait is complete', async () => {
+    prisma.telegramUnlock.findUnique.mockResolvedValue({
+      userId: 'u10',
+      clickedAt: new Date(Date.now() - 11 * 60 * 1000),
+      unlockedAt: null,
+    });
+
+    const status = await service.claimTelegramUnlock('u10');
+
+    expect(status.eligible).toBe(true);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.__tx.telegramUnlock.update).toHaveBeenCalledWith({
+      where: { userId: 'u10' },
+      data: { unlockedAt: expect.any(Date) },
+    });
+    expect(prisma.__tx.subscription.upsert).toHaveBeenCalledWith({
+      where: { userId: 'u10' },
+      create: expect.objectContaining({
+        userId: 'u10',
+        planKey: 'diamante',
+        provider: 'telegram-wait',
+        currentPeriodEnd: null,
+      }),
+      update: expect.objectContaining({
+        planKey: 'diamante',
+        provider: 'telegram-wait',
+        currentPeriodEnd: null,
+      }),
+    });
   });
 });

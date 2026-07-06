@@ -3,6 +3,7 @@ FROM node:20-alpine AS build
 RUN apk add --no-cache openssl
 WORKDIR /app
 COPY api/package.json ./
+COPY api/prisma ./prisma
 RUN npm install
 COPY api/ ./
 RUN npx prisma generate && npm run build

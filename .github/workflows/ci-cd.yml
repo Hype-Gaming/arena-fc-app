@@ -1,0 +1,167 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - feat/**
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  NODE_VERSION: "20"
+  POSTGRES_USER: tips
+  POSTGRES_PASSWORD: tips
+  POSTGRES_DB: tips
+  DATABASE_URL: postgresql://tips:tips@localhost:5432/tips?schema=public
+  JWT_SECRET: ci-jwt-secret
+  LASTLINK_WEBHOOK_SECRET: ci-lastlink-secret
+  PAYT_WEBHOOK_TOKEN: ci-payt-token
+  NODE_ENV: test
+  VITE_API_URL: /api
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tips
+          POSTGRES_PASSWORD: tips
+          POSTGRES_DB: tips
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tips -d tips"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate infrastructure files
+        run: npm run test:infra
+
+      - name: Run API migrations
+        run: npm run prisma:migrate --workspace @tips/api
+
+      - name: Test API
+        run: npm test --workspace @tips/api
+
+      - name: Test API e2e
+        run: npm run test:e2e --workspace @tips/api
+
+      - name: Build API
+        run: npm run build --workspace @tips/api
+
+      - name: Test web
+        run: npm test --workspace @tips/web
+
+      - name: Build web
+        run: npm run build --workspace @tips/web
+
+  docker:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build compose images
+        run: docker compose build
+        env:
+          POSTGRES_USER: tips
+          POSTGRES_PASSWORD: tips
+          POSTGRES_DB: tips
+          DATABASE_URL: postgresql://tips:tips@postgres:5432/tips?schema=public
+          JWT_SECRET: ci-jwt-secret
+          LASTLINK_WEBHOOK_SECRET: ci-lastlink-secret
+          PAYT_WEBHOOK_TOKEN: ci-payt-token
+          NODE_ENV: production
+
+  publish:
+    name: Publish Docker images
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: api/Dockerfile
+          - image: web
+            dockerfile: web/Dockerfile
+          - image: nginx
+            dockerfile: infra/nginx/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.image }}" >> "$GITHUB_ENV"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    name: Deploy by SSH
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.ENABLE_SSH_DEPLOY == 'true'
+    environment: production
+
+    steps:
+      - name: Install SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy application
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" << 'EOF'
+            set -e
+            cd "${{ secrets.DEPLOY_PATH }}"
+            git fetch --all --prune
+            git checkout "${{ github.ref_name }}"
+            git pull --ff-only
+            docker compose up -d --build
+            docker compose ps
+          EOF

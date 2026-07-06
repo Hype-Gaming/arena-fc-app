@@ -65,6 +65,15 @@ export class BilhetesService {
    */
   async getFeed(userId: string): Promise<BilhetesFeedDto> {
     const plan = await this.planRank(userId);
+    const now = new Date();
+    const accesses = await this.prisma.userCategoryAccess.findMany({
+      where: {
+        userId,
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      select: { categoria: true },
+    });
+    const unlockedByProduct = new Set(accesses.map((a) => a.categoria));
 
     const published = await this.prisma.bilhete.findMany({
       where: { publishedAt: { not: null } },
@@ -80,11 +89,15 @@ export class BilhetesService {
       key: c.key,
       label: c.label,
       count: countBy.get(c.key) ?? 0,
-      locked: plan.rank < c.minRank,
+      locked: plan.rank < c.minRank && !unlockedByProduct.has(c.key),
     }));
 
     const bilhetes = published
-      .filter((b) => plan.rank >= categoriaDef(b.categoria).minRank)
+      .filter(
+        (b) =>
+          plan.rank >= categoriaDef(b.categoria).minRank ||
+          unlockedByProduct.has(b.categoria),
+      )
       .map((b) => ({
         id: b.id,
         categoria: b.categoria,

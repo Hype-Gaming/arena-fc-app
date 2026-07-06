@@ -24,6 +24,11 @@ export class SportsFeedService {
     private readonly provider: SportsFeedProvider,
   ) {}
 
+  /** Upcoming prematch events straight from the provider (not cached). */
+  fetchUpcoming(): Promise<NormalizedEvent[]> {
+    return this.provider.fetchUpcoming();
+  }
+
   /**
    * Live (in-play) matches from the provider — ephemeral, not cached. Team
    * crests are cross-matched from the API-Football catalog by name; unmatched

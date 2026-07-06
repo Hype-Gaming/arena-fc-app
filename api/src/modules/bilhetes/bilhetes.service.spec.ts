@@ -8,9 +8,10 @@ type SubRow = {
   plan: { key: string; rank: number };
 } | null;
 
-function makePrisma(sub: SubRow, bilhetes: unknown[]) {
+function makePrisma(sub: SubRow, bilhetes: unknown[], accesses: unknown[] = []) {
   return {
     subscription: { findUnique: jest.fn().mockResolvedValue(sub) },
+    userCategoryAccess: { findMany: jest.fn().mockResolvedValue(accesses) },
     bilhete: { findMany: jest.fn().mockResolvedValue(bilhetes) },
   } as unknown as PrismaService;
 }
@@ -93,6 +94,22 @@ describe('BilhetesService.getFeed', () => {
     const feed2 = await new BilhetesService(expired).getFeed('u1');
     expect(feed2.plan).toEqual({ key: 'free', rank: 0 });
     expect(feed2.bilhetes).toHaveLength(0);
+  });
+
+  it('free viewer with a category product sees only that purchased category', async () => {
+    const prisma = makePrisma(
+      null,
+      [b('1', 'safes'), b('2', 'pro'), b('3', 'alavancagem'), b('4', 'ligas')],
+      [{ categoria: 'alavancagem' }],
+    );
+
+    const feed = await new BilhetesService(prisma).getFeed('u1');
+
+    expect(feed.plan).toEqual({ key: 'free', rank: 0 });
+    expect(feed.bilhetes.map((x) => x.id)).toEqual(['1', '3']);
+    const byKey = Object.fromEntries(feed.categorias.map((c) => [c.key, c]));
+    expect(byKey.alavancagem).toMatchObject({ locked: false });
+    expect(byKey.ligas).toMatchObject({ locked: true });
   });
 
   it('exposes the tier label and numeric odd on unlocked tickets', async () => {

@@ -13,6 +13,7 @@ import {
   teamKey,
 } from '../sports-feed/team-logo.match';
 import { countryToIso3 } from '../sports-feed/country-iso';
+import { resolveLeagueId } from './esportiva-leagues';
 import { normalizeText } from '../tipster/match-search.util';
 
 /** Shape of one row in API-Football's GET /teams response array. */
@@ -48,6 +49,21 @@ export interface LiveLogoSyncSummary {
   /** Left unsearched this run to protect the daily API quota. */
   skippedForCap: number;
 }
+
+export interface EsportivaLeagueSyncSummary {
+  leaguesInFeed: number;
+  synced: number;
+  failed: number;
+  teamsUpserted: number;
+  skippedForCap: number;
+  /** Feed competitions we don't have an API-Football mapping for. */
+  unmapped: string[];
+}
+
+/** Free API-Football tier only covers up to this season. */
+const CATALOG_SEASON = 2024;
+/** Cap league syncs per run so one click can't burn the daily quota. */
+const LEAGUE_CAP = 30;
 
 // Reserve/youth sides API-Football returns for a plain name search — never the
 // crest we want for a first-team live match.
@@ -223,6 +239,55 @@ export class AdminTeamsService {
       added,
       notFound,
       skippedForCap,
+    };
+  }
+
+  /**
+   * Pull teams for the leagues currently in the Esportiva feed: read the
+   * upcoming fixtures, map each distinct competition to its API-Football league
+   * (country-disambiguated), and sync those leagues into the catalog. Bounded by
+   * LEAGUE_CAP; a league whose season isn't on the free tier is skipped, not
+   * fatal. This is what makes the "from-events" bilhetes come out with crests.
+   */
+  async syncEsportivaLeagues(): Promise<EsportivaLeagueSyncSummary> {
+    const key = apiKey();
+    if (!key) {
+      throw new ServiceUnavailableException(
+        'API_FOOTBALL_KEY is not configured on the server',
+      );
+    }
+
+    const events = await this.sportsFeed.fetchUpcoming();
+    const leagueIds = new Set<number>();
+    const unmapped = new Set<string>();
+    for (const e of events) {
+      const id = resolveLeagueId(e.countryIso, e.competition);
+      if (id) leagueIds.add(id);
+      else if (e.competition) unmapped.add(e.competition);
+    }
+
+    const ids = [...leagueIds].slice(0, LEAGUE_CAP);
+    let synced = 0;
+    let failed = 0;
+    let teamsUpserted = 0;
+    for (const id of ids) {
+      try {
+        const r = await this.sync(id, CATALOG_SEASON);
+        teamsUpserted += r.upserted;
+        synced += 1;
+      } catch {
+        // Season not on the free tier, or a transient error — skip this league.
+        failed += 1;
+      }
+    }
+
+    return {
+      leaguesInFeed: leagueIds.size,
+      synced,
+      failed,
+      teamsUpserted,
+      skippedForCap: Math.max(0, leagueIds.size - ids.length),
+      unmapped: [...unmapped].sort().slice(0, 25),
     };
   }
 

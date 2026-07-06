@@ -22,4 +22,9 @@ export class AdminTeamsController {
   @Post('sync-live-logos') syncLiveLogos() {
     return this.service.syncLiveLogos();
   }
+
+  /** Pull teams for every league the Esportiva prematch feed is showing. */
+  @Post('sync-esportiva-leagues') syncEsportivaLeagues() {
+    return this.service.syncEsportivaLeagues();
+  }
 }

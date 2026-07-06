@@ -41,17 +41,19 @@ function sample(): AltenarRaw {
       { id: 4049572923, price: 4.1, name: 'Santos', competitorId: 54850 },
     ],
     champs: [{ id: 11318, name: 'Brasileirão A' }],
+    categories: [{ id: 593, name: 'Brasil', iso: 'BRA' }],
   };
 }
 
 describe('normalizeAltenar', () => {
-  it('maps a prematch event with 1X2 odds, competition and deep link', () => {
+  it('maps a prematch event with 1X2 odds, competition, country and deep link', () => {
     const [ev] = normalizeAltenar(sample(), link, NOW);
     expect(ev).toEqual({
       externalId: '16027580',
       homeTeam: 'Botafogo',
       awayTeam: 'Santos',
       competition: 'Brasileirão A',
+      countryIso: 'BRA',
       startsAt: new Date('2026-07-16T22:30:00Z'),
       oddHome: 1.9091,
       oddDraw: 3.4,

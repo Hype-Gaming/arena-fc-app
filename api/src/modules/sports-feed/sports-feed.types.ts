@@ -7,6 +7,8 @@ export interface NormalizedEvent {
   homeTeam: string;
   awayTeam: string;
   competition: string | null;
+  /** ISO-3166 alpha-3 of the competition's country (null for international). */
+  countryIso: string | null;
   startsAt: Date;
   /** Match-winner (1X2) prices; any may be null if the market is absent. */
   oddHome: number | null;
@@ -24,8 +26,6 @@ export interface NormalizedLiveEvent extends NormalizedEvent {
   awayScore: number;
   /** Human status label, e.g. "1ª parte" / "Intervalo". */
   statusText: string;
-  /** ISO-3166 alpha-3 of the competition's country (null for international). */
-  countryIso: string | null;
   /** Crest URLs cross-matched from the team catalog; null when unmatched. */
   homeLogo: string | null;
   awayLogo: string | null;

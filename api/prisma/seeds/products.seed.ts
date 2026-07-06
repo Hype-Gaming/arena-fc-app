@@ -1,4 +1,4 @@
-import { PrismaClient, GrantType } from '@prisma/client';
+import { PrismaClient, GrantType, BilheteCategoria } from '@prisma/client';
 
 /**
  * Payment products the billing webhook resolves to a grant. The gateway
@@ -19,6 +19,7 @@ interface ProductSeed {
   externalProductId: string;
   grantType: GrantType;
   grantCredits?: number;
+  grantCategory?: BilheteCategoria;
   grantPeriodDays?: number;
 }
 
@@ -47,6 +48,42 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantType: 'ia_unlimited',
     grantPeriodDays: 90,
   },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-odds-pro-vida',
+    grantType: 'category_access',
+    grantCategory: 'pro',
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-odds-altas-vida',
+    grantType: 'category_access',
+    grantCategory: 'ultra',
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-alavancagem-vida',
+    grantType: 'category_access',
+    grantCategory: 'alavancagem',
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-multiplas-vida',
+    grantType: 'category_access',
+    grantCategory: 'multiplas',
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-mercado-secundario-vida',
+    grantType: 'category_access',
+    grantCategory: 'secundario',
+  },
+  {
+    provider: 'lastlink',
+    externalProductId: 'premier-ligas-americanas-vida',
+    grantType: 'category_access',
+    grantCategory: 'ligas',
+  },
 ];
 
 /** Idempotently upsert products by their (provider, externalProductId) key. */
@@ -57,6 +94,7 @@ export async function seedProducts(
     const data = {
       grantType: p.grantType,
       grantCredits: p.grantCredits ?? null,
+      grantCategory: p.grantCategory ?? null,
       grantPeriodDays: p.grantPeriodDays ?? null,
       active: true,
     };

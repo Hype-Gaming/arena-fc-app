@@ -92,6 +92,7 @@ export function normalizeAltenar(
   const marketById = new Map((raw.markets ?? []).map((m) => [m.id, m]));
   const oddById = new Map((raw.odds ?? []).map((o) => [o.id, o]));
   const champById = new Map((raw.champs ?? []).map((c) => [c.id, c]));
+  const catById = new Map((raw.categories ?? []).map((c) => [c.id, c]));
 
   const out: NormalizedEvent[] = [];
 
@@ -121,6 +122,7 @@ export function normalizeAltenar(
       homeTeam,
       awayTeam,
       competition: champById.get(ev.champId)?.name ?? null,
+      countryIso: (catById.get(ev.catId)?.iso ?? '').toUpperCase() || null,
       startsAt,
       oddHome,
       oddDraw,

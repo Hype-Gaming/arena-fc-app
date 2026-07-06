@@ -3,12 +3,14 @@ import { seedAchievements } from './seeds/achievements.seed';
 import { seedPlans } from './seeds/plans.seed';
 import { seedProducts } from './seeds/products.seed';
 import { seedBilhetes } from './seeds/bilhetes.seed';
+import { seedTutorial } from './seeds/tutorial.seed';
 
 async function main(prisma: PrismaClient): Promise<void> {
   await seedPlans(prisma);
   await seedAchievements(prisma);
   await seedProducts(prisma);
   await seedBilhetes(prisma);
+  await seedTutorial(prisma);
 }
 
 const prisma = new PrismaClient();

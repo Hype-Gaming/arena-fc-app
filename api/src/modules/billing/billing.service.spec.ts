@@ -33,6 +33,8 @@ function makeModule(overrides: {
   subscriptionUpsert?: jest.Mock;
   userFindUnique?: jest.Mock;
   userUpdate?: jest.Mock;
+  userCategoryAccessFindUnique?: jest.Mock;
+  userCategoryAccessUpsert?: jest.Mock;
 }) {
   const webhookCreate =
     overrides.webhookCreate ??
@@ -46,6 +48,10 @@ function makeModule(overrides: {
   const userFindUnique =
     overrides.userFindUnique ?? jest.fn().mockResolvedValue({ iaUnlimitedUntil: null });
   const userUpdate = overrides.userUpdate ?? jest.fn().mockResolvedValue({});
+  const userCategoryAccessFindUnique =
+    overrides.userCategoryAccessFindUnique ?? jest.fn().mockResolvedValue(null);
+  const userCategoryAccessUpsert =
+    overrides.userCategoryAccessUpsert ?? jest.fn().mockResolvedValue({ id: 'uca_1' });
 
   // The interactive transaction client passed to the callback. It exposes the
   // same models the tx body touches: webhookEvent.create + subscription.upsert
@@ -54,6 +60,10 @@ function makeModule(overrides: {
     webhookEvent: { create: webhookCreate },
     subscription: { upsert: subscriptionUpsert },
     user: { findUnique: userFindUnique, update: userUpdate },
+    userCategoryAccess: {
+      findUnique: userCategoryAccessFindUnique,
+      upsert: userCategoryAccessUpsert,
+    },
   };
 
   const prisma = {
@@ -100,6 +110,8 @@ function makeModule(overrides: {
       subscriptionUpsert,
       userFindUnique,
       userUpdate,
+      userCategoryAccessFindUnique,
+      userCategoryAccessUpsert,
       txClient,
     }));
 }
@@ -421,5 +433,78 @@ describe('BillingService ia_unlimited grant', () => {
     await expect(
       service.processWebhook('lastlink', Buffer.from('{}'), {}),
     ).rejects.toThrow(/grantPeriodDays/);
+  });
+});
+
+describe('BillingService category_access grant', () => {
+  beforeEach(() => {
+    adapter.verifySignature.mockReset().mockReturnValue(true);
+    adapter.parse
+      .mockReset()
+      .mockReturnValue({ ...norm, externalProductId: 'prod_alavancagem' });
+  });
+
+  const categoryProduct = (grantPeriodDays: number | null) => ({
+    id: 'pc',
+    provider: 'lastlink',
+    externalProductId: 'prod_alavancagem',
+    grantType: 'category_access',
+    grantCredits: null,
+    grantPlanKey: null,
+    grantCategory: 'alavancagem',
+    grantPeriodDays,
+    active: true,
+  });
+
+  it('grants lifetime access to a single bilhete category without changing plan or credits', async () => {
+    const { service, credits, subscriptionUpsert, userCategoryAccessUpsert } =
+      await makeModule({
+        productFindFirst: jest.fn().mockResolvedValue(categoryProduct(null)),
+      });
+
+    const result = await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    expect(result.outcome).toBe('processed');
+    expect(credits.applyTransaction).not.toHaveBeenCalled();
+    expect(subscriptionUpsert).not.toHaveBeenCalled();
+    expect(userCategoryAccessUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId_categoria: {
+            userId: 'user_1',
+            categoria: 'alavancagem',
+          },
+        },
+        create: expect.objectContaining({
+          userId: 'user_1',
+          categoria: 'alavancagem',
+          provider: 'lastlink',
+          externalId: norm.externalId,
+          expiresAt: null,
+        }),
+        update: expect.objectContaining({
+          provider: 'lastlink',
+          externalId: norm.externalId,
+          expiresAt: null,
+        }),
+      }),
+    );
+  });
+
+  it('extends a timed category access from the current active expiry', async () => {
+    const activeUntil = new Date(Date.now() + 10 * 86_400_000);
+    const { service, userCategoryAccessUpsert } = await makeModule({
+      userCategoryAccessFindUnique: jest
+        .fn()
+        .mockResolvedValue({ expiresAt: activeUntil }),
+      productFindFirst: jest.fn().mockResolvedValue(categoryProduct(30)),
+    });
+
+    await service.processWebhook('lastlink', Buffer.from('{}'), {});
+
+    const { expiresAt } = userCategoryAccessUpsert.mock.calls[0][0].create;
+    const days = (expiresAt.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(39.9);
+    expect(days).toBeLessThanOrEqual(40);
   });
 });

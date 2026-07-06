@@ -15,7 +15,10 @@ function makePrisma() {
   } as unknown as PrismaService;
 }
 
-const sportsFeed = { fetchLive: jest.fn().mockResolvedValue([]) } as any;
+const sportsFeed = {
+  fetchLive: jest.fn().mockResolvedValue([]),
+  fetchUpcoming: jest.fn().mockResolvedValue([]),
+} as any;
 const logoCache = { warm: jest.fn(), get: jest.fn() } as any;
 
 const ROW = (id: number, name: string) => ({
@@ -190,6 +193,64 @@ describe('AdminTeamsService.syncLiveLogos', () => {
     delete process.env.API_FOOTBALL_KEY;
     const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
     await expect(svc.syncLiveLogos()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+});
+
+describe('AdminTeamsService.syncEsportivaLeagues', () => {
+  const OLD_ENV = process.env;
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    process.env = { ...OLD_ENV, API_FOOTBALL_KEY: 'k123' };
+    fetchMock = jest.fn().mockResolvedValue({
+      json: () => Promise.resolve({ errors: [], results: 1, response: [ROW(1, 'Team')] }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('maps distinct feed leagues to API-Football and syncs each', async () => {
+    sportsFeed.fetchUpcoming.mockResolvedValue([
+      { competition: 'Premier League', countryIso: 'ENG' },
+      { competition: 'Premier League', countryIso: 'ENG' }, // dup → one league
+      { competition: 'LaLiga', countryIso: 'ESP' },
+      { competition: 'Some Amateur Cup', countryIso: 'XXX' }, // unmapped
+    ]);
+
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    const summary = await svc.syncEsportivaLeagues();
+
+    expect(summary).toMatchObject({ leaguesInFeed: 2, synced: 2, failed: 0 });
+    expect(summary.unmapped).toContain('Some Amateur Cup');
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls.some((u) => u.includes('league=39'))).toBe(true); // PL
+    expect(urls.some((u) => u.includes('league=140'))).toBe(true); // LaLiga
+  });
+
+  it('counts a league whose season the API rejects as failed, not fatal', async () => {
+    sportsFeed.fetchUpcoming.mockResolvedValue([
+      { competition: 'LaLiga', countryIso: 'ESP' },
+    ]);
+    fetchMock.mockResolvedValue({
+      json: () =>
+        Promise.resolve({ errors: { plan: 'season not allowed' }, results: 0, response: [] }),
+    });
+
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    const summary = await svc.syncEsportivaLeagues();
+
+    expect(summary).toMatchObject({ leaguesInFeed: 1, synced: 0, failed: 1 });
+  });
+
+  it('throws 503 when no API key is configured', async () => {
+    delete process.env.API_FOOTBALL_KEY;
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    await expect(svc.syncEsportivaLeagues()).rejects.toBeInstanceOf(
       ServiceUnavailableException,
     );
   });

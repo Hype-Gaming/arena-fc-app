@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -24,12 +26,15 @@ services:
       LASTLINK_WEBHOOK_SECRET: ${LASTLINK_WEBHOOK_SECRET}
       PAYT_WEBHOOK_TOKEN: ${PAYT_WEBHOOK_TOKEN}
       API_FOOTBALL_KEY: ${API_FOOTBALL_KEY:-}
+      ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-false}
       NODE_ENV: ${NODE_ENV}
     depends_on:
       postgres:
         condition: service_healthy
     expose:
       - "3000"
+    ports:
+      - "3000:3000"
 
   web:
     build:

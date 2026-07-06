@@ -133,6 +133,25 @@ export function AdminBilhetes() {
     }
   }
 
+  async function onSyncEsportivaLeagues() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const s = await adminApi.syncEsportivaLeagues();
+      setSyncMsg(
+        `Ligas da Esportiva: ${s.synced}/${s.leaguesInFeed} sincronizadas, ${s.teamsUpserted} times` +
+          (s.failed ? `, ${s.failed} falharam (temporada)` : '') +
+          (s.skippedForCap ? `, ${s.skippedForCap} adiadas (cota)` : ''),
+      );
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onSyncLiveLogos() {
     setError(null);
     setSyncMsg(null);
@@ -259,6 +278,9 @@ export function AdminBilhetes() {
         </label>
         <button type="button" onClick={onSyncTeams} disabled={busy}>
           Sincronizar times
+        </button>
+        <button type="button" onClick={onSyncEsportivaLeagues} disabled={busy}>
+          Puxar times das ligas (Esportiva)
         </button>
         <small>{teams.length} times no catálogo</small>
         {syncMsg && <em>{syncMsg}</em>}

@@ -8,6 +8,7 @@ const EVENT: NormalizedEvent = {
   homeTeam: 'Botafogo',
   awayTeam: 'Santos',
   competition: 'Brasileirão A',
+  countryIso: 'BRA',
   startsAt: new Date('2026-07-16T22:30:00Z'),
   oddHome: 1.9,
   oddDraw: 3.4,

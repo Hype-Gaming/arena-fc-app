@@ -47,6 +47,7 @@ enum EntradaStatus {
 enum GrantType {
   credits
   plan
+  category_access
   // Time-boxed "acesso ilimitado" pass: analyses stop consuming credits for
   // grantPeriodDays. Extends User.iaUnlimitedUntil instead of moving credits.
   ia_unlimited
@@ -75,6 +76,8 @@ model User {
   entradaUnlocks   EntradaUnlock[]
   userAchievements UserAchievement[]
   chatSessions     ChatSession[]
+  telegramUnlock   TelegramUnlock?
+  categoryAccesses UserCategoryAccess[]
 }
 
 model AuthCode {
@@ -212,6 +215,7 @@ model Product {
   grantType         GrantType
   grantCredits      Int?
   grantPlanKey      PlanKey?
+  grantCategory     BilheteCategoria?
   // Subscription length granted by a 'plan' product, in days.
   // null = lifetime ("VIDA" checkout products — no expiry).
   grantPeriodDays   Int?
@@ -319,6 +323,21 @@ model Bilhete {
   @@index([categoria, startsAt])
 }
 
+model UserCategoryAccess {
+  id          String           @id @default(cuid())
+  userId      String
+  categoria   BilheteCategoria
+  provider    String
+  externalId  String?
+  purchasedAt DateTime         @default(now())
+  expiresAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoria])
+  @@index([userId])
+}
+
 // A fixture pulled from the sportsbook feed (Altenar/Esportiva today; the
 // official endpoint later — same normalized shape, swapped behind a provider).
 // Cached so the admin picks a real event (teams, kickoff, 1X2 odds, deep link)
@@ -368,4 +387,15 @@ model TutorialStep {
   createdAt DateTime @default(now())
 
   @@unique([version, order])
+}
+
+model TelegramUnlock {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  clickedAt  DateTime  @default(now())
+  unlockedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
