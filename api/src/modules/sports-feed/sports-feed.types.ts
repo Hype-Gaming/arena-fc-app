@@ -1,5 +1,29 @@
 // api/src/modules/sports-feed/sports-feed.types.ts
 
+/** One pickable outcome inside a market, with its decimal price. */
+export interface NormalizedSelection {
+  /** Provider label as bettors see it, e.g. "Mais de 2.5", "Empate", "Sim". */
+  label: string;
+  /** Decimal price. Suspended legs (price <= 0) are dropped, so this is > 0. */
+  odd: number;
+  /** Goal/handicap line when the market carries one (Over/Under), else null. */
+  line: number | null;
+}
+
+/**
+ * A betting market on an event (1X2, Over/Under, BTTS, …) with its outcomes.
+ * The feed offers many; we keep only the core few the admin can build from.
+ */
+export interface NormalizedMarket {
+  /** Altenar market typeId — 1 (1X2), 18, 10, 11, 29. */
+  typeId: number;
+  /** Stable slug: "1x2" | "over_under" | "double_chance" | "dnb" | "btts". */
+  key: string;
+  /** Provider market name, e.g. "Total de gols". */
+  name: string;
+  selections: NormalizedSelection[];
+}
+
 /** A fixture normalized away from any specific provider's payload. */
 export interface NormalizedEvent {
   /** Provider-scoped event id (kept as a string for stability). */
@@ -14,6 +38,8 @@ export interface NormalizedEvent {
   oddHome: number | null;
   oddDraw: number | null;
   oddAway: number | null;
+  /** Core markets (1X2, Over/Under, Double chance, DNB, BTTS) with live odds. */
+  markets: NormalizedMarket[];
   /** URL that opens this fixture on the sportsbook. */
   deepLink: string;
 }

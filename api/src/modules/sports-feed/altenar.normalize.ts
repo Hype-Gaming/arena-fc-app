@@ -1,5 +1,9 @@
 // api/src/modules/sports-feed/altenar.normalize.ts
-import { NormalizedEvent, NormalizedLiveEvent } from './sports-feed.types';
+import {
+  NormalizedEvent,
+  NormalizedLiveEvent,
+  NormalizedMarket,
+} from './sports-feed.types';
 
 /** Subset of Altenar's GetEvents payload we rely on (confirmed against live data). */
 export interface AltenarRaw {
@@ -30,8 +34,63 @@ interface AltenarEvent {
 /** Match-winner / 1X2 market. Confirmed: typeId 1 = "Vencedor do encontro". */
 const MATCH_WINNER_TYPE_ID = 1;
 
+/**
+ * The core markets we surface for bilhete-building, mapped to a stable slug.
+ * typeIds confirmed against the live Esportiva/Altenar feed:
+ *   1  1X2 (Vencedor do encontro)      10 Chance dupla (double chance)
+ *   18 Total de gols (Over/Under)       11 Empate anula aposta (DNB)
+ *   29 Ambas marcam (BTTS)
+ * Odds outside these types are dropped (the book offers dozens per event).
+ */
+const MARKET_KEYS: Record<number, string> = {
+  1: '1x2',
+  18: 'over_under',
+  10: 'double_chance',
+  11: 'dnb',
+  29: 'btts',
+};
+
 type AltenarMarket = NonNullable<AltenarRaw['markets']>[number];
 type AltenarOdd = NonNullable<AltenarRaw['odds']>[number];
+
+/** Pull the goal line off an Over/Under label ("Mais de 2.5" → 2.5). */
+function parseLine(label: string): number | null {
+  const m = label.match(/(\d+(?:\.\d+)?)/);
+  return m ? Number(m[1]) : null;
+}
+
+/**
+ * Build the structured market list for an event: every core market (see
+ * MARKET_KEYS) that still has at least one live outcome. Selection labels come
+ * straight from the feed (already Portuguese, e.g. "Mais de 2.5", "Sim"), so we
+ * show exactly what the book shows. Suspended legs (price <= 0) are dropped.
+ */
+function extractMarkets(
+  event: AltenarEvent,
+  marketById: Map<number, AltenarMarket>,
+  oddById: Map<number, AltenarOdd>,
+): NormalizedMarket[] {
+  const markets: NormalizedMarket[] = [];
+  for (const marketId of event.marketIds ?? []) {
+    const market = marketById.get(marketId);
+    if (!market) continue;
+    const key = MARKET_KEYS[market.typeId];
+    if (!key) continue;
+
+    const selections = (market.oddIds ?? [])
+      .map((id) => oddById.get(id))
+      .filter((o): o is AltenarOdd => !!o && typeof o.price === 'number' && o.price > 0)
+      .map((o) => ({
+        label: o.name?.trim() || '—',
+        odd: o.price,
+        line: key === 'over_under' ? parseLine(o.name ?? '') : null,
+      }));
+    if (selections.length > 0) {
+      markets.push({ typeId: market.typeId, key, name: market.name, selections });
+    }
+  }
+  return markets;
+}
 
 interface WinnerOdds {
   oddHome: number | null;
@@ -127,6 +186,7 @@ export function normalizeAltenar(
       oddHome,
       oddDraw,
       oddAway,
+      markets: extractMarkets(ev, marketById, oddById),
       deepLink: deepLink(ev.id),
     });
   }
@@ -180,6 +240,7 @@ export function normalizeAltenarLive(
       oddHome,
       oddDraw,
       oddAway,
+      markets: extractMarkets(ev, marketById, oddById),
       deepLink: deepLink(ev.id),
       minute: (ev.liveTime ?? '').trim(),
       homeScore: Number(ev.score?.[0] ?? 0),

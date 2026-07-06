@@ -13,6 +13,7 @@ const EVENT: NormalizedEvent = {
   oddHome: 1.9,
   oddDraw: 3.4,
   oddAway: 4.1,
+  markets: [],
   deepLink: 'https://esportiva.bet.br/e/16027580',
 };
 

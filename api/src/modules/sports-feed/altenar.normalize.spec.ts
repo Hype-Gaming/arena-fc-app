@@ -18,7 +18,7 @@ function sample(): AltenarRaw {
         startDate: '2026-07-16T22:30:00Z',
         status: 0,
         competitorIds: [56845, 54850],
-        marketIds: [1588971991],
+        marketIds: [1588971991, 1588971992, 1588971993, 1588971994],
         champId: 11318,
         catId: 593,
       },
@@ -34,11 +34,20 @@ function sample(): AltenarRaw {
         name: 'Vencedor do encontro',
         oddIds: [4049572921, 4049572922, 4049572923],
       },
+      { id: 1588971992, typeId: 18, name: 'Total de gols', oddIds: [50, 51] },
+      { id: 1588971993, typeId: 29, name: 'Ambas marcam', oddIds: [60, 61] },
+      // typeId 7 is not a core market — must be dropped from `markets`.
+      { id: 1588971994, typeId: 7, name: 'Handicap asiático', oddIds: [70] },
     ],
     odds: [
       { id: 4049572921, price: 1.9091, name: 'Botafogo', competitorId: 56845 },
       { id: 4049572922, price: 3.4, name: 'Empate' }, // draw: no competitorId
       { id: 4049572923, price: 4.1, name: 'Santos', competitorId: 54850 },
+      { id: 50, price: 1.72, name: 'Mais de 2.5' },
+      { id: 51, price: 2.05, name: 'Menos de 2.5' },
+      { id: 60, price: 1.8, name: 'Sim' },
+      { id: 61, price: 1.95, name: 'Não' },
+      { id: 70, price: 1.9, name: 'Botafogo -1' },
     ],
     champs: [{ id: 11318, name: 'Brasileirão A' }],
     categories: [{ id: 593, name: 'Brasil', iso: 'BRA' }],
@@ -58,8 +67,58 @@ describe('normalizeAltenar', () => {
       oddHome: 1.9091,
       oddDraw: 3.4,
       oddAway: 4.1,
+      markets: [
+        {
+          typeId: 1,
+          key: '1x2',
+          name: 'Vencedor do encontro',
+          selections: [
+            { label: 'Botafogo', odd: 1.9091, line: null },
+            { label: 'Empate', odd: 3.4, line: null },
+            { label: 'Santos', odd: 4.1, line: null },
+          ],
+        },
+        {
+          typeId: 18,
+          key: 'over_under',
+          name: 'Total de gols',
+          selections: [
+            { label: 'Mais de 2.5', odd: 1.72, line: 2.5 },
+            { label: 'Menos de 2.5', odd: 2.05, line: 2.5 },
+          ],
+        },
+        {
+          typeId: 29,
+          key: 'btts',
+          name: 'Ambas marcam',
+          selections: [
+            { label: 'Sim', odd: 1.8, line: null },
+            { label: 'Não', odd: 1.95, line: null },
+          ],
+        },
+      ],
       deepLink: 'https://esportiva.bet.br/e/16027580',
     });
+  });
+
+  it('drops non-core markets and suspended (price 0) selections', () => {
+    const raw = sample();
+    // Suspend one leg of the Over/Under market → it should not appear.
+    raw.odds!.find((o) => o.id === 50)!.price = 0;
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 'btts']);
+    const ou = ev.markets.find((m) => m.key === 'over_under')!;
+    expect(ou.selections).toEqual([{ label: 'Menos de 2.5', odd: 2.05, line: 2.5 }]);
+    // typeId 7 (Handicap) is never surfaced.
+    expect(ev.markets.some((m) => m.typeId === 7)).toBe(false);
+  });
+
+  it('omits a market whose every leg is suspended', () => {
+    const raw = sample();
+    raw.odds!.find((o) => o.id === 60)!.price = 0;
+    raw.odds!.find((o) => o.id === 61)!.price = 0;
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.markets.some((m) => m.key === 'btts')).toBe(false);
   });
 
   it('skips live/started events (status != 0 or already kicked off)', () => {
@@ -159,6 +218,18 @@ describe('normalizeAltenarLive', () => {
       oddHome: 1.8,
       oddDraw: 3.2,
       oddAway: 4.5,
+      markets: [
+        {
+          typeId: 1,
+          key: '1x2',
+          name: 'Vencedor do encontro',
+          selections: [
+            { label: 'Caac Brasil FC RJ', odd: 1.8, line: null },
+            { label: 'Empate', odd: 3.2, line: null },
+            { label: 'Barcelona EC RJ', odd: 4.5, line: null },
+          ],
+        },
+      ],
       deepLink: 'https://esportiva.bet.br/e/16946643',
       minute: "25'",
       homeScore: 1,
