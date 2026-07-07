@@ -138,6 +138,20 @@ describe('BillingService.processWebhook', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('ACKs (ignored, not 500) an authentic but unparseable body', async () => {
+    adapter.parse.mockImplementation(() => {
+      throw new Error('body is not valid JSON');
+    });
+    const { service, credits, prisma } = await makeModule({});
+
+    const result = await service.processWebhook('payt', Buffer.from('oops'), {}, { token: 'ok' });
+
+    expect(result.outcome).toBe('ignored');
+    expect(result.reason).toMatch(/unparseable/i);
+    expect(credits.applyTransaction).not.toHaveBeenCalled();
+    expect(prisma.webhookEvent.create).not.toHaveBeenCalled();
+  });
+
   it('returns duplicate and does no grant when event already processed', async () => {
     const { service, credits } = await makeModule({
       webhookFindUnique: jest

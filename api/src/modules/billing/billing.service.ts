@@ -1,5 +1,5 @@
 // api/src/modules/billing/billing.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
@@ -10,6 +10,8 @@ import { WebhookProcessResult } from './dto/webhook-result.dto';
 
 @Injectable()
 export class BillingService {
+  private readonly logger = new Logger(BillingService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: PaymentProviderRegistry,
@@ -29,7 +31,18 @@ export class BillingService {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
-    const event = provider.parse(rawBody);
+    // Authentic but undecodable body: ACK with 2xx (so the gateway's "test URL"
+    // passes and it doesn't retry a malformed payload in a storm) and log it
+    // for investigation, instead of surfacing a 500.
+    let event: NormalizedWebhook;
+    try {
+      event = provider.parse(rawBody);
+    } catch (err) {
+      this.logger.error(
+        `Could not parse ${providerName} webhook: ${(err as Error).message}`,
+      );
+      return { outcome: 'ignored', reason: `Unparseable ${providerName} body` };
+    }
 
     // Dedupe: gateways resend. externalId is unique in WebhookEvent.
     const existing = await this.prisma.webhookEvent.findUnique({
