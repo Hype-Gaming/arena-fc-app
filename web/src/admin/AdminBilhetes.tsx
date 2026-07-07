@@ -282,12 +282,15 @@ export function AdminBilhetes() {
       const p = await adminApi.previewEvent(previewRef.trim());
       setPreview(p);
       setSelectedEventId(''); // the pasted event takes over the card
-      // Remember any crests the API resolved so the form preview picks them up.
+      // Seed crests the API already matched from the catalog, then resolve any
+      // it missed (seleções/unsynced teams) so the flags appear on the card.
       setResolvedCrests((m) => ({
         ...m,
         ...(p.homeLogo ? { [p.homeTeam.trim().toLowerCase()]: p.homeLogo } : {}),
         ...(p.awayLogo ? { [p.awayTeam.trim().toLowerCase()]: p.awayLogo } : {}),
       }));
+      if (!p.homeLogo) onResolveCrest(p.homeTeam);
+      if (!p.awayLogo) onResolveCrest(p.awayTeam);
       const firstMarket = sortedMarkets(p.markets)[0];
       const firstSelection = firstMarket?.selections[0];
       setForm((f) => ({
@@ -512,9 +515,13 @@ export function AdminBilhetes() {
             <div className="ab-event-card__head">
               <div>
                 <b className="ab-event-card__title">
-                  {preview.homeLogo && <img className="ab-crest" src={preview.homeLogo} alt="" />}
+                  {crestUrl(preview.homeTeam) && (
+                    <img className="ab-crest" src={crestUrl(preview.homeTeam)} alt="" />
+                  )}
                   {preview.homeTeam} x {preview.awayTeam}
-                  {preview.awayLogo && <img className="ab-crest" src={preview.awayLogo} alt="" />}
+                  {crestUrl(preview.awayTeam) && (
+                    <img className="ab-crest" src={crestUrl(preview.awayTeam)} alt="" />
+                  )}
                 </b>
                 <span>{preview.competition ?? 'Futebol'}</span>
               </div>
