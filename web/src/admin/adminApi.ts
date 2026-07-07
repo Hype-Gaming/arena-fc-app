@@ -64,11 +64,14 @@ export interface AdminBilhete {
   awayTeam: string;
   homeColor: string | null;
   awayColor: string | null;
+  homeLogo: string | null;
+  awayLogo: string | null;
   competition: string | null;
   startsAt: string;
   odd: string | number;
   resultado: 'pending' | 'green' | 'red';
   publishedAt: string | null;
+  createdAt: string;
 }
 
 export interface CreateBilheteInput {
@@ -189,6 +192,11 @@ export const adminApi = {
   listBilhetes: () => req<AdminBilhete[]>('/admin/bilhetes'),
   createBilhete: (data: CreateBilheteInput) =>
     req<AdminBilhete>('/admin/bilhetes', { method: 'POST', body: JSON.stringify(data) }),
+  updateBilhete: (id: string, data: Partial<CreateBilheteInput>) =>
+    req<AdminBilhete>(`/admin/bilhetes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
   setBilheteResult: (id: string, resultado: 'pending' | 'green' | 'red') =>
     req<AdminBilhete>(`/admin/bilhetes/${id}/result`, {
       method: 'PATCH',

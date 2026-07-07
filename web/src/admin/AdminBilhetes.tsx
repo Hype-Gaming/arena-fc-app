@@ -1,5 +1,5 @@
 // web/src/admin/AdminBilhetes.tsx — backoffice section to create/manage bilhetes
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   adminApi,
   type AdminBilhete,
@@ -106,6 +106,22 @@ export function AdminBilhetes() {
   const [error, setError] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // List controls: search + filters + sort.
+  const [q, setQ] = useState('');
+  const [filterCat, setFilterCat] = useState<'all' | BilheteCategoria>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'green' | 'red' | 'pending' | 'published' | 'draft'>('all');
+  const [sortBy, setSortBy] = useState<'startsAt' | 'created' | 'odd'>('startsAt');
+  // Inline edit of an existing bilhete.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    categoria: 'safes' as BilheteCategoria,
+    mercado: '',
+    selecao: '',
+    linha: '',
+    competition: '',
+    startsAt: '',
+    odd: '',
+  });
 
   function refresh() {
     adminApi.listBilhetes().then(setItems).catch(() => setItems([]));
@@ -392,6 +408,113 @@ export function AdminBilhetes() {
     await adminApi.deleteBilhete(id);
     refresh();
   }
+
+  function onStartEdit(b: AdminBilhete) {
+    setEditingId(b.id);
+    setEditForm({
+      categoria: b.categoria,
+      mercado: b.mercado ?? '',
+      selecao: b.selecao ?? '',
+      linha: b.linha == null ? '' : String(Number(b.linha)),
+      competition: b.competition ?? '',
+      startsAt: toLocalInput(b.startsAt),
+      odd: String(Number(b.odd)),
+    });
+  }
+
+  async function onSaveEdit(id: string) {
+    setError(null);
+    setBusy(true);
+    try {
+      await adminApi.updateBilhete(id, {
+        categoria: editForm.categoria,
+        mercado: editForm.mercado || undefined,
+        selecao: editForm.selecao || undefined,
+        linha: editForm.linha === '' ? undefined : Number(editForm.linha),
+        competition: editForm.competition || undefined,
+        startsAt: editForm.startsAt
+          ? new Date(editForm.startsAt).toISOString()
+          : undefined,
+        odd: editForm.odd === '' ? undefined : Number(editForm.odd),
+      });
+      setEditingId(null);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Performance scoreboard, computed from the loaded bilhetes.
+  const stats = useMemo(() => {
+    const green = items.filter((b) => b.resultado === 'green').length;
+    const red = items.filter((b) => b.resultado === 'red').length;
+    const pending = items.filter((b) => b.resultado === 'pending').length;
+    const published = items.filter((b) => b.publishedAt).length;
+    const withCrest = items.filter((b) => b.homeLogo || b.awayLogo).length;
+    const decided = green + red;
+    return {
+      total: items.length,
+      green,
+      red,
+      pending,
+      published,
+      withCrest,
+      winRate: decided ? Math.round((green / decided) * 100) : null,
+    };
+  }, [items]);
+
+  // Per-category rollup: volume, win rate and average odd.
+  const perCat = useMemo(
+    () =>
+      CATEGORIAS.map((c) => {
+        const rows = items.filter((b) => b.categoria === c.key);
+        const green = rows.filter((b) => b.resultado === 'green').length;
+        const red = rows.filter((b) => b.resultado === 'red').length;
+        const decided = green + red;
+        const avgOdd = rows.length
+          ? rows.reduce((s, b) => s + Number(b.odd), 0) / rows.length
+          : 0;
+        return {
+          key: c.key,
+          label: c.label,
+          count: rows.length,
+          green,
+          red,
+          winRate: decided ? Math.round((green / decided) * 100) : null,
+          avgOdd,
+        };
+      }).filter((c) => c.count > 0),
+    [items],
+  );
+
+  // Search + filter + sort applied to the list the admin sees.
+  const visibleItems = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const matched = items.filter((b) => {
+      if (filterCat !== 'all' && b.categoria !== filterCat) return false;
+      if (filterStatus === 'published' && !b.publishedAt) return false;
+      if (filterStatus === 'draft' && b.publishedAt) return false;
+      if (
+        (filterStatus === 'green' || filterStatus === 'red' || filterStatus === 'pending') &&
+        b.resultado !== filterStatus
+      )
+        return false;
+      if (needle) {
+        const hay = `${b.homeTeam} ${b.awayTeam} ${b.competition ?? ''} ${b.selecao ?? ''}`.toLowerCase();
+        if (!hay.includes(needle)) return false;
+      }
+      return true;
+    });
+    const sorted = [...matched].sort((a, b) => {
+      if (sortBy === 'odd') return Number(b.odd) - Number(a.odd);
+      if (sortBy === 'created')
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+    });
+    return sorted;
+  }, [items, q, filterCat, filterStatus, sortBy]);
 
   /** The clickable market/selection grid, shared by the synced pick + preview. */
   function renderMarkets(markets: SportMarket[]) {
@@ -758,54 +881,251 @@ export function AdminBilhetes() {
         </div>
       </div>
 
+      {items.length > 0 && (
+        <div className="ab-stats">
+          <div className="ab-stat">
+            <b>{stats.total}</b>
+            <span>Bilhetes</span>
+          </div>
+          <div className="ab-stat" data-tone="green">
+            <b>{stats.winRate == null ? '—' : `${stats.winRate}%`}</b>
+            <span>Taxa de acerto</span>
+          </div>
+          <div className="ab-stat">
+            <b>
+              {stats.green}
+              <i>/</i>
+              {stats.red}
+            </b>
+            <span>Green / Red</span>
+          </div>
+          <div className="ab-stat">
+            <b>{stats.pending}</b>
+            <span>Pendentes</span>
+          </div>
+          <div className="ab-stat">
+            <b>{stats.published}</b>
+            <span>Publicados</span>
+          </div>
+          <div className="ab-stat" data-tone={stats.withCrest < stats.total ? 'warn' : undefined}>
+            <b>
+              {stats.withCrest}
+              <i>/</i>
+              {stats.total}
+            </b>
+            <span>Com escudo</span>
+          </div>
+        </div>
+      )}
+
+      {perCat.length > 0 && (
+        <div className="ab-cat-table" role="table" aria-label="Desempenho por categoria">
+          <div className="ab-cat-row ab-cat-row--head" role="row">
+            <span>Categoria</span>
+            <span>Qtd</span>
+            <span>Acerto</span>
+            <span>Green/Red</span>
+            <span>Odd média</span>
+          </div>
+          {perCat.map((c) => (
+            <div className="ab-cat-row" role="row" key={c.key}>
+              <span>{c.label}</span>
+              <span>{c.count}</span>
+              <span>{c.winRate == null ? '—' : `${c.winRate}%`}</span>
+              <span>
+                {c.green}/{c.red}
+              </span>
+              <span>{c.avgOdd.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div className="ab-filters">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar time, competição ou seleção…"
+            aria-label="Buscar bilhetes"
+          />
+          <select
+            value={filterCat}
+            onChange={(e) => setFilterCat(e.target.value as 'all' | BilheteCategoria)}
+            aria-label="Filtrar por categoria"
+          >
+            <option value="all">Todas categorias</option>
+            {CATEGORIAS.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
+            aria-label="Filtrar por status"
+          >
+            <option value="all">Todos status</option>
+            <option value="green">Verde</option>
+            <option value="red">Vermelho</option>
+            <option value="pending">Pendente</option>
+            <option value="published">Publicado</option>
+            <option value="draft">Rascunho</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            aria-label="Ordenar"
+          >
+            <option value="startsAt">Por horário do jogo</option>
+            <option value="created">Mais recentes</option>
+            <option value="odd">Maior odd</option>
+          </select>
+        </div>
+      )}
+
       {items.length === 0 ? (
         <p className="ab-empty">Nenhum bilhete criado ainda.</p>
+      ) : visibleItems.length === 0 ? (
+        <p className="ab-empty">Nenhum bilhete para esse filtro.</p>
       ) : (
         <ul className="admin-bilhetes__list">
-          {items.map((b) => (
-            <li key={b.id} className="ab-item">
-              <div className="ab-item__main">
-                <span className="ab-item__match">
-                  {b.homeTeam} x {b.awayTeam}
-                </span>
-                <span className="ab-item__meta">
-                  {b.competition ? `${b.competition} · ` : ''}
-                  {new Date(b.startsAt).toLocaleString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-              {(b.mercado || b.selecao) && (
-                <span className="ab-chip ab-chip--pick">
-                  {b.mercado ?? 'mercado'} - {b.selecao ?? 'selecao'}
-                  {b.linha != null ? ` (${Number(b.linha).toFixed(2)})` : ''}
-                </span>
-              )}
-              <span className="ab-chip">{b.categoria}</span>
-              <span className="ab-odd">{Number(b.odd).toFixed(2)}</span>
-              <span className="ab-pill" data-res={b.resultado}>
-                {b.resultado === 'green'
-                  ? 'Verde'
-                  : b.resultado === 'red'
-                    ? 'Vermelho'
-                    : 'Pendente'}
-              </span>
-              <span className="ab-pill" data-pub={!!b.publishedAt}>
-                {b.publishedAt ? 'Publicado' : 'Rascunho'}
-              </span>
-              <span className="ab-actions">
-                <button onClick={() => onResult(b.id, 'green')}>Green</button>
-                <button onClick={() => onResult(b.id, 'red')}>Red</button>
-                <button onClick={() => onTogglePublish(b)}>
-                  {b.publishedAt ? 'Despublicar' : 'Publicar'}
-                </button>
-                <button onClick={() => onDelete(b.id)}>Excluir</button>
-              </span>
-            </li>
-          ))}
+          {visibleItems.map((b) => {
+            const started = new Date(b.startsAt).getTime() < Date.now();
+            const crest = b.homeLogo ?? b.awayLogo;
+            return (
+              <li key={b.id} className="ab-item">
+                <div className="ab-item__row">
+                  <div className="ab-item__main">
+                    <span className="ab-item__match">
+                      {crest && <img className="ab-crest ab-crest--sm" src={crest} alt="" />}
+                      {b.homeTeam} x {b.awayTeam}
+                      {started && <span className="ab-live-tag">começou</span>}
+                    </span>
+                    <span className="ab-item__meta">
+                      {b.competition ? `${b.competition} · ` : ''}
+                      {new Date(b.startsAt).toLocaleString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  {(b.mercado || b.selecao) && (
+                    <span className="ab-chip ab-chip--pick">
+                      {b.mercado ?? 'mercado'} - {b.selecao ?? 'selecao'}
+                      {b.linha != null ? ` (${Number(b.linha).toFixed(2)})` : ''}
+                    </span>
+                  )}
+                  <span className="ab-chip">{b.categoria}</span>
+                  <span className="ab-odd">{Number(b.odd).toFixed(2)}</span>
+                  <span className="ab-pill" data-res={b.resultado}>
+                    {b.resultado === 'green'
+                      ? 'Verde'
+                      : b.resultado === 'red'
+                        ? 'Vermelho'
+                        : 'Pendente'}
+                  </span>
+                  <span className="ab-pill" data-pub={!!b.publishedAt}>
+                    {b.publishedAt ? 'Publicado' : 'Rascunho'}
+                  </span>
+                  <span className="ab-actions">
+                    <button onClick={() => onResult(b.id, 'green')}>Green</button>
+                    <button onClick={() => onResult(b.id, 'red')}>Red</button>
+                    <button onClick={() => onTogglePublish(b)}>
+                      {b.publishedAt ? 'Despublicar' : 'Publicar'}
+                    </button>
+                    <button onClick={() => (editingId === b.id ? setEditingId(null) : onStartEdit(b))}>
+                      {editingId === b.id ? 'Fechar' : 'Editar'}
+                    </button>
+                    <button onClick={() => onDelete(b.id)}>Excluir</button>
+                  </span>
+                </div>
+                {editingId === b.id && (
+                  <div className="ab-edit">
+                    <label>
+                      Categoria
+                      <select
+                        value={editForm.categoria}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, categoria: e.target.value as BilheteCategoria })
+                        }
+                      >
+                        {CATEGORIAS.map((c) => (
+                          <option key={c.key} value={c.key}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Mercado
+                      <input
+                        value={editForm.mercado}
+                        onChange={(e) => setEditForm({ ...editForm, mercado: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Seleção
+                      <input
+                        value={editForm.selecao}
+                        onChange={(e) => setEditForm({ ...editForm, selecao: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Linha
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editForm.linha}
+                        onChange={(e) => setEditForm({ ...editForm, linha: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Competição
+                      <input
+                        value={editForm.competition}
+                        onChange={(e) => setEditForm({ ...editForm, competition: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Início
+                      <input
+                        type="datetime-local"
+                        value={editForm.startsAt}
+                        onChange={(e) => setEditForm({ ...editForm, startsAt: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Odd
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="1.01"
+                        value={editForm.odd}
+                        onChange={(e) => setEditForm({ ...editForm, odd: e.target.value })}
+                      />
+                    </label>
+                    <div className="ab-edit__actions">
+                      <button
+                        type="button"
+                        className="ab-primary"
+                        onClick={() => onSaveEdit(b.id)}
+                        disabled={busy}
+                      >
+                        Salvar
+                      </button>
+                      <button type="button" onClick={() => setEditingId(null)}>
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
