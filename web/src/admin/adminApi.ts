@@ -112,6 +112,20 @@ export interface SportEventSyncSummary {
   upserted: number;
 }
 
+/** One event previewed from a pasted Esportiva link: card + popular markets. */
+export interface EventPreview {
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  countryIso: string | null;
+  startsAt: string;
+  deepLink: string;
+  markets: SportMarket[];
+  homeLogo: string | null;
+  awayLogo: string | null;
+}
+
 export interface Team {
   id: string;
   externalId: number;
@@ -197,6 +211,12 @@ export const adminApi = {
     req<SportEvent[]>(`/admin/sport-events${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   syncSportEvents: () =>
     req<SportEventSyncSummary>('/admin/sport-events/sync', { method: 'POST' }),
+  previewEvent: (ref: string) =>
+    req<EventPreview>(`/admin/sport-events/preview?ref=${encodeURIComponent(ref)}`),
+  resolveTeamLogo: (name: string, iso?: string) =>
+    req<{ logo: string | null }>(
+      `/admin/teams/resolve-logo?name=${encodeURIComponent(name)}${iso ? `&iso=${iso}` : ''}`,
+    ),
   importBetslip: (data: { json: string; categoria: BilheteCategoria; publish?: boolean }) =>
     req<{ imported: number }>('/admin/bilhetes/import-betslip', {
       method: 'POST',

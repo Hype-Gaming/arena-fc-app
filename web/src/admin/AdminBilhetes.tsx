@@ -4,6 +4,7 @@ import {
   adminApi,
   type AdminBilhete,
   type BilheteCategoria,
+  type EventPreview,
   type SportEvent,
   type SportMarket,
   type SportSelection,
@@ -92,6 +93,11 @@ export function AdminBilhetes() {
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [selectedEventId, setSelectedEventId] = useState('');
+  const [previewRef, setPreviewRef] = useState('');
+  const [preview, setPreview] = useState<EventPreview | null>(null);
+  // Crests resolved on demand (typed names / seleções not in the catalog yet),
+  // keyed by the lowercased team name → our cache URL.
+  const [resolvedCrests, setResolvedCrests] = useState<Record<string, string>>({});
   const [bulkMarket, setBulkMarket] = useState('1x2');
   const [league, setLeague] = useState(LEAGUES[0].id);
   const [season, setSeason] = useState(SEASONS[0]);
@@ -117,10 +123,29 @@ export function AdminBilhetes() {
     return teams.find((t) => t.name.toLowerCase() === n);
   }
 
-  /** Our cached, self-hosted crest URL for a catalog team (never a hotlink). */
+  /**
+   * Cached crest URL for a team name: catalog exact-name match first, then any
+   * crest resolved on demand (a typed name or seleção fetched via the API).
+   */
   function crestUrl(name: string): string | undefined {
     const t = teamByName(name);
-    return t ? `/api/team-logos/${t.externalId}.png` : undefined;
+    if (t) return `/api/team-logos/${t.externalId}.png`;
+    return resolvedCrests[name.trim().toLowerCase()];
+  }
+
+  /**
+   * On blur of a team-name field, fetch a crest for names the catalog doesn't
+   * already cover (seleções, unsynced clubs) so the flag shows automatically.
+   */
+  async function onResolveCrest(name: string) {
+    const n = name.trim();
+    if (!n || teamByName(n) || resolvedCrests[n.toLowerCase()]) return;
+    try {
+      const { logo } = await adminApi.resolveTeamLogo(n);
+      if (logo) setResolvedCrests((m) => ({ ...m, [n.toLowerCase()]: logo }));
+    } catch {
+      /* best-effort: keep the initials badge if the lookup fails */
+    }
   }
 
   async function onSyncTeams() {
@@ -216,6 +241,7 @@ export function AdminBilhetes() {
     const ev = events.find((e) => e.id === eventId);
     if (!ev) return;
     setSelectedEventId(eventId);
+    setPreview(null); // the synced pick takes over from a pasted preview
     const firstMarket = sortedMarkets(ev.markets)[0];
     const firstSelection = firstMarket?.selections[0];
     setForm((f) => ({
@@ -246,6 +272,42 @@ export function AdminBilhetes() {
       linha: lineValue(selection.line),
       odd: String(Number(selection.odd)),
     }));
+  }
+
+  /** Paste an Esportiva match link → preview the card + its popular markets. */
+  async function onPreviewLink() {
+    setError(null);
+    setBusy(true);
+    try {
+      const p = await adminApi.previewEvent(previewRef.trim());
+      setPreview(p);
+      setSelectedEventId(''); // the pasted event takes over the card
+      // Remember any crests the API resolved so the form preview picks them up.
+      setResolvedCrests((m) => ({
+        ...m,
+        ...(p.homeLogo ? { [p.homeTeam.trim().toLowerCase()]: p.homeLogo } : {}),
+        ...(p.awayLogo ? { [p.awayTeam.trim().toLowerCase()]: p.awayLogo } : {}),
+      }));
+      const firstMarket = sortedMarkets(p.markets)[0];
+      const firstSelection = firstMarket?.selections[0];
+      setForm((f) => ({
+        ...f,
+        homeTeam: p.homeTeam,
+        awayTeam: p.awayTeam,
+        competition: p.competition ?? '',
+        mercado: firstMarket?.key ?? '',
+        selecao: firstSelection?.label ?? p.homeTeam,
+        linha: lineValue(firstSelection?.line ?? null),
+        startsAt: toLocalInput(p.startsAt),
+        odd: firstSelection?.odd != null ? String(Number(firstSelection.odd)) : f.odd,
+        eventDeepLink: p.deepLink,
+        eventExternalId: p.externalId,
+      }));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onImportBetslip() {
@@ -285,6 +347,8 @@ export function AdminBilhetes() {
       });
       setForm(EMPTY);
       setSelectedEventId('');
+      setPreview(null);
+      setPreviewRef('');
       refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -306,6 +370,39 @@ export function AdminBilhetes() {
   async function onDelete(id: string) {
     await adminApi.deleteBilhete(id);
     refresh();
+  }
+
+  /** The clickable market/selection grid, shared by the synced pick + preview. */
+  function renderMarkets(markets: SportMarket[]) {
+    return (
+      <div className="ab-markets">
+        {markets.map((market) => (
+          <section className="ab-market" key={`${market.typeId}-${market.key}`}>
+            <h3>{marketTitle(market)}</h3>
+            <div className="ab-market__grid">
+              {market.selections.map((selection) => {
+                const active =
+                  form.mercado === market.key &&
+                  form.selecao === selection.label &&
+                  form.linha === lineValue(selection.line);
+                return (
+                  <button
+                    type="button"
+                    key={`${selection.label}-${selection.line ?? 'noline'}`}
+                    className="ab-selection"
+                    data-active={active}
+                    onClick={() => onPickSelection(market, selection)}
+                  >
+                    <span>{selection.label}</span>
+                    <b>{Number(selection.odd).toFixed(2)}</b>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -384,6 +481,54 @@ export function AdminBilhetes() {
       </p>
 
       <form onSubmit={onCreate} className="admin-bilhetes__form">
+        <div className="ab-paste">
+          <label>
+            Colar link da Esportiva{' '}
+            <input
+              value={previewRef}
+              onChange={(e) => setPreviewRef(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  onPreviewLink();
+                }
+              }}
+              placeholder="https://esportiva.bet.br/…/le-16993776"
+              aria-label="Link do jogo na Esportiva"
+            />
+          </label>
+          <button
+            type="button"
+            className="ab-primary"
+            onClick={onPreviewLink}
+            disabled={busy || previewRef.trim() === ''}
+          >
+            Ver jogo
+          </button>
+          <small>cola o jogo montado na Esportiva e veja o card + mercados</small>
+        </div>
+        {preview && (
+          <div className="ab-event-card">
+            <div className="ab-event-card__head">
+              <div>
+                <b className="ab-event-card__title">
+                  {preview.homeLogo && <img className="ab-crest" src={preview.homeLogo} alt="" />}
+                  {preview.homeTeam} x {preview.awayTeam}
+                  {preview.awayLogo && <img className="ab-crest" src={preview.awayLogo} alt="" />}
+                </b>
+                <span>{preview.competition ?? 'Futebol'}</span>
+              </div>
+              <a href={preview.deepLink} target="_blank" rel="noreferrer">
+                Abrir Esportiva
+              </a>
+            </div>
+            {sortedMarkets(preview.markets).length === 0 ? (
+              <p className="ab-market-empty">Sem mercados populares para este jogo.</p>
+            ) : (
+              renderMarkets(sortedMarkets(preview.markets))
+            )}
+          </div>
+        )}
         {events.length > 0 && (
           <label>
             Puxar jogo{' '}
@@ -437,33 +582,7 @@ export function AdminBilhetes() {
                 Este jogo ainda nao trouxe mercados estruturados; use a odd manual.
               </p>
             ) : (
-              <div className="ab-markets">
-                {eventMarkets.map((market) => (
-                  <section className="ab-market" key={`${market.typeId}-${market.key}`}>
-                    <h3>{marketTitle(market)}</h3>
-                    <div className="ab-market__grid">
-                      {market.selections.map((selection) => {
-                        const active =
-                          form.mercado === market.key &&
-                          form.selecao === selection.label &&
-                          form.linha === lineValue(selection.line);
-                        return (
-                          <button
-                            type="button"
-                            key={`${selection.label}-${selection.line ?? 'noline'}`}
-                            className="ab-selection"
-                            data-active={active}
-                            onClick={() => onPickSelection(market, selection)}
-                          >
-                            <span>{selection.label}</span>
-                            <b>{Number(selection.odd).toFixed(2)}</b>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
+              renderMarkets(eventMarkets)
             )}
           </div>
         )}
@@ -474,6 +593,7 @@ export function AdminBilhetes() {
               list="admin-teams"
               value={form.homeTeam}
               onChange={(e) => setForm({ ...form, homeTeam: e.target.value })}
+              onBlur={(e) => onResolveCrest(e.target.value)}
               placeholder="Espanha"
               required
             />
@@ -494,6 +614,7 @@ export function AdminBilhetes() {
               list="admin-teams"
               value={form.awayTeam}
               onChange={(e) => setForm({ ...form, awayTeam: e.target.value })}
+              onBlur={(e) => onResolveCrest(e.target.value)}
               placeholder="Áustria"
               required
             />
