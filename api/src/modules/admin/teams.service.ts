@@ -6,13 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SportsFeedService } from '../sports-feed/sports-feed.service';
-import { TeamLogoCacheService } from '../sports-feed/team-logo-cache.service';
+import {
+  TeamLogoCacheService,
+  teamLogoUrl,
+} from '../sports-feed/team-logo-cache.service';
 import {
   buildTeamLogoIndex,
   matchTeamLogo,
   teamKey,
 } from '../sports-feed/team-logo.match';
 import { countryToIso3 } from '../sports-feed/country-iso';
+import { nationEnglishName } from '../sports-feed/nation-aliases';
 import { resolveLeagueId } from './esportiva-leagues';
 import { normalizeText } from '../tipster/match-search.util';
 
@@ -243,6 +247,37 @@ export class AdminTeamsService {
   }
 
   /**
+   * Best-effort fallback used when a fixture team/selection is not in the local
+   * catalog yet. Returns the app's cached crest URL after upserting/warming.
+   */
+  async resolveTeamLogo(name: string, iso: string | null = null): Promise<string | null> {
+    const key = apiKey();
+    if (!key) return null;
+
+    const best = await this.searchTeam(name, iso, key);
+    if (!best) return null;
+
+    await this.prisma.team.upsert({
+      where: { externalId: best.id },
+      create: {
+        externalId: best.id,
+        name: best.name,
+        code: best.code,
+        country: best.country,
+        logoUrl: best.logo,
+      },
+      update: {
+        name: best.name,
+        code: best.code,
+        country: best.country,
+        logoUrl: best.logo,
+      },
+    });
+    await this.logoCache.warm(best.id, best.logo);
+    return teamLogoUrl(best.id);
+  }
+
+  /**
    * Pull teams for the leagues currently in the Esportiva feed: read the
    * upcoming fixtures, map each distinct competition to its API-Football league
    * (country-disambiguated), and sync those leagues into the catalog. Bounded by
@@ -297,7 +332,10 @@ export class AdminTeamsService {
     iso: string | null,
     key: string,
   ): Promise<ApiFootballTeamRow['team'] | null> {
-    const query = searchQuery(name);
+    // Seleções: search API-Football under its English name ("Suíça" →
+    // "Switzerland"), otherwise the PT name never matches the English catalog.
+    const canonical = nationEnglishName(name) ?? name;
+    const query = searchQuery(canonical);
     if (query.length < 3) return null;
 
     let rows: ApiFootballTeamRow[];
@@ -327,7 +365,7 @@ export class AdminTeamsService {
     }
 
     // Prefer an exact key match; otherwise the shortest non-reserve name.
-    const wantedKey = teamKey(name);
+    const wantedKey = teamKey(canonical);
     const exact = candidates.find((t) => teamKey(t.name) === wantedKey);
     if (exact) return exact;
 

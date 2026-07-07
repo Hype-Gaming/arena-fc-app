@@ -14,6 +14,9 @@ const CATEGORIA_KEYS = Object.values(BilheteCategoria);
 export class CreateBilheteDto {
   @IsOptional() @IsString() titulo?: string;
   @IsIn(CATEGORIA_KEYS) categoria!: BilheteCategoria;
+  @IsOptional() @IsString() mercado?: string;
+  @IsOptional() @IsString() selecao?: string;
+  @IsOptional() @IsNumber() @IsPositive() linha?: number;
   @IsString() homeTeam!: string;
   @IsString() awayTeam!: string;
   @IsOptional() @IsString() homeColor?: string;
@@ -31,6 +34,7 @@ export class CreateBilheteDto {
 
 export class FromEventsDto {
   @IsOptional() @IsIn(CATEGORIA_KEYS) categoria?: BilheteCategoria;
+  @IsOptional() @IsString() mercado?: string;
   @IsOptional() @IsNumber() @IsPositive() limit?: number;
   @IsOptional() @IsBoolean() publish?: boolean;
 }
@@ -45,6 +49,9 @@ export class ImportBetslipDto {
 export class UpdateBilheteDto {
   @IsOptional() @IsString() titulo?: string;
   @IsOptional() @IsIn(CATEGORIA_KEYS) categoria?: BilheteCategoria;
+  @IsOptional() @IsString() mercado?: string;
+  @IsOptional() @IsString() selecao?: string;
+  @IsOptional() @IsNumber() @IsPositive() linha?: number;
   @IsOptional() @IsString() homeTeam?: string;
   @IsOptional() @IsString() awayTeam?: string;
   @IsOptional() @IsString() homeColor?: string;

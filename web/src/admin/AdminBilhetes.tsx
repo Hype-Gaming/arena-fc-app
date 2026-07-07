@@ -5,6 +5,8 @@ import {
   type AdminBilhete,
   type BilheteCategoria,
   type SportEvent,
+  type SportMarket,
+  type SportSelection,
   type Team,
 } from './adminApi';
 
@@ -23,11 +25,41 @@ const EMPTY = {
   homeTeam: '',
   awayTeam: '',
   competition: '',
+  mercado: '',
+  selecao: '',
+  linha: '',
   startsAt: '',
   odd: '',
   eventDeepLink: '',
   eventExternalId: '',
 };
+
+const MARKET_ORDER = ['1x2', 'over_under', 'btts', 'double_chance', 'dnb'];
+const MARKET_LABELS: Record<string, string> = {
+  '1x2': 'Resultado Final',
+  over_under: 'Total de Gols',
+  btts: 'Ambas Marcam',
+  double_chance: 'Dupla Chance',
+  dnb: 'Empate Anula',
+};
+
+function sortedMarkets(markets: SportMarket[] | null | undefined): SportMarket[] {
+  return [...(markets ?? [])]
+    .filter((m) => m.selections.length > 0)
+    .sort((a, b) => {
+      const ai = MARKET_ORDER.indexOf(a.key);
+      const bi = MARKET_ORDER.indexOf(b.key);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+}
+
+function lineValue(line: number | null): string {
+  return line == null ? '' : String(line);
+}
+
+function marketTitle(market: SportMarket): string {
+  return MARKET_LABELS[market.key] ?? market.name;
+}
 
 /** ISO instant → the local value a <input type="datetime-local"> expects. */
 function toLocalInput(iso: string): string {
@@ -59,6 +91,8 @@ export function AdminBilhetes() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [form, setForm] = useState(EMPTY);
+  const [selectedEventId, setSelectedEventId] = useState('');
+  const [bulkMarket, setBulkMarket] = useState('1x2');
   const [league, setLeague] = useState(LEAGUES[0].id);
   const [season, setSeason] = useState(SEASONS[0]);
   const [betslip, setBetslip] = useState('');
@@ -73,6 +107,9 @@ export function AdminBilhetes() {
     adminApi.listSportEvents().then(setEvents).catch(() => setEvents([]));
   }
   useEffect(refresh, []);
+
+  const selectedEvent = events.find((ev) => ev.id === selectedEventId);
+  const eventMarkets = sortedMarkets(selectedEvent?.markets);
 
   /** Catalog match by exact name → auto-fills the crest logo on create. */
   function teamByName(name: string): Team | undefined {
@@ -121,7 +158,10 @@ export function AdminBilhetes() {
     setSyncMsg(null);
     setBusy(true);
     try {
-      const r = await adminApi.createBilhetesFromEvents({ categoria: form.categoria });
+      const r = await adminApi.createBilhetesFromEvents({
+        categoria: form.categoria,
+        mercado: bulkMarket,
+      });
       setSyncMsg(
         `Bilhetes criados: ${r.created} (${r.withCrest} com escudo, de ${r.availableEvents} jogos)`,
       );
@@ -175,15 +215,36 @@ export function AdminBilhetes() {
   function onPickEvent(eventId: string) {
     const ev = events.find((e) => e.id === eventId);
     if (!ev) return;
+    setSelectedEventId(eventId);
+    const firstMarket = sortedMarkets(ev.markets)[0];
+    const firstSelection = firstMarket?.selections[0];
     setForm((f) => ({
       ...f,
       homeTeam: ev.homeTeam,
       awayTeam: ev.awayTeam,
       competition: ev.competition ?? '',
+      mercado: firstMarket?.key ?? '1x2',
+      selecao: firstSelection?.label ?? ev.homeTeam,
+      linha: lineValue(firstSelection?.line ?? null),
       startsAt: toLocalInput(ev.startsAt),
-      odd: ev.oddHome != null ? String(Number(ev.oddHome)) : f.odd,
+      odd:
+        firstSelection?.odd != null
+          ? String(Number(firstSelection.odd))
+          : ev.oddHome != null
+            ? String(Number(ev.oddHome))
+            : f.odd,
       eventDeepLink: ev.deepLink,
       eventExternalId: ev.externalId,
+    }));
+  }
+
+  function onPickSelection(market: SportMarket, selection: SportSelection) {
+    setForm((f) => ({
+      ...f,
+      mercado: market.key,
+      selecao: selection.label,
+      linha: lineValue(selection.line),
+      odd: String(Number(selection.odd)),
     }));
   }
 
@@ -209,6 +270,9 @@ export function AdminBilhetes() {
     try {
       await adminApi.createBilhete({
         categoria: form.categoria,
+        mercado: form.mercado || undefined,
+        selecao: form.selecao || undefined,
+        linha: form.linha === '' ? undefined : Number(form.linha),
         homeTeam: form.homeTeam.trim(),
         awayTeam: form.awayTeam.trim(),
         homeLogo: crestUrl(form.homeTeam),
@@ -220,6 +284,7 @@ export function AdminBilhetes() {
         eventExternalId: form.eventExternalId || undefined,
       });
       setForm(EMPTY);
+      setSelectedEventId('');
       refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -291,6 +356,20 @@ export function AdminBilhetes() {
           Sincronizar jogos (Esportiva)
         </button>
         <small>{events.length} jogos disponíveis</small>
+        <label>
+          Mercado{' '}
+          <select
+            value={bulkMarket}
+            onChange={(e) => setBulkMarket(e.target.value)}
+            aria-label="Mercado para criar bilhetes dos jogos"
+          >
+            {MARKET_ORDER.map((key) => (
+              <option key={key} value={key}>
+                {MARKET_LABELS[key]}
+              </option>
+            ))}
+          </select>
+        </label>
         <button type="button" onClick={onCreateFromEvents} disabled={busy}>
           Criar bilhetes dos jogos
         </button>
@@ -309,7 +388,7 @@ export function AdminBilhetes() {
           <label>
             Puxar jogo{' '}
             <select
-              defaultValue=""
+              value={selectedEventId}
               onChange={(e) => onPickEvent(e.target.value)}
               aria-label="Puxar jogo da Esportiva"
             >
@@ -340,6 +419,54 @@ export function AdminBilhetes() {
             ))}
           </select>
         </label>
+        {selectedEvent && (
+          <div className="ab-event-card">
+            <div className="ab-event-card__head">
+              <div>
+                <b>
+                  {selectedEvent.homeTeam} x {selectedEvent.awayTeam}
+                </b>
+                <span>{selectedEvent.competition ?? 'Futebol'}</span>
+              </div>
+              <a href={selectedEvent.deepLink} target="_blank" rel="noreferrer">
+                Abrir Esportiva
+              </a>
+            </div>
+            {eventMarkets.length === 0 ? (
+              <p className="ab-market-empty">
+                Este jogo ainda nao trouxe mercados estruturados; use a odd manual.
+              </p>
+            ) : (
+              <div className="ab-markets">
+                {eventMarkets.map((market) => (
+                  <section className="ab-market" key={`${market.typeId}-${market.key}`}>
+                    <h3>{marketTitle(market)}</h3>
+                    <div className="ab-market__grid">
+                      {market.selections.map((selection) => {
+                        const active =
+                          form.mercado === market.key &&
+                          form.selecao === selection.label &&
+                          form.linha === lineValue(selection.line);
+                        return (
+                          <button
+                            type="button"
+                            key={`${selection.label}-${selection.line ?? 'noline'}`}
+                            className="ab-selection"
+                            data-active={active}
+                            onClick={() => onPickSelection(market, selection)}
+                          >
+                            <span>{selection.label}</span>
+                            <b>{Number(selection.odd).toFixed(2)}</b>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <label>
           Casa{' '}
           <span className="ab-team">
@@ -403,7 +530,33 @@ export function AdminBilhetes() {
           />
         </label>
         <label>
-          Odd{' '}
+          Mercado{' '}
+          <input
+            value={form.mercado}
+            onChange={(e) => setForm({ ...form, mercado: e.target.value })}
+            placeholder="1x2"
+          />
+        </label>
+        <label>
+          Selecao{' '}
+          <input
+            value={form.selecao}
+            onChange={(e) => setForm({ ...form, selecao: e.target.value })}
+            placeholder="Bahia"
+          />
+        </label>
+        <label>
+          Linha{' '}
+          <input
+            type="number"
+            step="0.01"
+            value={form.linha}
+            onChange={(e) => setForm({ ...form, linha: e.target.value })}
+            placeholder="2.5"
+          />
+        </label>
+        <label>
+          Odd selecionada{' '}
           <input
             type="number"
             step="0.01"
@@ -476,6 +629,12 @@ export function AdminBilhetes() {
                   })}
                 </span>
               </div>
+              {(b.mercado || b.selecao) && (
+                <span className="ab-chip ab-chip--pick">
+                  {b.mercado ?? 'mercado'} - {b.selecao ?? 'selecao'}
+                  {b.linha != null ? ` (${Number(b.linha).toFixed(2)})` : ''}
+                </span>
+              )}
               <span className="ab-chip">{b.categoria}</span>
               <span className="ab-odd">{Number(b.odd).toFixed(2)}</span>
               <span className="ab-pill" data-res={b.resultado}>

@@ -190,6 +190,103 @@
   grid-column: 1 / -1;
   margin: 0;
 }
+.ab-event-card {
+  grid-column: 1 / -1;
+  border: 1px solid var(--ad-line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+.ab-event-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ad-line);
+}
+.ab-event-card__head div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ab-event-card__head b {
+  font-size: 14px;
+  color: #fff;
+}
+.ab-event-card__head span {
+  font-size: 12px;
+  color: var(--ad-muted);
+}
+.ab-event-card__head a {
+  color: var(--ad-gold-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ab-markets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1px;
+  background: var(--ad-line);
+}
+.ab-market {
+  border: 0;
+  border-radius: 0;
+  padding: 10px;
+  background: rgba(10, 20, 32, 0.92);
+}
+.ab-market h3 {
+  margin: 0 0 8px;
+  color: var(--ad-muted);
+  font-family: var(--ad-display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ab-market__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 6px;
+}
+.admin .ab-selection {
+  min-height: 48px;
+  padding: 7px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--ad-body);
+  background: rgba(255, 255, 255, 0.06);
+}
+.admin .ab-selection span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ad-muted);
+}
+.admin .ab-selection b {
+  font-family: var(--ad-display);
+  font-size: 17px;
+  color: var(--ad-gold-soft);
+}
+.admin .ab-selection[data-active='true'] {
+  border-color: rgba(166, 238, 66, 0.75);
+  background: rgba(166, 238, 66, 0.12);
+}
+.ab-market-empty {
+  margin: 0;
+  padding: 12px 14px;
+  color: var(--ad-muted);
+  font-size: 13px;
+}
 
 /* betslip import */
 .ab-betslip {
@@ -288,6 +385,15 @@
   color: var(--ad-blue);
   border: 1px solid rgba(79, 143, 224, 0.5);
   background: rgba(79, 143, 224, 0.1);
+}
+.ab-chip--pick {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ad-gold-soft);
+  border-color: rgba(166, 238, 66, 0.45);
+  background: rgba(166, 238, 66, 0.08);
 }
 .ab-odd {
   font-family: var(--ad-display);

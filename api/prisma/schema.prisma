@@ -302,6 +302,14 @@ model Bilhete {
   id          String           @id @default(cuid())
   titulo      String           @default("Bilhete Especial")
   categoria   BilheteCategoria
+  // The betting market this tip is on. `mercado` is the market slug/name
+  // ("1x2", "over_under", "btts", …); `selecao` is the picked outcome label
+  // as the book shows it ("Mais de 2.5", "Sim", "Botafogo"); `linha` is the
+  // goal/handicap line when the market carries one (Over/Under). Legacy rows
+  // predate markets and keep null → they render as the old "Bilhete Especial".
+  mercado     String?
+  selecao     String?
+  linha       Decimal?         @db.Decimal(6, 2)
   homeTeam    String
   awayTeam    String
   homeColor   String? // crest accent hex fallback when there is no logo
@@ -349,10 +357,17 @@ model SportEvent {
   homeTeam    String
   awayTeam    String
   competition String?
+  // ISO-3166 alpha-3 of the competition's country (null for international),
+  // snapshotted so the crest fallback can break same-name club collisions.
+  countryIso  String?
   startsAt    DateTime
   oddHome     Decimal? @db.Decimal(6, 2)
   oddDraw     Decimal? @db.Decimal(6, 2)
   oddAway     Decimal? @db.Decimal(6, 2)
+  // Core markets snapshot (1X2, Over/Under, Double chance, DNB, BTTS) as a
+  // NormalizedMarket[] JSON blob, so the admin can build a bilhete on any
+  // offered market/selection without re-fetching the feed. Null on legacy rows.
+  markets     Json?
   deepLink    String
   syncedAt    DateTime @default(now())
 

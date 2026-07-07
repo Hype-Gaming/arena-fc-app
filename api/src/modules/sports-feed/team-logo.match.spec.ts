@@ -65,6 +65,15 @@ describe('matchTeamLogo', () => {
     expect(matchTeamLogo('Nacional', idx)).toEqual(ref(10, null));
   });
 
+  it('resolves a seleção via its English alias (Suíça → Switzerland)', () => {
+    const idx = buildTeamLogoIndex([team(100, 'Switzerland'), team(101, 'Colombia')]);
+    // The feed sends the Portuguese name; the catalog holds the English one.
+    expect(matchTeamLogo('Suíça', idx)).toEqual(ref(100));
+    expect(matchTeamLogo('Colômbia', idx)).toEqual(ref(101));
+    // A club with no alias still falls through to null.
+    expect(matchTeamLogo('Grêmio', idx)).toBeNull();
+  });
+
   it('rejects a key match from a different country (Barcelona BRA ≠ Spain)', () => {
     const idx = buildTeamLogoIndex([team(20, 'Barcelona', 'Spain')]);
     // A Brazilian "Barcelona EC RJ" (BRA) must NOT take Spain's Barcelona.

@@ -189,6 +189,27 @@ describe('AdminTeamsService.syncLiveLogos', () => {
     expect(logoCache.warm).not.toHaveBeenCalled();
   });
 
+  it('searches a seleção under its English name (Suíça → Switzerland)', async () => {
+    const prisma = makePrisma();
+    sportsFeed.fetchLive.mockResolvedValue([
+      { homeTeam: 'Suíça', awayTeam: 'Colômbia', countryIso: null },
+    ]);
+    fetchMock.mockResolvedValue({
+      json: () =>
+        Promise.resolve({ errors: [], results: 1, response: [ROW(15, 'Switzerland')] }),
+    });
+
+    const svc = new AdminTeamsService(prisma, sportsFeed, logoCache);
+    await svc.syncLiveLogos();
+
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    // PT names are translated to English before hitting /teams?search=.
+    expect(urls.some((u) => /search=Switzerland/i.test(u))).toBe(true);
+    expect(urls.some((u) => /search=Colombia/i.test(u))).toBe(true);
+    // The raw "suica" must never be searched — API-Football is English-only.
+    expect(urls.some((u) => /search=suica/i.test(u))).toBe(false);
+  });
+
   it('throws 503 when no API key is configured', async () => {
     delete process.env.API_FOOTBALL_KEY;
     const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);

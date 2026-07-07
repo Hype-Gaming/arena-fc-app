@@ -6,6 +6,7 @@
 // back to the initials badge.
 import { normalizeText } from '../tipster/match-search.util';
 import { countryToIso3 } from './country-iso';
+import { nationEnglishName } from './nation-aliases';
 
 export interface CatalogTeam {
   externalId: number;
@@ -101,10 +102,17 @@ export function matchTeamLogo(
   index: TeamLogoIndex,
   countryIso?: string | null,
 ): TeamLogoRef | null {
-  const exact = index.byName.get(normalizeText(name));
+  // The feed names seleções in Portuguese; the catalog stores API-Football's
+  // English name. Try the English alias too so "Suíça" resolves "Switzerland".
+  const english = nationEnglishName(name);
+  const exact =
+    index.byName.get(normalizeText(name)) ??
+    (english ? index.byName.get(normalizeText(english)) : undefined);
   if (exact) return exact;
 
-  const keyed = index.byKey.get(teamKey(name));
+  const keyed =
+    index.byKey.get(teamKey(name)) ??
+    (english ? index.byKey.get(teamKey(english)) : undefined);
   if (!keyed) return null;
   if (countryIso && keyed.countryIso && countryIso !== keyed.countryIso) {
     return null; // same name, different country → don't guess a wrong crest

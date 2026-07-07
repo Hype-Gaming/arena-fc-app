@@ -13,10 +13,50 @@ import {
   matchTeamLogo,
 } from '../sports-feed/team-logo.match';
 import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
+import { AdminTeamsService } from './teams.service';
+
+function defaultHomeSelection(ev: {
+  homeTeam: string;
+  oddHome: unknown;
+  markets?: unknown;
+  mercado?: string | null;
+}): { mercado: string; selecao: string; linha: number | null; odd: number } {
+  const markets = Array.isArray(ev.markets) ? ev.markets : [];
+  const preferredKey = ev.mercado ?? '1x2';
+  const market = markets.find(
+    (m) =>
+      typeof m === 'object' &&
+      m !== null &&
+      (m as { key?: unknown }).key === preferredKey,
+  ) as { key?: string; selections?: { label?: unknown; odd?: unknown; line?: unknown }[] } | undefined;
+  const winner = markets.find(
+    (m) =>
+      typeof m === 'object' &&
+      m !== null &&
+      (m as { key?: unknown }).key === '1x2',
+  ) as { selections?: { label?: unknown; odd?: unknown; line?: unknown }[] } | undefined;
+  const homeSelection =
+    market?.key === '1x2'
+      ? market.selections?.find((s) => s.label === ev.homeTeam)
+      : market?.selections?.[0];
+  const fallbackHome = winner?.selections?.find((s) => s.label === ev.homeTeam);
+  const selection = homeSelection ?? fallbackHome;
+  return {
+    mercado: market?.key ?? '1x2',
+    selecao: typeof selection?.label === 'string' ? selection.label : ev.homeTeam,
+    linha: typeof selection?.line === 'number' ? selection.line : null,
+    odd: Number(
+      typeof selection?.odd === 'number' ? selection.odd : ev.oddHome,
+    ),
+  };
+}
 
 @Injectable()
 export class AdminBilhetesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly teamsService: AdminTeamsService,
+  ) {}
 
   /**
    * Turn the synced Esportiva fixtures into bilhetes in one go: soonest
@@ -45,37 +85,53 @@ export class AdminBilhetesService {
       select: { externalId: true, name: true, logoUrl: true, country: true },
     });
     const index = buildTeamLogoIndex(teams);
-    const crest = (name: string): string | null => {
+    const fallbackCrests = new Map<string, Promise<string | null>>();
+    const crest = (name: string, iso: string | null): Promise<string | null> => {
       const ref = matchTeamLogo(name, index);
-      return ref ? teamLogoUrl(ref.externalId) : null;
+      if (ref) return Promise.resolve(teamLogoUrl(ref.externalId));
+
+      const key = `${name}|${iso ?? ''}`;
+      if (!fallbackCrests.has(key)) {
+        fallbackCrests.set(key, this.teamsService.resolveTeamLogo(name, iso));
+      }
+      return fallbackCrests.get(key)!;
     };
 
     // Resolve crests up front and float games that HAVE a crest to the top, so
     // "bring games with crests" actually does when the catalog covers them
     // (kept soonest-first within each group — sort is stable).
-    const scored = events
-      .filter((ev) => !ev.externalId || !used.has(ev.externalId))
-      .map((ev) => ({
+    const scored = await Promise.all(
+      events
+        .filter((ev) => !ev.externalId || !used.has(ev.externalId))
+        .map(async (ev) => ({
         ev,
-        homeLogo: crest(ev.homeTeam),
-        awayLogo: crest(ev.awayTeam),
-      }))
-      .map((s) => ({ ...s, hasCrest: !!(s.homeLogo || s.awayLogo) }));
-    scored.sort((a, b) => Number(b.hasCrest) - Number(a.hasCrest));
+        homeLogo: await crest(ev.homeTeam, ev.countryIso),
+        awayLogo: await crest(ev.awayTeam, ev.countryIso),
+      })),
+    );
+    const scoredWithCrests = scored.map((s) => ({
+      ...s,
+      hasCrest: !!(s.homeLogo || s.awayLogo),
+    }));
+    scoredWithCrests.sort((a, b) => Number(b.hasCrest) - Number(a.hasCrest));
 
     const created = [];
-    for (const s of scored.slice(0, limit)) {
+    for (const s of scoredWithCrests.slice(0, limit)) {
+      const pick = defaultHomeSelection({ ...s.ev, mercado: dto.mercado ?? null });
       created.push(
         await this.prisma.bilhete.create({
           data: {
             categoria,
+            mercado: pick.mercado,
+            selecao: pick.selecao,
+            linha: pick.linha,
             homeTeam: s.ev.homeTeam,
             awayTeam: s.ev.awayTeam,
             homeLogo: s.homeLogo,
             awayLogo: s.awayLogo,
             competition: s.ev.competition,
             startsAt: s.ev.startsAt,
-            odd: s.ev.oddHome!,
+            odd: pick.odd!,
             eventDeepLink: s.ev.deepLink,
             eventExternalId: s.ev.externalId,
             publishedAt,

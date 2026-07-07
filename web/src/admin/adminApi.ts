@@ -40,10 +40,26 @@ export interface Entrada { id: string; status: 'pending' | 'green' | 'red'; }
 export type BilheteCategoria =
   | 'safes' | 'pro' | 'ultra' | 'alavancagem' | 'multiplas' | 'secundario' | 'ligas';
 
+export interface SportSelection {
+  label: string;
+  odd: number;
+  line: number | null;
+}
+
+export interface SportMarket {
+  typeId: number;
+  key: string;
+  name: string;
+  selections: SportSelection[];
+}
+
 export interface AdminBilhete {
   id: string;
   titulo: string;
   categoria: BilheteCategoria;
+  mercado: string | null;
+  selecao: string | null;
+  linha: string | number | null;
   homeTeam: string;
   awayTeam: string;
   homeColor: string | null;
@@ -58,6 +74,9 @@ export interface AdminBilhete {
 export interface CreateBilheteInput {
   titulo?: string;
   categoria: BilheteCategoria;
+  mercado?: string;
+  selecao?: string;
+  linha?: number;
   homeTeam: string;
   awayTeam: string;
   homeColor?: string;
@@ -83,6 +102,7 @@ export interface SportEvent {
   oddHome: string | number | null;
   oddDraw: string | number | null;
   oddAway: string | number | null;
+  markets: SportMarket[] | null;
   deepLink: string;
 }
 
@@ -182,7 +202,9 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  createBilhetesFromEvents: (data: { categoria?: BilheteCategoria; limit?: number } = {}) =>
+  createBilhetesFromEvents: (
+    data: { categoria?: BilheteCategoria; mercado?: string; limit?: number } = {},
+  ) =>
     req<{ created: number; withCrest: number; availableEvents: number }>(
       '/admin/bilhetes/from-events',
       { method: 'POST', body: JSON.stringify(data) },

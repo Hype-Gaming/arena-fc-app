@@ -51,6 +51,22 @@ describe('BilhetesService.getFeed', () => {
     expect(feed.bilhetes.map((x) => x.id)).toEqual(['1']);
   });
 
+  it('loads only active published tickets from the Esportiva rail', async () => {
+    const prisma = makePrisma(null, [b('1', 'safes')]);
+    const svc = new BilhetesService(prisma);
+
+    await svc.getFeed('u1');
+
+    expect(prisma.bilhete.findMany).toHaveBeenCalledWith({
+      where: {
+        publishedAt: { not: null },
+        resultado: 'pending',
+        startsAt: { gte: expect.any(Date) },
+      },
+      orderBy: { startsAt: 'asc' },
+    });
+  });
+
   it('premium viewer: unlocks pro/ultra but not the diamante-only markets', async () => {
     const prisma = makePrisma(
       {

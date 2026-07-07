@@ -1,5 +1,6 @@
 // api/src/modules/sports-feed/sports-feed.service.ts
 import { Inject, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   NormalizedEvent,
@@ -93,10 +94,15 @@ export class SportsFeedService {
       homeTeam: e.homeTeam,
       awayTeam: e.awayTeam,
       competition: e.competition,
+      countryIso: e.countryIso,
       startsAt: e.startsAt,
       oddHome: e.oddHome,
       oddDraw: e.oddDraw,
       oddAway: e.oddAway,
+      // Persist the structured markets so the admin picker can offer every
+      // outcome (Over/Under, BTTS, …), not just 1X2. Prisma Json wants a
+      // plain value; [] when the event has no core market.
+      markets: e.markets as unknown as Prisma.InputJsonValue,
       deepLink: e.deepLink,
     };
     return this.prisma.sportEvent.upsert({

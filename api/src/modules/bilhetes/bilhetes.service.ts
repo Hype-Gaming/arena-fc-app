@@ -76,7 +76,11 @@ export class BilhetesService {
     const unlockedByProduct = new Set(accesses.map((a) => a.categoria));
 
     const published = await this.prisma.bilhete.findMany({
-      where: { publishedAt: { not: null } },
+      where: {
+        publishedAt: { not: null },
+        resultado: 'pending',
+        startsAt: { gte: now },
+      },
       orderBy: { startsAt: 'asc' },
     });
 
