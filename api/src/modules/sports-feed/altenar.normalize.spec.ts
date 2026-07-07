@@ -2,7 +2,9 @@
 import {
   normalizeAltenar,
   normalizeAltenarLive,
+  normalizeAltenarEventDetails,
   AltenarRaw,
+  AltenarEventDetails,
 } from './altenar.normalize';
 
 const NOW = new Date('2026-07-10T00:00:00Z');
@@ -205,6 +207,93 @@ function liveSample(): AltenarRaw {
     champs: [{ id: 8461, name: 'Carioca, Série C' }],
   };
 }
+
+// Mirrors GetEventDetails: markets carry `sv` (line) + nested `desktopOddIds`,
+// prices live in a separate `odds` array, and `marketGroups[Principal]` defines
+// the popular set.
+function detailsSample(): AltenarEventDetails {
+  return {
+    competitors: [
+      { id: 1, name: 'Suíça' },
+      { id: 2, name: 'Colômbia' },
+    ],
+    marketGroups: [
+      { id: 1, name: 'Principal', sortOrder: 0, marketIds: [100, 101, 102, 200, 300, 900] },
+      { id: 5, name: 'Escanteios', sortOrder: 5, marketIds: [999] },
+    ],
+    markets: [
+      { id: 100, typeId: 1, name: 'Vencedor do encontro', sv: '', desktopOddIds: [[10], [11], [12]] },
+      { id: 101, typeId: 18, name: 'Total de gols', sv: '1.5', desktopOddIds: [[20], [21]] },
+      { id: 102, typeId: 18, name: 'Total de gols', sv: '2.5', desktopOddIds: [[22], [23]] },
+      { id: 200, typeId: 45, name: 'Resultado Correto', sv: '1:0', desktopOddIds: [[30], [31]] },
+      { id: 300, typeId: 17725, name: 'Monitor VAR', sv: '', desktopOddIds: [[40]] },
+      { id: 900, typeId: 21001, name: 'Jogador para Marcar Gol', sv: '', desktopOddIds: [[9999]] },
+      { id: 999, typeId: 166, name: 'Total de escanteios', sv: '8.5', desktopOddIds: [[50], [51]] },
+    ],
+    odds: [
+      { id: 10, price: 1.9, name: 'Suíça', competitorId: 1 },
+      { id: 11, price: 3.4, name: 'Empate' },
+      { id: 12, price: 4.1, name: 'Colômbia', competitorId: 2 },
+      { id: 20, price: 1.7, name: 'Mais de 1.5' },
+      { id: 21, price: 2.1, name: 'Menos de 1.5' },
+      { id: 22, price: 2.4, name: 'Mais de 2.5' },
+      { id: 23, price: 1.55, name: 'Menos de 2.5' },
+      { id: 30, price: 7.5, name: '1:0' },
+      { id: 31, price: 8.0, name: '2:0' },
+      { id: 40, price: 1.5, name: 'Sim' }, // VAR market is denied → unused
+      { id: 50, price: 1.9, name: 'Mais de 8.5' }, // corners not in Principal
+      { id: 51, price: 1.9, name: 'Menos de 8.5' },
+      // no id 9999 → the player market resolves to zero selections
+    ],
+  };
+}
+
+describe('normalizeAltenarEventDetails', () => {
+  it('surfaces the Principal markets, merging lines and dropping noise', () => {
+    const markets = normalizeAltenarEventDetails(detailsSample());
+    // 1X2 + Total (merged) + Resultado Correto. Corners (not Principal), VAR
+    // (denied) and the player market (no live odds) are all excluded.
+    expect(markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 't45']);
+
+    const ou = markets.find((m) => m.key === 'over_under')!;
+    // Both lines merged into one market, each selection keeping its line.
+    expect(ou.selections).toEqual([
+      { label: 'Mais de 1.5', odd: 1.7, line: 1.5 },
+      { label: 'Menos de 1.5', odd: 2.1, line: 1.5 },
+      { label: 'Mais de 2.5', odd: 2.4, line: 2.5 },
+      { label: 'Menos de 2.5', odd: 1.55, line: 2.5 },
+    ]);
+
+    // A scoreline sv ("1:0") is not a numeric line.
+    const cs = markets.find((m) => m.key === 't45')!;
+    expect(cs.selections.every((s) => s.line === null)).toBe(true);
+    expect(markets.find((m) => m.key === '1x2')!.selections).toHaveLength(3);
+  });
+
+  it('drops suspended legs (oddStatus != 0)', () => {
+    const raw = detailsSample();
+    raw.odds!.find((o) => o.id === 20)!.oddStatus = 1; // suspend "Mais de 1.5"
+    const ou = normalizeAltenarEventDetails(raw).find((m) => m.key === 'over_under')!;
+    expect(ou.selections.map((s) => s.label)).toEqual([
+      'Menos de 1.5',
+      'Mais de 2.5',
+      'Menos de 2.5',
+    ]);
+  });
+
+  it('falls back to all markets when there is no Principal group', () => {
+    const raw = detailsSample();
+    raw.marketGroups = [];
+    const keys = normalizeAltenarEventDetails(raw).map((m) => m.key);
+    // Now corners (166) are included; VAR/player still drop (deny / no odds).
+    expect(keys).toContain('t166');
+    expect(keys).not.toContain('t17725');
+  });
+
+  it('returns [] for an empty payload', () => {
+    expect(normalizeAltenarEventDetails({})).toEqual([]);
+  });
+});
 
 describe('normalizeAltenarLive', () => {
   it('maps a live event with score, minute, status and 1X2 odds', () => {

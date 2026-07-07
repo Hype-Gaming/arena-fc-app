@@ -14,6 +14,17 @@ export class AdminTeamsController {
 
   @Get() list(@Query('q') q?: string) { return this.service.list(q); }
 
+  /**
+   * Resolve a crest for a typed team name: catalog first, then an
+   * API-Football search (seleções translated PT→EN), caching the result.
+   * Powers the "type a name → crest appears" preview in the create form.
+   */
+  @Get('resolve-logo')
+  async resolveLogo(@Query('name') name = '', @Query('iso') iso?: string) {
+    const logo = await this.service.resolveTeamLogo(name, iso || null);
+    return { logo };
+  }
+
   @Post('sync') sync(@Body() dto: SyncTeamsDto) {
     return this.service.sync(dto.league ?? 71, dto.season ?? 2024);
   }

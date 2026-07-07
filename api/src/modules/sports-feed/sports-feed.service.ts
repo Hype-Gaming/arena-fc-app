@@ -1,15 +1,17 @@
 // api/src/modules/sports-feed/sports-feed.service.ts
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   NormalizedEvent,
+  NormalizedEventPreview,
   NormalizedLiveEvent,
   SPORTS_FEED_PROVIDER,
   SportsFeedProvider,
 } from './sports-feed.types';
 import { buildTeamLogoIndex, matchTeamLogo } from './team-logo.match';
 import { teamLogoUrl } from './team-logo-cache.service';
+import { parseEsportivaEventId } from './esportiva-link';
 
 export interface SyncEventsSummary {
   provider: string;
@@ -28,6 +30,36 @@ export class SportsFeedService {
   /** Upcoming prematch events straight from the provider (not cached). */
   fetchUpcoming(): Promise<NormalizedEvent[]> {
     return this.provider.fetchUpcoming();
+  }
+
+  /**
+   * Preview for one event pasted as an Esportiva link (or bare id): identity,
+   * kickoff and the full popular-markets board (Handicap, Resultado Correto,
+   * Intervalo/final, …), with crests cross-matched from the catalog. The admin
+   * pastes a link and sees the card before creating the bilhete.
+   */
+  async getEventPreview(
+    ref: string,
+  ): Promise<NormalizedEventPreview & { homeLogo: string | null; awayLogo: string | null }> {
+    const id = parseEsportivaEventId(ref);
+    if (!id) {
+      throw new BadRequestException('Cole um link ou ID de evento da Esportiva');
+    }
+    const preview = await this.provider.fetchEventPreview(id);
+
+    const teams = await this.prisma.team.findMany({
+      select: { externalId: true, name: true, logoUrl: true, country: true },
+    });
+    const index = buildTeamLogoIndex(teams);
+    const crest = (name: string): string | null => {
+      const ref = matchTeamLogo(name, index, preview.countryIso);
+      return ref ? teamLogoUrl(ref.externalId) : null;
+    };
+    return {
+      ...preview,
+      homeLogo: crest(preview.homeTeam),
+      awayLogo: crest(preview.awayTeam),
+    };
   }
 
   /**

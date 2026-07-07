@@ -44,6 +44,23 @@ export interface NormalizedEvent {
   deepLink: string;
 }
 
+/**
+ * A single event's full preview: identity + kickoff + the popular markets
+ * board, built from GetEventDetails so the admin can paste a link and see the
+ * card before creating a bilhete. Crests are attached downstream from the
+ * catalog (homeLogo/awayLogo), same as the live feed.
+ */
+export interface NormalizedEventPreview {
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  countryIso: string | null;
+  startsAt: Date;
+  deepLink: string;
+  markets: NormalizedMarket[];
+}
+
 /** A live (in-play) fixture: the fixture plus its current state. */
 export interface NormalizedLiveEvent extends NormalizedEvent {
   /** Elapsed-time label as the book shows it, e.g. "25'". */
@@ -69,6 +86,8 @@ export interface SportsFeedProvider {
   fetchUpcoming(): Promise<NormalizedEvent[]>;
   /** Soccer matches in play right now, with score/minute and 1X2 odds. */
   fetchLive(): Promise<NormalizedLiveEvent[]>;
+  /** One event's identity, kickoff and popular markets board (paste-a-link). */
+  fetchEventPreview(eventId: string): Promise<NormalizedEventPreview>;
 }
 
 export const SPORTS_FEED_PROVIDER = Symbol('SPORTS_FEED_PROVIDER');

@@ -251,6 +251,15 @@ export class AdminTeamsService {
    * catalog yet. Returns the app's cached crest URL after upserting/warming.
    */
   async resolveTeamLogo(name: string, iso: string | null = null): Promise<string | null> {
+    if (!name.trim()) return null;
+
+    // Catalog first: instant, free, and covers every synced club/seleção.
+    const catalog = await this.prisma.team.findMany({
+      select: { externalId: true, name: true, logoUrl: true, country: true },
+    });
+    const hit = matchTeamLogo(name, buildTeamLogoIndex(catalog), iso);
+    if (hit) return teamLogoUrl(hit.externalId);
+
     const key = apiKey();
     if (!key) return null;
 

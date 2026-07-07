@@ -22,6 +22,16 @@ function makeProvider(events: NormalizedEvent[]): SportsFeedProvider {
     name: 'altenar',
     fetchUpcoming: jest.fn().mockResolvedValue(events),
     fetchLive: jest.fn().mockResolvedValue([]),
+    fetchEventPreview: jest.fn().mockResolvedValue({
+      externalId: '1',
+      homeTeam: '',
+      awayTeam: '',
+      competition: null,
+      countryIso: null,
+      startsAt: new Date(0),
+      deepLink: '',
+      markets: [],
+    }),
   };
 }
 
@@ -53,6 +63,44 @@ describe('SportsFeedService.sync', () => {
       oddHome: 1.9,
       deepLink: 'https://esportiva.bet.br/e/16027580',
     });
+  });
+});
+
+describe('SportsFeedService.getEventPreview', () => {
+  const preview = {
+    externalId: '16993776',
+    homeTeam: 'Suíça',
+    awayTeam: 'Colômbia',
+    competition: 'Copa do Mundo 2026',
+    countryIso: null,
+    startsAt: new Date('2026-07-07T20:00:00Z'),
+    deepLink: 'https://x/16993776',
+    markets: [{ typeId: 1, key: '1x2', name: 'Vencedor', selections: [] }],
+  };
+
+  it('parses the pasted link, previews the event and attaches catalog crests', async () => {
+    const prisma = makePrisma();
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { externalId: 15, name: 'Switzerland', logoUrl: 'https://x/15.png' },
+    ]);
+    const provider = makeProvider([]);
+    (provider.fetchEventPreview as jest.Mock).mockResolvedValue(preview);
+    const svc = new SportsFeedService(prisma, provider);
+
+    const out = await svc.getEventPreview(
+      'https://esportiva.bet.br/sports/futebol/mundo/copa-do-mundo-2026/suica-vs-colombia/le-16993776',
+    );
+
+    expect(provider.fetchEventPreview).toHaveBeenCalledWith('16993776');
+    // Suíça resolves Switzerland (id 15) via the seleção alias, from cache.
+    expect(out.homeLogo).toBe('/api/team-logos/15.png');
+    expect(out.awayLogo).toBeNull(); // Colômbia not in catalog → null
+    expect(out.markets).toHaveLength(1);
+  });
+
+  it('rejects input with no recognizable event id', async () => {
+    const svc = new SportsFeedService(makePrisma(), makeProvider([]));
+    await expect(svc.getEventPreview('not a link')).rejects.toThrow();
   });
 });
 

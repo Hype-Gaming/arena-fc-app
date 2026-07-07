@@ -12,4 +12,10 @@ export class AdminSportEventsController {
   @Get() list(@Query('q') q?: string) { return this.feed.list(q); }
 
   @Post('sync') sync() { return this.feed.sync(); }
+
+  /** Preview one event from a pasted Esportiva link (card + popular markets). */
+  @Get('preview')
+  preview(@Query('ref') ref = '') {
+    return this.feed.getEventPreview(ref);
+  }
 }

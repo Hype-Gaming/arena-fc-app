@@ -1,6 +1,7 @@
 // api/src/modules/sports-feed/altenar.normalize.ts
 import {
   NormalizedEvent,
+  NormalizedEventPreview,
   NormalizedLiveEvent,
   NormalizedMarket,
 } from './sports-feed.types';
@@ -194,6 +195,133 @@ export function normalizeAltenar(
   // Soonest first.
   out.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   return out;
+}
+
+/** Subset of Altenar's GetEventDetails payload (one event, all its markets). */
+export interface AltenarEventDetails {
+  id?: number;
+  name?: string;
+  startDate?: string;
+  competitors?: { id: number; name: string }[];
+  champ?: { id: number; name: string };
+  /** Soccer category = country; `iso` present for national leagues, not "Mundo". */
+  category?: { id: number; name: string; iso?: string };
+  /** Book's own tabs; the first ("Principal") is the popular-markets set. */
+  marketGroups?: { id: number; name: string; marketIds: number[]; sortOrder?: number }[];
+  markets?: DetailMarket[];
+  odds?: DetailOdd[];
+}
+interface DetailMarket {
+  id: number;
+  typeId: number;
+  name: string;
+  /** Special value: the line ("1.5", "-0.5") or a scoreline ("1:0"), or "". */
+  sv?: string;
+  /** Odd ids grouped by column; flattened before lookup. */
+  desktopOddIds?: number[][];
+}
+interface DetailOdd {
+  id: number;
+  price: number;
+  name: string;
+  competitorId?: number;
+  /** 0 = open; anything else is suspended/settled and skipped. */
+  oddStatus?: number;
+}
+
+// Markets the book lists in "Principal" but that are noise for a tips ticket.
+const EVENT_MARKET_DENY = new Set<number>([
+  17725, // Monitor VAR (Y/N)
+]);
+
+/** A pure numeric line ("1.5", "-0.5") → number; a scoreline ("1:0") → null. */
+function svLine(sv: string | undefined): number | null {
+  if (!sv || !/^-?\d+(\.\d+)?$/.test(sv.trim())) return null;
+  return Number(sv);
+}
+
+/**
+ * Normalize a single event's full market board (GetEventDetails) into the same
+ * NormalizedMarket[] shape as the bulk feed — but driven by the book's own
+ * "Principal" tab so we surface exactly the popular markets a bettor sees
+ * (1X2, Total, Handicap, Resultado Correto, Intervalo/final, team totals, …),
+ * not the 5-market bulk subset. Markets sharing a typeId (e.g. every Over/Under
+ * line) merge into one entry whose selections each carry their own line.
+ * Suspended legs and markets with no live price (player props referencing child
+ * odds) drop out naturally.
+ */
+export function normalizeAltenarEventDetails(
+  raw: AltenarEventDetails,
+): NormalizedMarket[] {
+  const oddById = new Map((raw.odds ?? []).map((o) => [o.id, o]));
+  const marketById = new Map((raw.markets ?? []).map((m) => [m.id, m]));
+
+  // The popular set: the "Principal" group's markets in book order; fall back
+  // to every market if the group is absent.
+  const groups = raw.marketGroups ?? [];
+  const principal =
+    groups.find((g) => /principa|popular/i.test(g.name)) ??
+    [...groups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))[0];
+  const orderedIds = principal?.marketIds ?? (raw.markets ?? []).map((m) => m.id);
+
+  // Merge markets by typeId, preserving first-seen order.
+  const byType = new Map<number, NormalizedMarket>();
+  for (const marketId of orderedIds) {
+    const market = marketById.get(marketId);
+    if (!market || EVENT_MARKET_DENY.has(market.typeId)) continue;
+
+    const line = svLine(market.sv);
+    const selections = (market.desktopOddIds ?? [])
+      .flat()
+      .map((id) => oddById.get(id))
+      .filter(
+        (o): o is DetailOdd =>
+          !!o &&
+          typeof o.price === 'number' &&
+          o.price > 0 &&
+          (o.oddStatus === undefined || o.oddStatus === 0),
+      )
+      .map((o) => ({ label: o.name?.trim() || '—', odd: o.price, line }));
+    if (selections.length === 0) continue;
+
+    const existing = byType.get(market.typeId);
+    if (existing) {
+      existing.selections.push(...selections);
+    } else {
+      byType.set(market.typeId, {
+        typeId: market.typeId,
+        key: MARKET_KEYS[market.typeId] ?? `t${market.typeId}`,
+        name: market.name,
+        selections,
+      });
+    }
+  }
+
+  return [...byType.values()];
+}
+
+/**
+ * Full preview for one event (identity + kickoff + popular markets) from
+ * GetEventDetails, for the paste-a-link admin flow. Crests are attached
+ * downstream from the catalog. `deepLink` builds the sportsbook URL.
+ */
+export function normalizeAltenarEventPreview(
+  raw: AltenarEventDetails,
+  deepLink: (eventId: number) => string,
+): NormalizedEventPreview {
+  const [fbHome, fbAway] = splitName(raw.name ?? '');
+  const competitors = raw.competitors ?? [];
+  const startsAt = new Date(raw.startDate ?? 0);
+  return {
+    externalId: String(raw.id ?? ''),
+    homeTeam: competitors[0]?.name ?? fbHome,
+    awayTeam: competitors[1]?.name ?? fbAway,
+    competition: raw.champ?.name ?? null,
+    countryIso: (raw.category?.iso ?? '').toUpperCase() || null,
+    startsAt: Number.isNaN(startsAt.getTime()) ? new Date(0) : startsAt,
+    deepLink: deepLink(raw.id ?? 0),
+    markets: normalizeAltenarEventDetails(raw),
+  };
 }
 
 /**

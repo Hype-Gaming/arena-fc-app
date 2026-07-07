@@ -219,6 +219,41 @@ describe('AdminTeamsService.syncLiveLogos', () => {
   });
 });
 
+describe('AdminTeamsService.resolveTeamLogo', () => {
+  const OLD_ENV = process.env;
+  beforeEach(() => {
+    process.env = { ...OLD_ENV, API_FOOTBALL_KEY: 'k123' };
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('returns a catalog crest without spending an API request (quota-safe)', async () => {
+    const prisma = makePrisma();
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { externalId: 15, name: 'Switzerland', logoUrl: 'https://x/15.png', country: 'Switzerland' },
+    ]);
+    const svc = new AdminTeamsService(prisma, sportsFeed, logoCache);
+
+    // "Suíça" resolves the catalog's "Switzerland" via the seleção alias.
+    expect(await svc.resolveTeamLogo('Suíça')).toBe('/api/team-logos/15.png');
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('falls back to an API search when the catalog misses', async () => {
+    const prisma = makePrisma(); // catalog empty
+    (global.fetch as jest.Mock).mockResolvedValue({
+      json: () => Promise.resolve({ errors: [], results: 1, response: [ROW(8, 'Colombia')] }),
+    });
+    const svc = new AdminTeamsService(prisma, sportsFeed, logoCache);
+
+    expect(await svc.resolveTeamLogo('Colômbia')).toBe('/api/team-logos/8.png');
+    expect(global.fetch).toHaveBeenCalled();
+  });
+});
+
 describe('AdminTeamsService.syncEsportivaLeagues', () => {
   const OLD_ENV = process.env;
   let fetchMock: jest.Mock;

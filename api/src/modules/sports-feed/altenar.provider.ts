@@ -2,12 +2,15 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import {
   NormalizedEvent,
+  NormalizedEventPreview,
   NormalizedLiveEvent,
   SportsFeedProvider,
 } from './sports-feed.types';
 import {
+  AltenarEventDetails,
   AltenarRaw,
   normalizeAltenar,
+  normalizeAltenarEventPreview,
   normalizeAltenarLive,
 } from './altenar.normalize';
 
@@ -84,5 +87,15 @@ export class AltenarFeedProvider implements SportsFeedProvider {
   async fetchLive(): Promise<NormalizedLiveEvent[]> {
     const raw = await this.fetchRaw('GetLiveEvents');
     return normalizeAltenarLive(raw, this.deepLink);
+  }
+
+  async fetchEventPreview(eventId: string): Promise<NormalizedEventPreview> {
+    // GetEventDetails carries the full "Principal" board for a single event —
+    // far more than the 5 markets the bulk GetEvents feed returns — plus the
+    // teams, competition and kickoff we need for the preview card.
+    const raw = (await this.fetchRaw('GetEventDetails', {
+      eventId,
+    })) as unknown as AltenarEventDetails;
+    return normalizeAltenarEventPreview(raw, this.deepLink);
   }
 }
