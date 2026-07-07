@@ -1,4 +1,9 @@
-import { PrismaClient, GrantType, BilheteCategoria } from '@prisma/client';
+import {
+  PrismaClient,
+  GrantType,
+  BilheteCategoria,
+  PlanKey,
+} from '@prisma/client';
 
 /**
  * Payment products the billing webhook resolves to a grant. The gateway
@@ -19,6 +24,7 @@ interface ProductSeed {
   externalProductId: string;
   grantType: GrantType;
   grantCredits?: number;
+  grantPlanKey?: PlanKey;
   grantCategory?: BilheteCategoria;
   grantPeriodDays?: number;
 }
@@ -84,6 +90,24 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantType: 'category_access',
     grantCategory: 'ligas',
   },
+
+  // Payt checkout products. externalProductId = the checkout-link hash
+  // (checkout.payt.com.br/<hash>) — our best guess for the product identifier
+  // the PayT V1 postback references. If a real postback ships a different id,
+  // the webhook logs "No active product for payt/<id>" and we correct it here.
+  // Both are lifetime ("VIDA") plans, so grantPeriodDays is null.
+  {
+    provider: 'payt',
+    externalProductId: '037c06e7020d3d721b416738ceb23481',
+    grantType: 'plan',
+    grantPlanKey: 'premium',
+  },
+  {
+    provider: 'payt',
+    externalProductId: '10c39db1ebf3ea9668be934041c9bf94',
+    grantType: 'plan',
+    grantPlanKey: 'diamante',
+  },
 ];
 
 /** Idempotently upsert products by their (provider, externalProductId) key. */
@@ -94,6 +118,7 @@ export async function seedProducts(
     const data = {
       grantType: p.grantType,
       grantCredits: p.grantCredits ?? null,
+      grantPlanKey: p.grantPlanKey ?? null,
       grantCategory: p.grantCategory ?? null,
       grantPeriodDays: p.grantPeriodDays ?? null,
       active: true,
