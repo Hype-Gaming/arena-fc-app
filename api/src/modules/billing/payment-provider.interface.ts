@@ -18,8 +18,16 @@ export interface NormalizedWebhook {
 
 export interface PaymentProvider {
   readonly name: ProviderName;
-  /** True if the request signature/token is authentic. Never throws. */
-  verifySignature(rawBody: Buffer, headers: Record<string, string>): boolean;
+  /**
+   * True if the request signature/token is authentic. Never throws.
+   * `query` carries the URL query params — some gateways (Payt postback) can
+   * only pass a secret in the URL (?token=…), not a header.
+   */
+  verifySignature(
+    rawBody: Buffer,
+    headers: Record<string, string>,
+    query?: Record<string, string>,
+  ): boolean;
   /** Decode the raw body into a NormalizedWebhook. Throws on malformed body. */
   parse(rawBody: Buffer): NormalizedWebhook;
 }

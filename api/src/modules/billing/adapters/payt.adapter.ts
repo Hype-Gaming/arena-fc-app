@@ -13,8 +13,17 @@ export class PaytAdapter implements PaymentProvider {
 
   constructor(private readonly token: string) {}
 
-  verifySignature(_rawBody: Buffer, headers: Record<string, string>): boolean {
-    const provided = this.headerValue(headers, TOKEN_HEADER);
+  /**
+   * Payt's postback can't send a custom header, only the URL you configure — so
+   * the secret ("Chave Única") travels in the query string (?token=…). We accept
+   * it there first, and still fall back to the x-payt-token header.
+   */
+  verifySignature(
+    _rawBody: Buffer,
+    headers: Record<string, string>,
+    query?: Record<string, string>,
+  ): boolean {
+    const provided = query?.token ?? this.headerValue(headers, TOKEN_HEADER);
     if (!provided) return false;
     const a = Buffer.from(provided);
     const b = Buffer.from(this.token);

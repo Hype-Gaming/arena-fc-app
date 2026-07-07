@@ -16,17 +16,32 @@ describe('BillingController', () => {
     controller = mod.get(BillingController);
   });
 
-  it('forwards provider, raw body and headers to the service', async () => {
+  it('forwards provider, raw body, headers and query to the service', async () => {
     billing.processWebhook.mockResolvedValue({ outcome: 'processed', eventId: 'wh_1' });
     const raw = Buffer.from('{"Id":"x"}');
     const req: any = { rawBody: raw, headers: { 'x-lastlink-signature': 'sig' } };
 
     const res = await controller.handle('lastlink', req);
 
-    expect(billing.processWebhook).toHaveBeenCalledWith('lastlink', raw, {
-      'x-lastlink-signature': 'sig',
-    });
+    expect(billing.processWebhook).toHaveBeenCalledWith(
+      'lastlink',
+      raw,
+      { 'x-lastlink-signature': 'sig' },
+      {},
+    );
     expect(res).toEqual({ outcome: 'processed', eventId: 'wh_1' });
+  });
+
+  it('passes the URL token (?token=…) through as query for Payt postbacks', async () => {
+    billing.processWebhook.mockResolvedValue({ outcome: 'processed' });
+    const raw = Buffer.from('{}');
+    const req: any = { rawBody: raw, headers: {}, query: { token: 'chave-unica' } };
+
+    await controller.handle('payt', req);
+
+    expect(billing.processWebhook).toHaveBeenCalledWith('payt', raw, {}, {
+      token: 'chave-unica',
+    });
   });
 
   it('falls back to an empty buffer when rawBody is absent', async () => {
@@ -36,6 +51,7 @@ describe('BillingController', () => {
     expect(billing.processWebhook).toHaveBeenCalledWith(
       'payt',
       Buffer.alloc(0),
+      {},
       {},
     );
   });

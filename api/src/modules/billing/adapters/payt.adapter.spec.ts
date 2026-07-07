@@ -15,9 +15,15 @@ describe('PaytAdapter', () => {
     expect(adapter.verifySignature(Buffer.from('{}'), { 'X-Payt-Token': TOKEN })).toBe(true);
   });
 
+  it('verifies a matching token from the URL query (postback has no header)', () => {
+    expect(adapter.verifySignature(Buffer.from('{}'), {}, { token: TOKEN })).toBe(true);
+    expect(adapter.verifySignature(Buffer.from('{}'), {}, { token: 'nope' })).toBe(false);
+  });
+
   it('rejects a wrong or missing token', () => {
     expect(adapter.verifySignature(Buffer.from('{}'), { 'x-payt-token': 'nope' })).toBe(false);
     expect(adapter.verifySignature(Buffer.from('{}'), {})).toBe(false);
+    expect(adapter.verifySignature(Buffer.from('{}'), {}, {})).toBe(false);
   });
 
   it('normalizes a Payt payload into the shared shape', () => {

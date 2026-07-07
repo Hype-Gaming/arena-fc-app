@@ -21,10 +21,11 @@ export class BillingService {
     providerName: string,
     rawBody: Buffer,
     headers: Record<string, string>,
+    query: Record<string, string> = {},
   ): Promise<WebhookProcessResult> {
     const provider = this.registry.get(providerName);
 
-    if (!provider.verifySignature(rawBody, headers)) {
+    if (!provider.verifySignature(rawBody, headers, query)) {
       throw new UnauthorizedException('Invalid webhook signature');
     }
 
