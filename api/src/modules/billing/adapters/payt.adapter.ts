@@ -39,10 +39,17 @@ export class PaytAdapter implements PaymentProvider {
       throw new Error('Payt webhook: body is not valid JSON');
     }
 
+    // PayT V1 postback shape (confirmed from a live "Testar URL"):
+    //   transaction_id  → our externalId (unique per order)
+    //   status          → payment status ("paid", "refunded", …) = our type
+    //   customer.email  → buyer identity
+    //   product.code    → Payt's product code; what we key a grant on. (There is
+    //                     no `plan_code`; grouped products expose the parent
+    //                     product's code at product.code.)
     const externalId = data?.transaction_id;
     const type = data?.status;
     const buyerEmail = data?.customer?.email;
-    const externalProductId = data?.plan_code;
+    const externalProductId = data?.product?.code;
 
     if (!externalId || !type || !buyerEmail || !externalProductId) {
       throw new Error('Payt webhook: missing required fields');

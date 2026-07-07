@@ -20,15 +20,27 @@ export class BillingController {
     const headers = (req.headers ?? {}) as Record<string, string>;
     const query = flattenQuery(req.query);
 
-    // TEMPORARY (Payt wiring): dump the real postback so we can map its fields
-    // and confirm how the token arrives. Remove once the adapter is verified.
+    // TEMPORARY (Payt wiring): the field shape is confirmed, but we still need
+    // the real `product.code` of each plan to seed it. Log ONLY the product
+    // identity + status (no PII — no name/email/doc/address) so a real sale
+    // reveals the code. Remove once both plan products are seeded & verified.
     if (provider === 'payt') {
+      const body = safeJson(rawBody);
       this.logger.log(
-        `payt postback · ct=${headers['content-type'] ?? '-'} · query=${JSON.stringify(query)} · body=${rawBody.toString('utf8').slice(0, 4000)}`,
+        `payt postback · status=${body?.status ?? '-'} · tx=${body?.transaction_id ?? '-'} · product.code=${body?.product?.code ?? '-'} · product.name=${body?.product?.name ?? '-'} · test=${body?.test ?? '-'}`,
       );
     }
 
     return this.billing.processWebhook(provider, rawBody, headers, query);
+  }
+}
+
+/** Best-effort JSON parse for the temporary Payt product-identity log. */
+function safeJson(raw: Buffer): any {
+  try {
+    return JSON.parse(raw.toString('utf8'));
+  } catch {
+    return null;
   }
 }
 

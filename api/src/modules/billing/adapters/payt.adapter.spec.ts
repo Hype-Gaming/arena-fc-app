@@ -26,20 +26,21 @@ describe('PaytAdapter', () => {
     expect(adapter.verifySignature(Buffer.from('{}'), {}, {})).toBe(false);
   });
 
-  it('normalizes a Payt payload into the shared shape', () => {
+  it('normalizes a Payt V1 postback into the shared shape', () => {
     const payload = {
-      transaction_id: 'payt_tx_7',
+      transaction_id: 'PAYTS2',
       status: 'paid',
+      type: 'order',
       customer: { email: 'Pay@Buyer.com' },
-      plan_code: 'payt_premium_monthly',
+      product: { code: '4O9J39', name: 'Premium' },
     };
     const norm = adapter.parse(Buffer.from(JSON.stringify(payload)));
     expect(norm).toEqual({
       provider: 'payt',
-      externalId: 'payt_tx_7',
+      externalId: 'PAYTS2',
       type: 'paid',
       buyerEmail: 'pay@buyer.com',
-      externalProductId: 'payt_premium_monthly',
+      externalProductId: '4O9J39',
       raw: payload,
     });
   });
