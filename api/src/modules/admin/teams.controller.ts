@@ -38,4 +38,9 @@ export class AdminTeamsController {
   @Post('sync-esportiva-leagues') syncEsportivaLeagues() {
     return this.service.syncEsportivaLeagues();
   }
+
+  /** Pull national-team squads (World Cup / Euro / Copa América) for crests. */
+  @Post('sync-national-teams') syncNationalTeams() {
+    return this.service.syncNationalTeams();
+  }
 }

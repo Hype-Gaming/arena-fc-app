@@ -254,6 +254,50 @@ describe('AdminTeamsService.resolveTeamLogo', () => {
   });
 });
 
+describe('AdminTeamsService.syncNationalTeams', () => {
+  const OLD_ENV = process.env;
+  let fetchMock: jest.Mock;
+  beforeEach(() => {
+    process.env = { ...OLD_ENV, API_FOOTBALL_KEY: 'k123' };
+    fetchMock = jest.fn().mockResolvedValue({
+      json: () => Promise.resolve({ errors: [], results: 1, response: [ROW(1, 'Brazil')] }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('syncs the national-team competitions (World Cup / Euro / Copa América)', async () => {
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    const summary = await svc.syncNationalTeams();
+
+    expect(summary).toMatchObject({ competitions: 3, synced: 3, failed: 0 });
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls.some((u) => u.includes('league=1&season=2022'))).toBe(true); // World Cup
+    expect(urls.some((u) => u.includes('league=4&season=2024'))).toBe(true); // Euro
+    expect(urls.some((u) => u.includes('league=9&season=2024'))).toBe(true); // Copa América
+  });
+
+  it('counts a rejected competition as failed, not fatal', async () => {
+    fetchMock.mockResolvedValue({
+      json: () => Promise.resolve({ errors: { plan: 'season not allowed' }, results: 0, response: [] }),
+    });
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    const summary = await svc.syncNationalTeams();
+    expect(summary).toMatchObject({ synced: 0, failed: 3 });
+  });
+
+  it('throws 503 when no API key is configured', async () => {
+    delete process.env.API_FOOTBALL_KEY;
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+    await expect(svc.syncNationalTeams()).rejects.toBeInstanceOf(
+      ServiceUnavailableException,
+    );
+  });
+});
+
 describe('AdminTeamsService.syncEsportivaLeagues', () => {
   const OLD_ENV = process.env;
   let fetchMock: jest.Mock;

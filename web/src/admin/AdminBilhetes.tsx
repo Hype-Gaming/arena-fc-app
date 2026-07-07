@@ -217,6 +217,24 @@ export function AdminBilhetes() {
     }
   }
 
+  async function onSyncNationalTeams() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const s = await adminApi.syncNationalTeams();
+      setSyncMsg(
+        `Seleções: ${s.teamsUpserted} times de ${s.synced}/${s.competitions} torneios` +
+          (s.failed ? `, ${s.failed} falharam` : ''),
+      );
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onSyncLiveLogos() {
     setError(null);
     setSyncMsg(null);
@@ -446,6 +464,9 @@ export function AdminBilhetes() {
         </button>
         <button type="button" onClick={onSyncEsportivaLeagues} disabled={busy}>
           Puxar times das ligas (Esportiva)
+        </button>
+        <button type="button" onClick={onSyncNationalTeams} disabled={busy}>
+          Puxar seleções
         </button>
         <small>{teams.length} times no catálogo</small>
         {syncMsg && <em>{syncMsg}</em>}

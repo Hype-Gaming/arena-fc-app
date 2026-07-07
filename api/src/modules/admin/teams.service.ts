@@ -64,10 +64,28 @@ export interface EsportivaLeagueSyncSummary {
   unmapped: string[];
 }
 
+export interface NationalTeamSyncSummary {
+  competitions: number;
+  synced: number;
+  failed: number;
+  teamsUpserted: number;
+}
+
 /** Free API-Football tier only covers up to this season. */
 const CATALOG_SEASON = 2024;
 /** Cap league syncs per run so one click can't burn the daily quota. */
 const LEAGUE_CAP = 30;
+
+// National-team competitions (API-Football league/season) whose squads are the
+// seleções that show up in international fixtures. Three requests cover ~50+
+// nations, so a paste-a-link preview of a World Cup / Euro / Copa América game
+// finds the crests in the catalog on the first try. Seasons are inside the free
+// window (2022–2024); a rejected one is skipped, not fatal.
+const NATIONAL_TEAM_COMPETITIONS: { league: number; season: number }[] = [
+  { league: 1, season: 2022 }, // World Cup (32 nations)
+  { league: 4, season: 2024 }, // Euro (24 nations)
+  { league: 9, season: 2024 }, // Copa América (16 nations)
+];
 
 // Reserve/youth sides API-Football returns for a plain name search — never the
 // crest we want for a first-team live match.
@@ -332,6 +350,40 @@ export class AdminTeamsService {
       teamsUpserted,
       skippedForCap: Math.max(0, leagueIds.size - ids.length),
       unmapped: [...unmapped].sort().slice(0, 25),
+    };
+  }
+
+  /**
+   * Pull national-team squads (World Cup / Euro / Copa América) into the
+   * catalog so seleção crests resolve instantly on the first preview. Guarded
+   * per competition; a season the free tier rejects is skipped, not fatal.
+   */
+  async syncNationalTeams(): Promise<NationalTeamSyncSummary> {
+    const key = apiKey();
+    if (!key) {
+      throw new ServiceUnavailableException(
+        'API_FOOTBALL_KEY is not configured on the server',
+      );
+    }
+
+    let synced = 0;
+    let failed = 0;
+    let teamsUpserted = 0;
+    for (const { league, season } of NATIONAL_TEAM_COMPETITIONS) {
+      try {
+        const r = await this.sync(league, season);
+        teamsUpserted += r.upserted;
+        synced += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    return {
+      competitions: NATIONAL_TEAM_COMPETITIONS.length,
+      synced,
+      failed,
+      teamsUpserted,
     };
   }
 

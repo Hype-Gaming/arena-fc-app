@@ -160,6 +160,13 @@ export interface EsportivaLeagueSyncSummary {
   unmapped: string[];
 }
 
+export interface NationalTeamSyncSummary {
+  competitions: number;
+  synced: number;
+  failed: number;
+  teamsUpserted: number;
+}
+
 export const adminApi = {
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>
@@ -205,6 +212,10 @@ export const adminApi = {
     req<LiveLogoSyncSummary>('/admin/teams/sync-live-logos', { method: 'POST' }),
   syncEsportivaLeagues: () =>
     req<EsportivaLeagueSyncSummary>('/admin/teams/sync-esportiva-leagues', {
+      method: 'POST',
+    }),
+  syncNationalTeams: () =>
+    req<NationalTeamSyncSummary>('/admin/teams/sync-national-teams', {
       method: 'POST',
     }),
   listSportEvents: (q?: string) =>
