@@ -1,13 +1,17 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { TopBar } from './TopBar';
 
-function renderAt(path: string) {
+function apiForPlan(planKey: string) {
+  return { get: vi.fn().mockResolvedValue({ planKey }) };
+}
+
+function renderAt(path: string, planKey = 'premium') {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <TopBar />
+      <TopBar api={apiForPlan(planKey) as never} />
       <Routes>
         <Route path="/" element={<div>Home route</div>} />
         <Route path="/bilhetes" element={<div>Bilhetes route</div>} />
@@ -19,6 +23,10 @@ function renderAt(path: string) {
 }
 
 describe('TopBar', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns to the sport page via the back arrow', async () => {
     const user = userEvent.setup();
     renderAt('/perfil');
@@ -33,17 +41,40 @@ describe('TopBar', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('routes the logo home and the pills to Tipster/Planos', async () => {
+  it('routes the logo home and shows Criar Odds/Planos for paid users', async () => {
     const user = userEvent.setup();
-    renderAt('/perfil');
+    renderAt('/perfil', 'premium');
 
     await user.click(screen.getByRole('button', { name: /início/i }));
     expect(screen.getByText('Home route')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /criar odds/i }));
+    await user.click(await screen.findByRole('button', { name: /criar odds/i }));
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^planos$/i }));
     expect(screen.getByText('Planos route')).toBeInTheDocument();
+  });
+
+  it('shows only "Resgatar Odd Grátis" for free users, and it opens the Telegram popup', async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
+    renderAt('/perfil', 'free');
+
+    const resgatar = await screen.findByRole('button', {
+      name: /resgatar odd grátis/i,
+    });
+    expect(resgatar).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /criar odds/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^planos$/i })).not.toBeInTheDocument();
+
+    await user.click(resgatar);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/grupo do telegram/i)).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole('button', { name: /resgatar odd grátis/i }),
+    );
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy.mock.calls[0][1]).toBe('_blank');
   });
 });

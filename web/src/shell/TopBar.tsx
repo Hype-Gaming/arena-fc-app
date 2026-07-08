@@ -1,13 +1,43 @@
 // web/src/shell/TopBar.tsx — global app top bar (logo + quick actions).
 // The back arrow returns to the sport page (/bilhetes); it hides while already
-// there so it never points at the current screen.
+// there so it never points at the current screen. The right-side actions depend
+// on the plan: free users get "Resgatar Odd Grátis" (Telegram popup); paid users
+// (premium/diamante) get "Criar Odds" and "Planos".
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { api as defaultApi, type ApiClient } from '../lib/apiClient';
+import { FreeOddModal } from './FreeOddModal';
 import './TopBar.css';
 
-export function TopBar() {
+interface MeProfile {
+  planKey: string;
+}
+
+export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const onSport = pathname === '/bilhetes';
+
+  const [planKey, setPlanKey] = useState<string | null>(null);
+  const [freeOddOpen, setFreeOddOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    api
+      .get<MeProfile>('/me')
+      .then((me) => {
+        if (active) setPlanKey(me.planKey);
+      })
+      .catch(() => {
+        /* unknown plan → show no plan-specific actions rather than guessing */
+      });
+    return () => {
+      active = false;
+    };
+  }, [api]);
+
+  const isFree = planKey === 'free';
+  const isPaid = planKey === 'premium' || planKey === 'diamante';
 
   return (
     <header className="topbar">
@@ -34,23 +64,49 @@ export function TopBar() {
           </button>
         </div>
         <div className="topbar__right">
-          <button
-            type="button"
-            className="topbar__pill"
-            onClick={() => navigate('/tipster')}
-          >
-            <Sparkles /> Criar Odds
-          </button>
-          <button
-            type="button"
-            className="topbar__pill"
-            onClick={() => navigate('/planos')}
-          >
-            <Sparkles /> Planos
-          </button>
+          {isFree && (
+            <button
+              type="button"
+              className="topbar__pill topbar__pill--free"
+              onClick={() => setFreeOddOpen(true)}
+            >
+              <PaperPlane /> Resgatar Odd Grátis
+            </button>
+          )}
+          {isPaid && (
+            <>
+              <button
+                type="button"
+                className="topbar__pill"
+                onClick={() => navigate('/tipster')}
+              >
+                <Sparkles /> Criar Odds
+              </button>
+              <button
+                type="button"
+                className="topbar__pill"
+                onClick={() => navigate('/planos')}
+              >
+                <Sparkles /> Planos
+              </button>
+            </>
+          )}
         </div>
       </div>
+
+      <FreeOddModal open={freeOddOpen} onClose={() => setFreeOddOpen(false)} />
     </header>
+  );
+}
+
+function PaperPlane() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+      <path
+        d="M20.7 4.2 3.8 10.7c-1.1.4-1.1 1.1-.2 1.4l4.3 1.3 1.7 5.2c.2.6.3.8.7.8.3 0 .5-.1.8-.4l2.1-2 4.4 3.2c.8.5 1.4.3 1.6-.8l2.9-13.6c.3-1.2-.4-1.8-1.4-1.4Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }
 

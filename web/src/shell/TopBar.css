@@ -104,6 +104,11 @@
 .topbar__pill:hover {
   transform: scale(1.05);
 }
+/* Free-user CTA: same pill, a touch more filled so it reads as the primary action. */
+.topbar__pill--free {
+  background: rgba(140, 230, 10, 0.2);
+  border-color: rgba(140, 230, 10, 0.72);
+}
 .topbar__back:focus-visible,
 .topbar__logo:focus-visible,
 .topbar__pill:focus-visible {

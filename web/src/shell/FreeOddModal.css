@@ -1,37 +1,5 @@
-/* web/src/shell/FreeOddCta.css — free-user "Resgatar Odd Grátis" CTA + popup */
+/* web/src/shell/FreeOddModal.css — free-user "Resgatar Odd Grátis" popup */
 
-.free-odd {
-  display: flex;
-  justify-content: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(128, 146, 165, 0.14);
-}
-
-.free-odd__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 20px;
-  border-radius: 999px;
-  border: 1px solid rgba(128, 146, 165, 0.28);
-  background: #16232f;
-  color: #eaf1f8;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.15s, transform 0.05s;
-}
-.free-odd__btn:hover {
-  border-color: rgba(42, 171, 238, 0.6);
-}
-.free-odd__btn:active {
-  transform: translateY(1px);
-}
-.free-odd__btn svg {
-  color: #2aabee;
-}
-
-/* ---- popup ---- */
 .free-odd__overlay {
   position: fixed;
   inset: 0;
@@ -113,7 +81,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .free-odd__btn,
   .free-odd__cta {
     transition: none;
   }
