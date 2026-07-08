@@ -11,6 +11,7 @@ import { BilhetesPage } from './pages/BilhetesPage';
 import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
 import { PlanosPage } from './pages/PlanosPage';
+import { UltimosGreensPage } from './pages/UltimosGreensPage';
 import { AdminPage } from './admin/AdminPage';
 
 interface Props {
@@ -49,6 +50,10 @@ function Gate({ api }: { api: ApiClient }) {
                 element={<PerfilPage api={api} onLogout={logout} />}
               />
               <Route path="planos" element={<PlanosPage api={api} />} />
+              <Route
+                path="ultimos-greens"
+                element={<UltimosGreensPage api={api} />}
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </>

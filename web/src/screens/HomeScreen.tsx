@@ -105,7 +105,7 @@ const SECTIONS: Section[] = [
         badges: [{ label: 'Verdes', tone: 'green' }],
         ctaLabel: 'Visualização histórica',
         ctaVariant: 'solid',
-        to: '/bilhetes',
+        to: '/ultimos-greens',
       },
     ],
   },
