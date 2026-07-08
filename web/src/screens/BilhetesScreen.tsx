@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
-import { MultiplasModal } from './MultiplasModal';
+import { ExplainerModal } from './ExplainerModal';
+import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './BilhetesScreen.css';
 
 interface CatView {
@@ -201,7 +202,7 @@ export function BilhetesScreen({ api }: Props = {}) {
   const [cat, setCat] = useState('safes');
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
-  const [multiplasOpen, setMultiplasOpen] = useState(false);
+  const [explainerKey, setExplainerKey] = useState<string | null>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<HTMLDivElement>(null);
 
@@ -272,10 +273,11 @@ export function BilhetesScreen({ api }: Props = {}) {
   }
 
   function pickCat(c: CatView) {
-    // Múltiplas opens an explainer popup before sending interested users to the
-    // plans screen, rather than jumping straight to the paywall.
-    if (c.key === 'multiplas') {
-      setMultiplasOpen(true);
+    // A locked category with an explainer (Múltiplas, Odds Altas, …) opens a
+    // "how it works" popup that funnels to the plans screen, instead of jumping
+    // straight to the paywall. Unlocked categories just show their tickets.
+    if (c.locked && CATEGORY_EXPLAINERS[c.key]) {
+      setExplainerKey(c.key);
       return;
     }
     if (c.locked) {
@@ -395,11 +397,11 @@ export function BilhetesScreen({ api }: Props = {}) {
         </div>
       </div>
 
-      <MultiplasModal
-        open={multiplasOpen}
-        onClose={() => setMultiplasOpen(false)}
+      <ExplainerModal
+        explainer={explainerKey ? CATEGORY_EXPLAINERS[explainerKey] : null}
+        onClose={() => setExplainerKey(null)}
         onInterest={() => {
-          setMultiplasOpen(false);
+          setExplainerKey(null);
           navigate('/planos');
         }}
       />

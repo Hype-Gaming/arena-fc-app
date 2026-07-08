@@ -1,6 +1,6 @@
 /* web/src/screens/MultiplasModal.css — "Odds Múltiplas" explainer popup */
 
-.mult__overlay {
+.exp__overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -12,7 +12,7 @@
   backdrop-filter: blur(3px);
 }
 
-.mult__card {
+.exp__card {
   position: relative;
   width: 100%;
   max-width: 420px;
@@ -24,7 +24,7 @@
   text-align: center;
 }
 
-.mult__close {
+.exp__close {
   position: absolute;
   top: 14px;
   right: 14px;
@@ -36,12 +36,12 @@
   color: #8092a5;
   cursor: pointer;
 }
-.mult__close:hover {
+.exp__close:hover {
   color: #eaf1f8;
   background: rgba(128, 146, 165, 0.12);
 }
 
-.mult__title {
+.exp__title {
   margin: 0 24px 18px;
   font-size: 22px;
   line-height: 1.2;
@@ -50,7 +50,7 @@
   text-wrap: balance;
 }
 
-.mult__art {
+.exp__art {
   display: block;
   width: 100%;
   max-width: 320px;
@@ -61,14 +61,14 @@
   background: #0a1420;
 }
 
-.mult__body {
+.exp__body {
   margin: 0 0 22px;
   font-size: 15px;
   line-height: 1.55;
   color: #8092a5;
 }
 
-.mult__cta {
+.exp__cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -85,15 +85,15 @@
   box-shadow: 0 8px 20px rgba(140, 230, 10, 0.26);
   transition: filter 0.15s, transform 0.05s;
 }
-.mult__cta:hover {
+.exp__cta:hover {
   filter: brightness(1.05);
 }
-.mult__cta:active {
+.exp__cta:active {
   transform: translateY(1px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mult__cta {
+  .exp__cta {
     transition: none;
   }
 }

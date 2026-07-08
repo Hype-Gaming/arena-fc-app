@@ -1,52 +1,57 @@
-// web/src/screens/MultiplasModal.tsx — explainer popup for the "Odds Múltiplas"
-// product. Opened from the Múltiplas market; the CTA leads to the plans screen.
-import './MultiplasModal.css';
+// web/src/screens/ExplainerModal.tsx — reusable "understand this product" popup
+// (Múltiplas, Odds Altas, …). Opened from a category chip; the CTA leads to plans.
+import './ExplainerModal.css';
 
-export function MultiplasModal({
-  open,
+export interface Explainer {
+  title: string;
+  imageSrc: string;
+  imageAlt: string;
+  body: string;
+}
+
+export function ExplainerModal({
+  explainer,
   onClose,
   onInterest,
 }: {
-  open: boolean;
+  /** The content to show; null closes the modal. */
+  explainer: Explainer | null;
   onClose: () => void;
   onInterest: () => void;
 }) {
-  if (!open) return null;
+  if (!explainer) return null;
 
   return (
     <div
-      className="mult__overlay"
+      className="exp__overlay"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="mult-title"
+      aria-labelledby="exp-title"
       onClick={onClose}
     >
-      <div className="mult__card" onClick={(e) => e.stopPropagation()}>
+      <div className="exp__card" onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
-          className="mult__close"
+          className="exp__close"
           aria-label="Fechar"
           onClick={onClose}
         >
           <CloseIcon />
         </button>
 
-        <h3 id="mult-title" className="mult__title">
-          Entenda como funciona as Múltiplas
+        <h3 id="exp-title" className="exp__title">
+          {explainer.title}
         </h3>
 
         <img
-          className="mult__art"
-          src="/odds-multiplas.png"
-          alt="Odds Múltiplas — Arena FC"
+          className="exp__art"
+          src={explainer.imageSrc}
+          alt={explainer.imageAlt}
         />
 
-        <p className="mult__body">
-          Odds combinadas de múltiplos eventos com retorno entre 10x e 200x.
-          Aposta de baixa entrada e potencial alto de multiplicação.
-        </p>
+        <p className="exp__body">{explainer.body}</p>
 
-        <button type="button" className="mult__cta" onClick={onInterest}>
+        <button type="button" className="exp__cta" onClick={onInterest}>
           Entendi, tenho interesse <Arrow />
         </button>
       </div>
