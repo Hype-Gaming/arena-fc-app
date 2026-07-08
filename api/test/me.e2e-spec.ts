@@ -29,7 +29,6 @@ describe('Me (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await prisma.telegramUnlock.deleteMany();
     await prisma.creditTransaction.deleteMany();
     await prisma.subscription.deleteMany();
     await prisma.user.deleteMany();
@@ -89,62 +88,5 @@ describe('Me (e2e)', () => {
     expect(res.body.planKey).toBe('premium');
     expect(res.body.planName).toBe('Premium');
     expect(res.body.creditBalance).toBe(0);
-  });
-
-  it('starts the Telegram first-access unlock and blocks claiming before 10 minutes', async () => {
-    const user = await prisma.user.create({
-      data: { email: 'telegram-wait@test.dev' },
-    });
-    const token = await signTestAccess(user.id, user.email);
-
-    const started = await request(app.getHttpServer())
-      .post('/me/telegram-unlock/start')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(201);
-
-    expect(started.body.startedAt).toEqual(expect.any(String));
-    expect(started.body.claimAt).toEqual(expect.any(String));
-    expect(started.body.remainingSeconds).toBeGreaterThan(0);
-    expect(started.body.eligible).toBe(false);
-    expect(started.body.planKey).toBe('diamante');
-
-    const claimed = await request(app.getHttpServer())
-      .post('/me/telegram-unlock/claim')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(201);
-
-    expect(claimed.body.eligible).toBe(false);
-    await expect(
-      prisma.subscription.findUnique({ where: { userId: user.id } }),
-    ).resolves.toBeNull();
-  });
-
-  it('grants the complete Diamante plan after the Telegram wait', async () => {
-    const user = await prisma.user.create({
-      data: { email: 'telegram-diamante@test.dev' },
-    });
-    await prisma.telegramUnlock.create({
-      data: {
-        userId: user.id,
-        clickedAt: new Date(Date.now() - 11 * 60 * 1000),
-      },
-    });
-    const token = await signTestAccess(user.id, user.email);
-
-    const claimed = await request(app.getHttpServer())
-      .post('/me/telegram-unlock/claim')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(201);
-
-    expect(claimed.body.eligible).toBe(true);
-    expect(claimed.body.unlockedAt).toEqual(expect.any(String));
-
-    const me = await request(app.getHttpServer())
-      .get('/me')
-      .set('Authorization', `Bearer ${token}`)
-      .expect(200);
-
-    expect(me.body.planKey).toBe('diamante');
-    expect(me.body.planName).toBe('Diamante');
   });
 });

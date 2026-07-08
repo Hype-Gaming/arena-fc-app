@@ -3,8 +3,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 
 export type PlanKeyValue = 'free' | 'premium' | 'diamante';
-const TELEGRAM_UNLOCK_WAIT_SECONDS = 10 * 60;
-const TELEGRAM_UNLOCK_PLAN: PlanKeyValue = 'diamante';
 
 /** Human-facing plan names keyed by the PlanKey enum. */
 const PLAN_NAMES: Record<PlanKeyValue, string> = {
@@ -22,15 +20,6 @@ export interface MeProfile {
   iaUnlimited: boolean;
   /** When the unlimited pass expires (ISO), or null if none. */
   iaUnlimitedUntil: string | null;
-}
-
-export interface TelegramUnlockStatus {
-  startedAt: string | null;
-  claimAt: string | null;
-  unlockedAt: string | null;
-  remainingSeconds: number;
-  eligible: boolean;
-  planKey: PlanKeyValue;
 }
 
 @Injectable()
@@ -78,91 +67,6 @@ export class MeService {
       iaUnlimitedUntil: user.iaUnlimitedUntil
         ? user.iaUnlimitedUntil.toISOString()
         : null,
-    };
-  }
-
-  async getTelegramUnlockStatus(userId: string): Promise<TelegramUnlockStatus> {
-    const record = await this.prisma.telegramUnlock.findUnique({
-      where: { userId },
-    });
-    return this.toTelegramStatus(record);
-  }
-
-  async startTelegramUnlock(userId: string): Promise<TelegramUnlockStatus> {
-    const record = await this.prisma.telegramUnlock.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
-    return this.toTelegramStatus(record);
-  }
-
-  async claimTelegramUnlock(userId: string): Promise<TelegramUnlockStatus> {
-    const record = await this.prisma.telegramUnlock.findUnique({
-      where: { userId },
-    });
-    const status = this.toTelegramStatus(record);
-    if (!record || !status.eligible) return status;
-
-    const unlockedAt = record.unlockedAt ?? new Date();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.telegramUnlock.update({
-        where: { userId },
-        data: { unlockedAt },
-      });
-      await tx.subscription.upsert({
-        where: { userId },
-        create: {
-          userId,
-          planKey: TELEGRAM_UNLOCK_PLAN,
-          status: 'active',
-          provider: 'telegram-wait',
-          externalId: `telegram-wait:${userId}`,
-          currentPeriodEnd: null,
-        },
-        update: {
-          planKey: TELEGRAM_UNLOCK_PLAN,
-          status: 'active',
-          provider: 'telegram-wait',
-          externalId: `telegram-wait:${userId}`,
-          currentPeriodEnd: null,
-        },
-      });
-    });
-
-    return this.toTelegramStatus({ ...record, unlockedAt });
-  }
-
-  private toTelegramStatus(record: {
-    clickedAt: Date;
-    unlockedAt: Date | null;
-  } | null): TelegramUnlockStatus {
-    if (!record) {
-      return {
-        startedAt: null,
-        claimAt: null,
-        unlockedAt: null,
-        remainingSeconds: TELEGRAM_UNLOCK_WAIT_SECONDS,
-        eligible: false,
-        planKey: TELEGRAM_UNLOCK_PLAN,
-      };
-    }
-
-    const claimAt = new Date(
-      record.clickedAt.getTime() + TELEGRAM_UNLOCK_WAIT_SECONDS * 1000,
-    );
-    const remainingSeconds = Math.max(
-      0,
-      Math.ceil((claimAt.getTime() - Date.now()) / 1000),
-    );
-
-    return {
-      startedAt: record.clickedAt.toISOString(),
-      claimAt: claimAt.toISOString(),
-      unlockedAt: record.unlockedAt ? record.unlockedAt.toISOString() : null,
-      remainingSeconds,
-      eligible: remainingSeconds === 0 || record.unlockedAt !== null,
-      planKey: TELEGRAM_UNLOCK_PLAN,
     };
   }
 }

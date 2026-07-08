@@ -1,0 +1,120 @@
+/* web/src/shell/FreeOddCta.css — free-user "Resgatar Odd Grátis" CTA + popup */
+
+.free-odd {
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(128, 146, 165, 0.14);
+}
+
+.free-odd__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 146, 165, 0.28);
+  background: #16232f;
+  color: #eaf1f8;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.05s;
+}
+.free-odd__btn:hover {
+  border-color: rgba(42, 171, 238, 0.6);
+}
+.free-odd__btn:active {
+  transform: translateY(1px);
+}
+.free-odd__btn svg {
+  color: #2aabee;
+}
+
+/* ---- popup ---- */
+.free-odd__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 9, 16, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.free-odd__card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 26px 26px;
+  border-radius: 18px;
+  background: #13202e;
+  border: 1px solid rgba(128, 146, 165, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.free-odd__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #8092a5;
+  cursor: pointer;
+}
+.free-odd__close:hover {
+  color: #eaf1f8;
+  background: rgba(128, 146, 165, 0.12);
+}
+
+.free-odd__title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.free-odd__body {
+  margin: 0 0 24px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #8092a5;
+}
+
+.free-odd__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #2aabee 0%, #1e93cf 100%);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(42, 171, 238, 0.28);
+  transition: filter 0.15s, transform 0.05s;
+}
+.free-odd__cta:hover {
+  filter: brightness(1.06);
+}
+.free-odd__cta:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .free-odd__btn,
+  .free-odd__cta {
+    transition: none;
+  }
+}
