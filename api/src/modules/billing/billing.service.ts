@@ -62,7 +62,12 @@ export class BillingService {
       },
     });
     if (!product) {
-      // No grant to make: record a standalone dedupe marker and stop.
+      // No grant to make: record a standalone dedupe marker and stop. Warn so a
+      // real sale that maps to no product (e.g. a new/renamed provider product
+      // code we haven't seeded) is visible in logs without dumping PII.
+      this.logger.warn(
+        `Webhook ${event.provider}/${event.externalId} (${event.type}) matched no active product for ${event.provider}/${event.externalProductId}`,
+      );
       const record = await this.prisma.webhookEvent.create({
         data: {
           provider: event.provider,

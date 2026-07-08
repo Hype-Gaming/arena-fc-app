@@ -91,20 +91,19 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantCategory: 'ligas',
   },
 
-  // Payt checkout products. externalProductId = the checkout-link hash
-  // (checkout.payt.com.br/<hash>) — our best guess for the product identifier
-  // the PayT V1 postback references. If a real postback ships a different id,
-  // the webhook logs "No active product for payt/<id>" and we correct it here.
-  // Both are lifetime ("VIDA") plans, so grantPeriodDays is null.
+  // Payt plan products. externalProductId = Payt's `product.code` (the short
+  // code shown per product in the Payt admin, and what the PayT V1 postback
+  // sends at product.code). Both are lifetime ("VIDA") plans, so
+  // grantPeriodDays is null.
   {
     provider: 'payt',
-    externalProductId: '037c06e7020d3d721b416738ceb23481',
+    externalProductId: '4EPO3E', // plano Premium
     grantType: 'plan',
     grantPlanKey: 'premium',
   },
   {
     provider: 'payt',
-    externalProductId: '10c39db1ebf3ea9668be934041c9bf94',
+    externalProductId: 'R229VD', // plano Diamante
     grantType: 'plan',
     grantPlanKey: 'diamante',
   },
