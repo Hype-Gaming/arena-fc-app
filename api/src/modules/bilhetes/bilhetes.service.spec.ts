@@ -20,6 +20,9 @@ const b = (id: string, categoria: string, odd = 1.5) => ({
   id,
   categoria,
   titulo: 'Bilhete Especial',
+  mercado: '1x2',
+  selecao: 'A',
+  linha: null,
   homeTeam: 'A',
   awayTeam: 'B',
   homeColor: null,
@@ -135,6 +138,31 @@ describe('BilhetesService.getFeed', () => {
       tierLabel: 'Básico',
       odd: 1.53,
       titulo: 'Bilhete Especial',
+      mercado: '1x2',
+      selecao: 'A',
+    });
+  });
+});
+
+describe('BilhetesService.getHistorico', () => {
+  it('returns only published green tickets, most recent first, as cards', async () => {
+    const prisma = makePrisma(null, [
+      { ...b('1', 'safes', 1.8), resultado: 'green' },
+      { ...b('2', 'pro', 2.1), resultado: 'green' },
+    ]);
+    const svc = new BilhetesService(prisma);
+
+    const historico = await svc.getHistorico();
+
+    expect(prisma.bilhete.findMany).toHaveBeenCalledWith({
+      where: { publishedAt: { not: null }, resultado: 'green' },
+      orderBy: { startsAt: 'desc' },
+    });
+    expect(historico.map((x) => x.id)).toEqual(['1', '2']);
+    expect(historico[0]).toMatchObject({
+      resultado: 'green',
+      odd: 1.8,
+      tierLabel: 'Básico',
     });
   });
 });

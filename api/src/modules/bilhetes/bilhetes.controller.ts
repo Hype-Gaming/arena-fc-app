@@ -13,4 +13,10 @@ export class BilhetesController {
   getFeed(@CurrentUser() user: AuthUser) {
     return this.bilhetes.getFeed(user.userId);
   }
+
+  /** "Últimos greens": published tickets that already hit, most recent first. */
+  @Get('historico')
+  getHistorico() {
+    return this.bilhetes.getHistorico();
+  }
 }

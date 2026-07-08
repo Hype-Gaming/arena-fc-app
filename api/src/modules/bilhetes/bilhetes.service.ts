@@ -1,5 +1,6 @@
 // api/src/modules/bilhetes/bilhetes.service.ts
 import { Injectable } from '@nestjs/common';
+import { Bilhete } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CATEGORIAS, categoriaDef } from './bilhetes.constants';
 
@@ -8,6 +9,9 @@ export interface BilheteCardDto {
   categoria: string;
   tierLabel: string;
   titulo: string;
+  mercado: string | null;
+  selecao: string | null;
+  linha: number | null;
   homeTeam: string;
   awayTeam: string;
   homeColor: string | null;
@@ -102,24 +106,44 @@ export class BilhetesService {
           plan.rank >= categoriaDef(b.categoria).minRank ||
           unlockedByProduct.has(b.categoria),
       )
-      .map((b) => ({
-        id: b.id,
-        categoria: b.categoria,
-        tierLabel: categoriaDef(b.categoria).tierLabel,
-        titulo: b.titulo,
-        homeTeam: b.homeTeam,
-        awayTeam: b.awayTeam,
-        homeColor: b.homeColor,
-        awayColor: b.awayColor,
-        homeLogo: b.homeLogo,
-        awayLogo: b.awayLogo,
-        competition: b.competition,
-        startsAt: b.startsAt,
-        odd: Number(b.odd),
-        resultado: b.resultado,
-        deepLink: b.eventDeepLink,
-      }));
+      .map((b) => this.toCard(b));
 
     return { plan, categorias, bilhetes };
+  }
+
+  /**
+   * "Últimos greens": every published ticket that already hit (resultado green),
+   * most recent first. It's a public track record (no plan lock) so free users
+   * see the wins too — the UI groups them by date.
+   */
+  async getHistorico(): Promise<BilheteCardDto[]> {
+    const greens = await this.prisma.bilhete.findMany({
+      where: { publishedAt: { not: null }, resultado: 'green' },
+      orderBy: { startsAt: 'desc' },
+    });
+    return greens.map((b) => this.toCard(b));
+  }
+
+  private toCard(b: Bilhete): BilheteCardDto {
+    return {
+      id: b.id,
+      categoria: b.categoria,
+      tierLabel: categoriaDef(b.categoria).tierLabel,
+      titulo: b.titulo,
+      mercado: b.mercado,
+      selecao: b.selecao,
+      linha: b.linha == null ? null : Number(b.linha),
+      homeTeam: b.homeTeam,
+      awayTeam: b.awayTeam,
+      homeColor: b.homeColor,
+      awayColor: b.awayColor,
+      homeLogo: b.homeLogo,
+      awayLogo: b.awayLogo,
+      competition: b.competition,
+      startsAt: b.startsAt,
+      odd: Number(b.odd),
+      resultado: b.resultado,
+      deepLink: b.eventDeepLink,
+    };
   }
 }
