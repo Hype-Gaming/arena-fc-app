@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
+import { MultiplasModal } from './MultiplasModal';
 import './BilhetesScreen.css';
 
 interface CatView {
@@ -23,6 +24,7 @@ interface RailCard {
   id: string;
   cat: string;
   tierLabel: string;
+  pickLabel: string;
   home: Team;
   away: Team;
   /** kickoff instant (ms since epoch) — drives the countdown + time label */
@@ -42,6 +44,9 @@ interface FeedResponse {
     categoria: string;
     tierLabel: string;
     titulo: string;
+    mercado: string | null;
+    selecao: string | null;
+    linha: number | null;
     homeTeam: string;
     awayTeam: string;
     homeColor: string | null;
@@ -107,6 +112,7 @@ function buildMockCards(): RailCard[] {
     id: m.id,
     cat: m.cat,
     tierLabel: MOCK_TIER[m.cat] ?? 'Ultra',
+    pickLabel: 'Bilhete Especial',
     home: m.home,
     away: m.away,
     koMs: now + m.inHours * 3_600_000,
@@ -130,11 +136,23 @@ function fallbackColor(name: string): string {
   return CREST_FALLBACKS[h % CREST_FALLBACKS.length];
 }
 
+const MARKET_LABELS: Record<string, string> = {
+  '1x2': 'Resultado Final',
+  over_under: 'Total de Gols',
+  btts: 'Ambas Marcam',
+  double_chance: 'Dupla Chance',
+  dnb: 'Empate Anula',
+};
+
 function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
+  const line = b.linha == null ? '' : ` (${Number(b.linha).toFixed(2)})`;
+  const market = b.mercado ? MARKET_LABELS[b.mercado] ?? b.mercado : '';
+  const pick = b.selecao ? `${b.selecao}${line}` : b.titulo;
   return {
     id: b.id,
     cat: b.categoria,
     tierLabel: b.tierLabel,
+    pickLabel: market ? `${market}: ${pick}` : pick,
     home: {
       ...t(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
       logo: b.homeLogo,
@@ -183,6 +201,7 @@ export function BilhetesScreen({ api }: Props = {}) {
   const [cat, setCat] = useState('safes');
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
+  const [multiplasOpen, setMultiplasOpen] = useState(false);
   const railRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<HTMLDivElement>(null);
 
@@ -253,6 +272,12 @@ export function BilhetesScreen({ api }: Props = {}) {
   }
 
   function pickCat(c: CatView) {
+    // Múltiplas opens an explainer popup before sending interested users to the
+    // plans screen, rather than jumping straight to the paywall.
+    if (c.key === 'multiplas') {
+      setMultiplasOpen(true);
+      return;
+    }
     if (c.locked) {
       navigate('/planos');
       return;
@@ -333,7 +358,7 @@ export function BilhetesScreen({ api }: Props = {}) {
                 </div>
 
                 <div className="spt-card__row">
-                  <span className="spt-card__title">Bilhete Especial</span>
+                  <span className="spt-card__title">{c.pickLabel}</span>
                   <span className="spt-card__odd">
                     <i>Odd</i> {c.odd.toFixed(2)}
                   </span>
@@ -369,6 +394,15 @@ export function BilhetesScreen({ api }: Props = {}) {
           <SportsbookFrame />
         </div>
       </div>
+
+      <MultiplasModal
+        open={multiplasOpen}
+        onClose={() => setMultiplasOpen(false)}
+        onInterest={() => {
+          setMultiplasOpen(false);
+          navigate('/planos');
+        }}
+      />
     </main>
   );
 }
