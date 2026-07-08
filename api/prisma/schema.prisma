@@ -370,6 +370,14 @@ model SportEvent {
   markets     Json?
   deepLink    String
   syncedAt    DateTime @default(now())
+  // Live score capture (populated by the settle poller off GetLiveEvents while
+  // the match is in play; the feed drops finished matches, so we freeze the last
+  // seen score). finishedAt is set once the match window elapses, marking the
+  // score final and ready to grade bilhetes against.
+  homeScore   Int?
+  awayScore   Int?
+  scoreSeenAt DateTime?
+  finishedAt  DateTime?
 
   @@unique([provider, externalId])
   @@index([startsAt])
