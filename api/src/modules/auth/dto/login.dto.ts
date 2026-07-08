@@ -1,6 +1,6 @@
 import { IsEmail } from 'class-validator';
 
-export class RequestCodeDto {
+export class LoginDto {
   @IsEmail()
   email!: string;
 }

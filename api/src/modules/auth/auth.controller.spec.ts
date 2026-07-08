@@ -8,8 +8,7 @@ describe('AuthController', () => {
 
   beforeEach(async () => {
     service = {
-      requestCode: jest.fn(),
-      verify: jest.fn(),
+      login: jest.fn(),
       refresh: jest.fn(),
     } as unknown as jest.Mocked<AuthService>;
 
@@ -21,20 +20,10 @@ describe('AuthController', () => {
     controller = moduleRef.get(AuthController);
   });
 
-  it('POST /auth/request-code delegates to AuthService.requestCode', async () => {
-    service.requestCode.mockResolvedValue({ ok: true });
-    const res = await controller.requestCode({ email: 'a@b.com' });
-    expect(service.requestCode).toHaveBeenCalledWith('a@b.com');
-    expect(res).toEqual({ ok: true });
-  });
-
-  it('POST /auth/verify delegates to AuthService.verify', async () => {
-    service.verify.mockResolvedValue({
-      accessToken: 'acc',
-      refreshToken: 'ref',
-    });
-    const res = await controller.verify({ email: 'a@b.com', code: '123456' });
-    expect(service.verify).toHaveBeenCalledWith('a@b.com', '123456');
+  it('POST /auth/login delegates to AuthService.login', async () => {
+    service.login.mockResolvedValue({ accessToken: 'acc', refreshToken: 'ref' });
+    const res = await controller.login({ email: 'a@b.com' });
+    expect(service.login).toHaveBeenCalledWith('a@b.com');
     expect(res).toEqual({ accessToken: 'acc', refreshToken: 'ref' });
   });
 

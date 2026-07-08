@@ -88,15 +88,12 @@ function Brand() {
 }
 
 export function LoginScreen({ api, onLogin }: Props) {
-  const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [slide, setSlide] = useState(0);
 
   useEffect(() => {
-    if (step !== 'email') return;
     const reduce = window.matchMedia?.(
       '(prefers-reduced-motion: reduce)',
     ).matches;
@@ -106,36 +103,16 @@ export function LoginScreen({ api, onLogin }: Props) {
       5000,
     );
     return () => clearInterval(id);
-  }, [step]);
+  }, []);
 
-  const devLogin = import.meta.env.VITE_DEV_LOGIN === 'true';
-
-  async function requestCode(e: FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setBusy(true);
     try {
-      // Dev shortcut: skip the OTP step and log in straight from the email.
-      if (devLogin) {
-        const tokens = await api.post<Tokens>('/auth/dev-login', { email });
-        onLogin(tokens);
-        return;
-      }
-      await api.post('/auth/request-code', { email });
-      setStep('code');
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verify(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    try {
-      const tokens = await api.post<Tokens>('/auth/verify', { email, code });
+      // Email-only login: a valid email enters the app (free user by default;
+      // a paid plan comes from the Payt purchase tied to this email).
+      const tokens = await api.post<Tokens>('/auth/login', { email });
       onLogin(tokens);
     } catch (err) {
       setError((err as Error).message);
@@ -155,8 +132,7 @@ export function LoginScreen({ api, onLogin }: Props) {
       <div className="pf-login__inner">
         <Brand />
 
-        {step === 'email' ? (
-          <>
+        <>
             <div className="pf-promo">
               <div className="pf-viewport">
                 <div
@@ -210,7 +186,7 @@ export function LoginScreen({ api, onLogin }: Props) {
               </div>
             </div>
 
-            <form className="pf-form" onSubmit={requestCode}>
+            <form className="pf-form" onSubmit={submit}>
               <div className="pf-field">
                 <label className="pf-label" htmlFor="email">
                   E-mail
@@ -318,51 +294,6 @@ export function LoginScreen({ api, onLogin }: Props) {
               <p className="pf-foot__age">18+ • Jogue com responsabilidade.</p>
             </footer>
           </>
-        ) : (
-          <form className="pf-form" onSubmit={verify}>
-            <p className="pf-code-note">
-              Enviamos um código de acesso para <b>{email}</b>.
-            </p>
-            <div className="pf-field">
-              <label className="pf-label" htmlFor="code">
-                Código
-              </label>
-              <input
-                id="code"
-                className="pf-input"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
-              />
-            </div>
-            {error && (
-              <p className="pf-error" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              className="pf-btn pf-btn--primary"
-              type="submit"
-              disabled={busy}
-            >
-              {busy ? 'Entrando…' : 'Entrar'}
-            </button>
-            <button
-              type="button"
-              className="pf-btn pf-btn--link"
-              onClick={() => {
-                setStep('email');
-                setCode('');
-                setError(null);
-              }}
-            >
-              Usar outro <b>e-mail</b>
-            </button>
-          </form>
-        )}
       </div>
     </main>
   );

@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { LoginScreen } from './LoginScreen';
 
 describe('LoginScreen', () => {
-  it('requests a code for the entered email then shows the code step', async () => {
+  it('logs in with the entered email and calls onLogin with the tokens', async () => {
     const user = userEvent.setup();
     const api = {
-      post: vi.fn().mockResolvedValue({}),
+      post: vi.fn().mockResolvedValue({ accessToken: 'a', refreshToken: 'r' }),
     };
     const onLogin = vi.fn();
     render(<LoginScreen api={api as never} onLogin={onLogin} />);
@@ -15,54 +15,33 @@ describe('LoginScreen', () => {
     await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
     await user.click(screen.getByRole('button', { name: /acessar/i }));
 
-    expect(api.post).toHaveBeenCalledWith('/auth/request-code', {
-      email: 'a@b.com',
-    });
-    expect(await screen.findByLabelText(/código/i)).toBeInTheDocument();
+    expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'a@b.com' });
+    expect(onLogin).toHaveBeenCalledWith({ accessToken: 'a', refreshToken: 'r' });
   });
 
-  it('verifies the code and calls onLogin with the returned tokens', async () => {
+  it('shows an error message when login fails', async () => {
     const user = userEvent.setup();
     const api = {
-      post: vi
-        .fn()
-        .mockResolvedValueOnce({})
-        .mockResolvedValueOnce({ accessToken: 'a', refreshToken: 'r' }),
-    };
-    const onLogin = vi.fn();
-    render(<LoginScreen api={api as never} onLogin={onLogin} />);
-
-    await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
-    await user.click(screen.getByRole('button', { name: /acessar/i }));
-
-    await user.type(await screen.findByLabelText(/código/i), '123456');
-    await user.click(screen.getByRole('button', { name: /entrar/i }));
-
-    expect(api.post).toHaveBeenLastCalledWith('/auth/verify', {
-      email: 'a@b.com',
-      code: '123456',
-    });
-    expect(onLogin).toHaveBeenCalledWith({
-      accessToken: 'a',
-      refreshToken: 'r',
-    });
-  });
-
-  it('shows an error message when verify fails', async () => {
-    const user = userEvent.setup();
-    const api = {
-      post: vi
-        .fn()
-        .mockResolvedValueOnce({})
-        .mockRejectedValueOnce(new Error('Código inválido')),
+      post: vi.fn().mockRejectedValue(new Error('E-mail inválido')),
     };
     render(<LoginScreen api={api as never} onLogin={vi.fn()} />);
 
     await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
     await user.click(screen.getByRole('button', { name: /acessar/i }));
-    await user.type(await screen.findByLabelText(/código/i), '000000');
-    await user.click(screen.getByRole('button', { name: /entrar/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/inválido/i);
+  });
+
+  it('does not show a code step (email-only login)', async () => {
+    const user = userEvent.setup();
+    const api = {
+      post: vi.fn().mockResolvedValue({ accessToken: 'a', refreshToken: 'r' }),
+    };
+    render(<LoginScreen api={api as never} onLogin={vi.fn()} />);
+
+    await user.type(screen.getByLabelText(/e-mail/i), 'a@b.com');
+    await user.click(screen.getByRole('button', { name: /acessar/i }));
+
+    expect(screen.queryByLabelText(/código/i)).not.toBeInTheDocument();
   });
 });
