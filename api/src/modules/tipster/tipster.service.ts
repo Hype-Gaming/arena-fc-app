@@ -20,6 +20,18 @@ export interface AnalyzeResult {
   balanceAfter: number;
 }
 
+export interface UpcomingMatch {
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  startsAt: string;
+  oddHome: number | null;
+  oddDraw: number | null;
+  oddAway: number | null;
+  deepLink: string;
+}
+
 /** A live analysis costs a flat credit (there is no curated entrada to price). */
 const LIVE_ANALYSIS_COST = 1;
 
@@ -48,6 +60,25 @@ export class TipsterService {
   /** Current in-play matches for the "Ao Vivo" tab. */
   liveMatches(): Promise<NormalizedLiveEvent[]> {
     return this.sportsFeed.fetchLive();
+  }
+
+  /**
+   * Upcoming real fixtures from the sportsbook feed (cached), soonest first —
+   * the games the IA Tipster offers to analyze before kickoff.
+   */
+  async upcomingMatches(limit = 20): Promise<UpcomingMatch[]> {
+    const events = await this.sportsFeed.upcomingCached(limit);
+    return events.map((e) => ({
+      externalId: e.externalId,
+      homeTeam: e.homeTeam,
+      awayTeam: e.awayTeam,
+      competition: e.competition,
+      startsAt: e.startsAt.toISOString(),
+      oddHome: e.oddHome == null ? null : Number(e.oddHome),
+      oddDraw: e.oddDraw == null ? null : Number(e.oddDraw),
+      oddAway: e.oddAway == null ? null : Number(e.oddAway),
+      deepLink: e.deepLink,
+    }));
   }
 
   async analyze(userId: string, matchId: string): Promise<AnalyzeResult> {
@@ -82,6 +113,34 @@ export class TipsterService {
       refType: 'tipster_analyze',
       refId: principal.id,
       entradaId: principal.id,
+    });
+  }
+
+  /**
+   * Analyze an upcoming (prematch) fixture picked from the feed. Pulls the
+   * event's popular markets and lets the model recommend off the 1X2 board.
+   */
+  async analyzeUpcoming(
+    userId: string,
+    externalId: string,
+  ): Promise<AnalyzeResult> {
+    const preview = await this.sportsFeed.getEventPreview(externalId);
+    const candidates = buildPrematchCandidates(preview);
+    if (candidates.length === 0) {
+      throw new NotFoundException('Sem mercado 1X2 para analisar neste jogo');
+    }
+
+    const input: AnalysisInput = {
+      homeTeam: preview.homeTeam,
+      awayTeam: preview.awayTeam,
+      competition: preview.competition ?? 'Próximos jogos',
+      candidates,
+    };
+
+    return this.runAnalysis(userId, input, LIVE_ANALYSIS_COST, {
+      refType: 'tipster_upcoming',
+      refId: externalId,
+      entradaId: null,
     });
   }
 
@@ -202,6 +261,29 @@ export class TipsterService {
       };
     });
   }
+}
+
+/**
+ * Build prematch candidates from an event preview's 1X2 board, favourite first
+ * (lowest odd → ENTRADA PRINCIPAL). Suspended legs (odd <= 0) are dropped.
+ */
+export function buildPrematchCandidates(preview: {
+  externalId: string;
+  markets: { key: string; selections: { label: string; odd: number }[] }[];
+}): AnalysisCandidate[] {
+  const market = preview.markets.find((m) => m.key === '1x2');
+  if (!market) return [];
+  const legs = market.selections
+    .filter((s) => s.odd > 0)
+    .sort((a, b) => a.odd - b.odd);
+  return legs.map((l, i) => ({
+    id: `${preview.externalId}-${i}`,
+    market: 'Resultado Final',
+    selection: l.label,
+    odd: l.odd,
+    justification:
+      i === 0 ? 'Favorito no mercado 1X2.' : 'Alternativa no mercado 1X2.',
+  }));
 }
 
 /** Elapsed minutes as an int ("25'" → 25); non-numeric labels → 0. */

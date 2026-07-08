@@ -105,6 +105,19 @@ export class SportsFeedService {
     });
   }
 
+  /**
+   * Upcoming fixtures from the cached feed (kickoff still in the future),
+   * soonest first — the real games the IA Tipster offers to analyze. The cache
+   * is populated by the admin "sync" action (or the sync cron).
+   */
+  upcomingCached(limit = 20) {
+    return this.prisma.sportEvent.findMany({
+      where: { startsAt: { gte: new Date() } },
+      orderBy: { startsAt: 'asc' },
+      take: limit,
+    });
+  }
+
   /** Pull the provider's upcoming events and upsert them into the cache. */
   async sync(): Promise<SyncEventsSummary> {
     const events = await this.provider.fetchUpcoming();

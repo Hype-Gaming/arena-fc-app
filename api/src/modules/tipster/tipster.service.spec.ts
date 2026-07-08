@@ -1,6 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { TipsterService } from './tipster.service';
+import { TipsterService, buildPrematchCandidates } from './tipster.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { InsufficientCreditsError } from '../credits/errors';
@@ -19,7 +19,11 @@ const prismaMock = {
 };
 
 const creditsMock = { applyTransaction: jest.fn(), getBalance: jest.fn() };
-const sportsFeedMock = { fetchLive: jest.fn() };
+const sportsFeedMock = {
+  fetchLive: jest.fn(),
+  upcomingCached: jest.fn(),
+  getEventPreview: jest.fn(),
+};
 // Real deterministic provider so message assertions match the shipped output;
 // spied so we can assert it is NOT called on the pre-check short-circuit.
 const aiProvider = new MockAnalysisProvider();
@@ -293,5 +297,88 @@ describe('TipsterService.analyzeLive', () => {
 
     expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
     expect(result.balanceAfter).toBe(9);
+  });
+});
+
+describe('TipsterService.upcomingMatches', () => {
+  let service: TipsterService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        TipsterService,
+        { provide: PrismaService, useValue: prismaMock },
+        { provide: CreditsService, useValue: creditsMock },
+        { provide: SportsFeedService, useValue: sportsFeedMock },
+        { provide: AI_ANALYSIS_PROVIDER, useValue: aiProvider },
+      ],
+    }).compile();
+    service = moduleRef.get(TipsterService);
+  });
+
+  it('maps cached upcoming feed events to the tipster shape', async () => {
+    sportsFeedMock.upcomingCached.mockResolvedValue([
+      {
+        externalId: 'e1',
+        homeTeam: 'Argentina',
+        awayTeam: 'Egito',
+        competition: 'Amistoso',
+        startsAt: new Date('2026-07-10T18:00:00.000Z'),
+        oddHome: { toString: () => '1.55' } as never,
+        oddDraw: null,
+        oddAway: { toString: () => '3.20' } as never,
+        deepLink: 'https://esportiva.bet.br/event/e1',
+      },
+    ]);
+
+    const matches = await service.upcomingMatches();
+
+    expect(sportsFeedMock.upcomingCached).toHaveBeenCalled();
+    expect(matches).toEqual([
+      {
+        externalId: 'e1',
+        homeTeam: 'Argentina',
+        awayTeam: 'Egito',
+        competition: 'Amistoso',
+        startsAt: '2026-07-10T18:00:00.000Z',
+        oddHome: 1.55,
+        oddDraw: null,
+        oddAway: 3.2,
+        deepLink: 'https://esportiva.bet.br/event/e1',
+      },
+    ]);
+  });
+});
+
+describe('buildPrematchCandidates', () => {
+  it('builds 1X2 candidates favourite-first and drops suspended legs', () => {
+    const candidates = buildPrematchCandidates({
+      externalId: 'e1',
+      markets: [
+        {
+          key: '1x2',
+          selections: [
+            { label: 'Argentina', odd: 1.5 },
+            { label: 'Empate', odd: 0 }, // suspended
+            { label: 'Egito', odd: 6.0 },
+          ],
+        },
+        { key: 'btts', selections: [{ label: 'Sim', odd: 1.8 }] },
+      ],
+    });
+
+    expect(candidates.map((c) => c.selection)).toEqual(['Argentina', 'Egito']);
+    expect(candidates[0].odd).toBe(1.5);
+    expect(candidates[0].market).toBe('Resultado Final');
+  });
+
+  it('returns nothing when there is no 1X2 market', () => {
+    expect(
+      buildPrematchCandidates({
+        externalId: 'e2',
+        markets: [{ key: 'btts', selections: [{ label: 'Sim', odd: 1.8 }] }],
+      }),
+    ).toEqual([]);
   });
 });

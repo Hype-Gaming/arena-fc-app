@@ -1,6 +1,13 @@
 // web/src/features/tipster/TipsterLive.tsx — "Ao Vivo" tab: in-play matches + AI
 import { useEffect, useState } from 'react';
-import { liveMatches, analyzeLive, type LiveMatch } from './tipsterApi';
+import {
+  liveMatches,
+  analyzeLive,
+  upcomingFeedMatches,
+  analyzeUpcoming,
+  type LiveMatch,
+  type UpcomingFeedMatch,
+} from './tipsterApi';
 import './TipsterScreen.css';
 
 interface Props {
@@ -11,12 +18,18 @@ interface Props {
 }
 
 interface Result {
-  match: LiveMatch;
+  home: string;
+  away: string;
+  homeLogo?: string | null;
+  awayLogo?: string | null;
   message: string;
+  deepLink?: string;
+  live?: { minute: string; homeScore: number; awayScore: number };
 }
 
 export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
   const [list, setList] = useState<LiveMatch[]>(matches ?? []);
+  const [upcoming, setUpcoming] = useState<UpcomingFeedMatch[]>([]);
   const [loading, setLoading] = useState(!matches);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
@@ -27,9 +40,14 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
     setLoading(true);
     setError(null);
     try {
-      setList(await liveMatches());
+      const [live, up] = await Promise.all([
+        liveMatches(),
+        upcomingFeedMatches().catch(() => [] as UpcomingFeedMatch[]),
+      ]);
+      setList(live);
+      setUpcoming(up);
     } catch {
-      setError('Não consegui carregar os jogos ao vivo agora.');
+      setError('Não consegui carregar os jogos agora.');
     } finally {
       setLoading(false);
     }
@@ -40,52 +58,95 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
     refresh();
   }, [matches]);
 
+  function onAnalyzeError(err: unknown) {
+    const status = (err as { status?: number }).status;
+    const message = (err as Error).message;
+    if (onBuyCredits && (status === 402 || /cr[eé]dito/i.test(message))) {
+      setNeedCredits(true);
+    } else {
+      setError(message);
+    }
+  }
+
   async function onAnalyze(m: LiveMatch) {
     setBusyId(m.externalId);
     setError(null);
     setNeedCredits(false);
     try {
       const res = await analyzeLive(m.externalId);
-      setResult({ match: m, message: res.message });
+      setResult({
+        home: m.homeTeam,
+        away: m.awayTeam,
+        homeLogo: m.homeLogo,
+        awayLogo: m.awayLogo,
+        message: res.message,
+        deepLink: m.deepLink,
+        live: {
+          minute: m.minute,
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+        },
+      });
       onBalance?.(res.balanceAfter);
     } catch (err) {
-      const status = (err as { status?: number }).status;
-      const message = (err as Error).message;
-      if (onBuyCredits && (status === 402 || /cr[eé]dito/i.test(message))) {
-        setNeedCredits(true);
-      } else {
-        setError(message);
-      }
+      onAnalyzeError(err);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function onAnalyzeUpcoming(m: UpcomingFeedMatch) {
+    setBusyId(m.externalId);
+    setError(null);
+    setNeedCredits(false);
+    try {
+      const res = await analyzeUpcoming(m.externalId);
+      setResult({
+        home: m.homeTeam,
+        away: m.awayTeam,
+        message: res.message,
+        deepLink: m.deepLink,
+      });
+      onBalance?.(res.balanceAfter);
+    } catch (err) {
+      onAnalyzeError(err);
     } finally {
       setBusyId(null);
     }
   }
 
   if (result) {
-    const m = result.match;
     return (
       <div className="tst-live">
         <div className="tst-live__result">
           <div className="tst-live__rhead">
-            <span className="tst-live__badge">
-              <LiveDot /> AO VIVO
-              {m.minute && <i> · {m.minute}</i>}
-            </span>
+            {result.live ? (
+              <span className="tst-live__badge">
+                <LiveDot /> AO VIVO
+                {result.live.minute && <i> · {result.live.minute}</i>}
+              </span>
+            ) : (
+              <span className="tst-live__badge">PRÓXIMO JOGO</span>
+            )}
             <span className="tst-live__rteams">
-              <Crest name={m.homeTeam} logo={m.homeLogo} /> {m.homeTeam}{' '}
-              <b>
-                {m.homeScore}–{m.awayScore}
-              </b>{' '}
-              {m.awayTeam} <Crest name={m.awayTeam} logo={m.awayLogo} />
+              <Crest name={result.home} logo={result.homeLogo} /> {result.home}{' '}
+              {result.live ? (
+                <b>
+                  {result.live.homeScore}–{result.live.awayScore}
+                </b>
+              ) : (
+                <b>VS</b>
+              )}{' '}
+              {result.away} <Crest name={result.away} logo={result.awayLogo} />
             </span>
           </div>
           <p className="tst-line tst-line--assistant tst-live__analysis">
             {result.message}
           </p>
-          {m.deepLink && (
+          {result.deepLink && (
             <a
               className="tst-live__esportiva"
-              href={m.deepLink}
+              href={result.deepLink}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -97,7 +158,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
             className="tst-live__back"
             onClick={() => setResult(null)}
           >
-            ← Ver outros jogos ao vivo
+            ← Ver outros jogos
           </button>
         </div>
       </div>
@@ -185,8 +246,66 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
           ))}
         </ul>
       )}
+
+      {upcoming.length > 0 && (
+        <section className="tst-live__soon">
+          <div className="tst-live__bar">
+            <span className="tst-live__count">Próximos jogos</span>
+          </div>
+          <ul className="tst-live__list">
+            {upcoming.map((m) => (
+              <li key={m.externalId}>
+                <button
+                  type="button"
+                  className="tst-live__card"
+                  onClick={() => onAnalyzeUpcoming(m)}
+                  disabled={busyId === m.externalId}
+                  aria-label={`Analisar ${m.homeTeam} x ${m.awayTeam}`}
+                >
+                  <div className="tst-live__top">
+                    <span className="tst-live__comp">
+                      {m.competition ?? 'Jogo'}
+                    </span>
+                    <span className="tst-live__comp">
+                      {kickoffLabel(m.startsAt)}
+                    </span>
+                  </div>
+
+                  <div className="tst-live__row">
+                    <div className="tst-live__side">
+                      <Crest name={m.homeTeam} />
+                      <span className="tst-live__name">{m.homeTeam}</span>
+                    </div>
+                    <span className="tst-live__score">
+                      <i>VS</i>
+                    </span>
+                    <div className="tst-live__side tst-live__side--away">
+                      <span className="tst-live__name">{m.awayTeam}</span>
+                      <Crest name={m.awayTeam} />
+                    </div>
+                  </div>
+
+                  <span className="tst-live__hint">
+                    {busyId === m.externalId
+                      ? 'Analisando…'
+                      : 'Toque para análise IA'}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
+}
+
+/** Kickoff time as HH:MM (pt-BR). */
+function kickoffLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /* ---- crest: licensed logo when present, else a coloured initials badge ---- */

@@ -32,6 +32,18 @@ export interface LiveMatch {
   awayLogo?: string | null;
 }
 
+export interface UpcomingFeedMatch {
+  externalId: string;
+  homeTeam: string;
+  awayTeam: string;
+  competition: string | null;
+  startsAt: string;
+  oddHome: number | null;
+  oddDraw: number | null;
+  oddAway: number | null;
+  deepLink: string;
+}
+
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('accessToken');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -108,6 +120,27 @@ export async function liveMatches(): Promise<LiveMatch[]> {
 
 export async function analyzeLive(externalId: string): Promise<AnalyzeResponse> {
   const res = await fetch('/api/tipster/analyze-live', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ externalId }),
+  });
+  return unwrap<AnalyzeResponse>(res);
+}
+
+/** Upcoming real fixtures from the sportsbook feed (same games as the book). */
+export async function upcomingFeedMatches(): Promise<UpcomingFeedMatch[]> {
+  const res = await fetch('/api/tipster/upcoming', {
+    method: 'GET',
+    headers: { ...authHeaders() },
+  });
+  const body = await unwrap<{ matches: UpcomingFeedMatch[] }>(res);
+  return body.matches;
+}
+
+export async function analyzeUpcoming(
+  externalId: string,
+): Promise<AnalyzeResponse> {
+  const res = await fetch('/api/tipster/analyze-upcoming', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ externalId }),
