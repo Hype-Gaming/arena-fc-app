@@ -41,9 +41,8 @@ function renderApp() {
 
 describe('App', () => {
   beforeEach(() => {
-    // The first-access TutorialOverlay fetches /api/tutorial/latest; in jsdom
-    // that fetch fails and the overlay skips itself gracefully, so it does not
-    // cover the shell under test.
+    // The first-access Onboarding reads /me/telegram-gate; the mocked api returns
+    // [] (no `applies`), so the wizard stays closed and doesn't cover the shell.
     localStorage.clear();
   });
 

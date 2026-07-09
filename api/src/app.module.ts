@@ -14,6 +14,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { TutorialModule } from './modules/tutorial/tutorial.module';
 import { MeModule } from './modules/me/me.module';
 import { BilhetesModule } from './modules/bilhetes/bilhetes.module';
+import { TelegramGateModule } from './modules/telegram-gate/telegram-gate.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { BilhetesModule } from './modules/bilhetes/bilhetes.module';
     TutorialModule,
     MeModule,
     BilhetesModule,
+    TelegramGateModule,
   ],
 })
 export class AppModule {}

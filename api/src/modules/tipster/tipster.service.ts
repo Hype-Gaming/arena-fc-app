@@ -4,6 +4,8 @@ import { CreditsService } from '../credits/credits.service';
 import { InsufficientCreditsError } from '../credits/errors';
 import { SportsFeedService } from '../sports-feed/sports-feed.service';
 import { NormalizedLiveEvent } from '../sports-feed/sports-feed.types';
+import { buildTeamLogoIndex, matchTeamLogo } from '../sports-feed/team-logo.match';
+import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { rankMatches } from './match-search.util';
 import {
   AI_ANALYSIS_PROVIDER,
@@ -30,6 +32,8 @@ export interface UpcomingMatch {
   oddDraw: number | null;
   oddAway: number | null;
   deepLink: string;
+  homeLogo: string | null;
+  awayLogo: string | null;
 }
 
 /** A live analysis costs a flat credit (there is no curated entrada to price). */
@@ -57,9 +61,21 @@ export class TipsterService {
     return rankMatches(q, candidates, TipsterService.SEARCH_LIMIT);
   }
 
-  /** Current in-play matches for the "Ao Vivo" tab. */
-  liveMatches(): Promise<NormalizedLiveEvent[]> {
-    return this.sportsFeed.fetchLive();
+  /** How many in-play matches the "Ao Vivo" tab shows (feed can return dozens). */
+  private static readonly LIVE_DISPLAY_LIMIT = 6;
+
+  /**
+   * Current in-play matches for the "Ao Vivo" tab. The feed already enriches
+   * crests from the catalog; we show ONLY games where both teams matched a crest
+   * (the major leagues users recognize), capped to the display limit. Obscure
+   * live leagues the catalog doesn't cover are dropped rather than shown as bare
+   * initials — the sportsbook feed carries no team logos of its own.
+   */
+  async liveMatches(
+    limit = TipsterService.LIVE_DISPLAY_LIMIT,
+  ): Promise<NormalizedLiveEvent[]> {
+    const events = await this.sportsFeed.fetchLive();
+    return events.filter((e) => e.homeLogo && e.awayLogo).slice(0, limit);
   }
 
   /**
@@ -68,6 +84,19 @@ export class TipsterService {
    */
   async upcomingMatches(limit = 20): Promise<UpcomingMatch[]> {
     const events = await this.sportsFeed.upcomingCached(limit);
+    if (events.length === 0) return [];
+
+    // Attach catalog crests (same source as the live tab) so the "Próximos
+    // jogos" cards show logos instead of bare initials.
+    const teams = await this.prisma.team.findMany({
+      select: { externalId: true, name: true, logoUrl: true, country: true },
+    });
+    const index = buildTeamLogoIndex(teams);
+    const logo = (name: string): string | null => {
+      const ref = matchTeamLogo(name, index);
+      return ref ? teamLogoUrl(ref.externalId) : null;
+    };
+
     return events.map((e) => ({
       externalId: e.externalId,
       homeTeam: e.homeTeam,
@@ -78,6 +107,8 @@ export class TipsterService {
       oddDraw: e.oddDraw == null ? null : Number(e.oddDraw),
       oddAway: e.oddAway == null ? null : Number(e.oddAway),
       deepLink: e.deepLink,
+      homeLogo: logo(e.homeTeam),
+      awayLogo: logo(e.awayTeam),
     }));
   }
 

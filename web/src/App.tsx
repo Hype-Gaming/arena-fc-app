@@ -2,7 +2,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { api as defaultApi, type ApiClient } from './lib/apiClient';
-import { TutorialOverlay } from './components/TutorialOverlay';
+import { Onboarding } from './components/Onboarding';
+import { TelegramGateProvider } from './components/TelegramGate';
 import { LoginScreen } from './screens/LoginScreen';
 import { AppShell } from './shell/AppShell';
 import { HomePage } from './pages/HomePage';
@@ -23,7 +24,7 @@ function Gate({ api }: { api: ApiClient }) {
 
   return (
     <>
-      {isAuthenticated && <TutorialOverlay />}
+      {isAuthenticated && <Onboarding api={api} />}
       <Routes>
         {/* Login is its own route. Authenticated users are bounced to the home hub. */}
         <Route
@@ -40,7 +41,13 @@ function Gate({ api }: { api: ApiClient }) {
         {isAuthenticated ? (
           <>
             <Route path="/admin" element={<AdminPage />} />
-            <Route element={<AppShell />}>
+            <Route
+              element={
+                <TelegramGateProvider api={api}>
+                  <AppShell />
+                </TelegramGateProvider>
+              }
+            >
               <Route index element={<HomePage />} />
               <Route path="bilhetes" element={<BilhetesPage api={api} />} />
               <Route path="tips" element={<TipsPage api={api} />} />

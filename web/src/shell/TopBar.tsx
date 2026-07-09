@@ -3,9 +3,11 @@
 // there so it never points at the current screen. The right-side actions depend
 // on the plan: free users get "Resgatar Odd Grátis" (Telegram popup); paid users
 // (premium/diamante) get "Criar Odds" and "Planos".
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api as defaultApi, type ApiClient } from '../lib/apiClient';
+import { useRevalidateOnFocus } from '../lib/useRevalidateOnFocus';
+import { useGate } from '../components/TelegramGate';
 import { FreeOddModal } from './FreeOddModal';
 import './TopBar.css';
 
@@ -20,21 +22,21 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
 
   const [planKey, setPlanKey] = useState<string | null>(null);
   const [freeOddOpen, setFreeOddOpen] = useState(false);
+  const { requireUnlock } = useGate();
 
-  useEffect(() => {
-    let active = true;
+  const loadPlan = useCallback(() => {
     api
       .get<MeProfile>('/me')
-      .then((me) => {
-        if (active) setPlanKey(me.planKey);
-      })
+      .then((me) => setPlanKey(me.planKey))
       .catch(() => {
         /* unknown plan → show no plan-specific actions rather than guessing */
       });
-    return () => {
-      active = false;
-    };
   }, [api]);
+
+  useEffect(loadPlan, [loadPlan]);
+  // Re-read the plan when the user returns from the external checkout tab, so a
+  // fresh premium buyer sees the paid actions without reloading.
+  useRevalidateOnFocus(loadPlan);
 
   const isFree = planKey === 'free';
   const isPaid = planKey === 'premium' || planKey === 'diamante';
@@ -77,7 +79,7 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
               <button
                 type="button"
                 className="topbar__pill"
-                onClick={() => navigate('/tipster')}
+                onClick={() => requireUnlock(() => navigate('/tipster'))}
               >
                 <Sparkles /> Criar Odds
               </button>

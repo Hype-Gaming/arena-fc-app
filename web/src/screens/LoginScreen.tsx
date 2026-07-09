@@ -14,7 +14,7 @@ const SUPPORT_URL =
   (import.meta.env.VITE_SUPPORT_URL as string | undefined) ??
   'https://wa.me/5500000000000';
 
-type Tone = 'ia' | 'pro' | 'ultra';
+type Tone = 'ia' | 'pro' | 'basic';
 
 interface Slide {
   tone: Tone;
@@ -26,36 +26,65 @@ interface Slide {
   foot: string;
 }
 
-// Mirrors the reference carousel: IA Tipster (green), PRO (gold), ULTRA (purple).
+// Mirrors the reference carousel: IA Tipster + recent validated entries.
 const SLIDES: Slide[] = [
   {
     tone: 'ia',
     pill: 'IA Tipster',
-    odd: '1.78',
-    title: 'Crie suas próprias odds',
-    sub: 'Análise de IA em segundos',
-    meta: 'R$ 100 → R$ 178',
-    foot: '✨ Disponível dentro do app',
+    odd: '1.67',
+    title: 'Crie suas proprias odds',
+    sub: 'Analise de IA em segundos',
+    meta: 'R$ 100 -> R$ 167',
+    foot: 'Disponivel dentro do app',
   },
   {
     tone: 'pro',
     pill: 'PRO',
-    odd: '1.78',
-    title: 'Inglaterra x RD Congo',
-    sub: 'Bilhete Especial',
-    meta: 'R$ 100 → R$ 178',
-    foot: '✓ Entrada de hoje bateu',
+    odd: '1.67',
+    title: 'Maxline Rogachev x U Craiova',
+    sub: 'Menos de 9.5 escanteios',
+    meta: 'R$ 100 -> R$ 167',
+    foot: 'Entrada de ontem bateu',
   },
   {
-    tone: 'ultra',
-    pill: 'ULTRA',
+    tone: 'pro',
+    pill: 'PRO',
+    odd: '1.65',
+    title: 'Ponte Preta x Criciuma',
+    sub: 'Bilhete Especial',
+    meta: 'R$ 100 -> R$ 165',
+    foot: 'Entrada de ontem bateu',
+  },
+  {
+    tone: 'basic',
+    pill: 'BÁSICO',
+    odd: '1.50',
+    title: 'Ponte Preta x Criciuma',
+    sub: 'Menos de 6.5 Cartoes',
+    meta: 'R$ 100 -> R$ 150',
+    foot: 'Entrada de ontem bateu',
+  },
+  {
+    tone: 'basic',
+    pill: 'BÁSICO',
+    odd: '1.47',
+    title: 'Real Oruro x FC Universitario de Vinto',
+    sub: 'Mais de 2.5 gols',
+    meta: 'R$ 100 -> R$ 147',
+    foot: 'Entrada de ontem bateu',
+  },
+  {
+    tone: 'basic',
+    pill: 'BÁSICO',
     odd: '1.45',
-    title: 'Inglaterra x RD Congo',
-    sub: 'Finalizações do jogador no alvo , 0.5',
-    meta: 'R$ 100 → R$ 145',
-    foot: '✓ Entrada de hoje bateu',
+    title: 'Maxline Rogachev x U Craiova',
+    sub: 'Bilhete Especial',
+    meta: 'R$ 100 -> R$ 145',
+    foot: 'Entrada de ontem bateu',
   },
 ];
+
+const INITIAL_SLIDE = 4;
 
 function Sparkles() {
   return (
@@ -76,13 +105,35 @@ function Sparkles() {
   );
 }
 
+function CheckIcon() {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <header className="pf-brand">
-      <img className="pf-brand__img" src="/logo-simplificada.png" alt="Arena FC" />
-      <div className="pf-tagline">
-        ENTRE NA <b>ARENA</b>
-      </div>
+      <span className="pf-logo" aria-label="Arena FC App">
+        <img className="pf-logo__mark" src="/logo-simplificada.png" alt="" />
+        <span className="pf-word" aria-hidden="true">
+          <b className="pf-word__a">ARENA</b>
+          <b className="pf-word__fc">FC</b>
+          <span className="pf-word__app">APP</span>
+        </span>
+      </span>
     </header>
   );
 }
@@ -91,7 +142,7 @@ export function LoginScreen({ api, onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [slide, setSlide] = useState(0);
+  const [slide, setSlide] = useState(INITIAL_SLIDE);
 
   useEffect(() => {
     const reduce = window.matchMedia?.(
@@ -140,7 +191,10 @@ export function LoginScreen({ api, onLogin }: Props) {
                   style={{ transform: `translateX(-${slide * 100}%)` }}
                 >
                   {SLIDES.map((s, i) => (
-                    <div className="pf-slide" key={s.pill}>
+                    <div
+                      className="pf-slide"
+                      key={`${s.pill}-${s.odd}-${s.title}`}
+                    >
                       <article
                         className={
                           i === 0 ? 'pf-card pf-card--shine' : 'pf-card'
@@ -156,14 +210,17 @@ export function LoginScreen({ api, onLogin }: Props) {
                             {s.odd}
                           </span>
                         </div>
-                        <div className="pf-card__row pf-card__row--mid">
-                          <div>
+                        <div className="pf-card__body">
+                          <div className="pf-card__title-row">
                             <p className="pf-card__title">{s.title}</p>
+                            <span className="pf-card__meta">{s.meta}</span>
+                          </div>
+                          <div className="pf-card__sub-row">
                             <p className="pf-card__sub">{s.sub}</p>
                           </div>
-                          <span className="pf-card__meta">{s.meta}</span>
                         </div>
                         <div className="pf-card__foot" data-tone={s.tone}>
+                          {s.tone === 'ia' ? <Sparkles /> : <CheckIcon />}
                           {s.foot}
                         </div>
                       </article>
@@ -174,7 +231,7 @@ export function LoginScreen({ api, onLogin }: Props) {
               <div className="pf-dots" role="tablist" aria-label="Destaques">
                 {SLIDES.map((sl, i) => (
                   <button
-                    key={sl.pill}
+                    key={`${sl.pill}-${sl.odd}-${sl.title}`}
                     type="button"
                     className={i === slide ? 'pf-dot pf-dot--active' : 'pf-dot'}
                     aria-label={`Ver ${sl.pill}`}

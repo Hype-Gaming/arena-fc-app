@@ -2,8 +2,10 @@
 import {
   BadGatewayException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SportsFeedService } from '../sports-feed/sports-feed.service';
 import {
@@ -103,11 +105,39 @@ function apiHost(): string {
 
 @Injectable()
 export class AdminTeamsService {
+  private readonly logger = new Logger(AdminTeamsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly sportsFeed: SportsFeedService,
     private readonly logoCache: TeamLogoCacheService,
   ) {}
+
+  /**
+   * Keep live-match crests filling in on their own: cross-match the current
+   * in-play teams against the catalog and download any missing logos. The crest
+   * cache is cumulative, so the "Ao Vivo" tab shows more crests over time with no
+   * admin action. No-ops when API_FOOTBALL_KEY isn't configured.
+   *
+   * Cadence is deliberately conservative: each run spends up to SEARCH_CAP (40)
+   * API-Football searches and the free tier is ~100/day, so the default every-6h
+   * (≤4 runs/day) stays within budget. Override with LIVE_LOGO_SYNC_CRON on a
+   * paid tier to fill crests faster.
+   */
+  @Cron(process.env.LIVE_LOGO_SYNC_CRON || '0 0 */6 * * *')
+  async syncLiveLogosJob(): Promise<void> {
+    if (!apiKey()) return;
+    try {
+      const s = await this.syncLiveLogos();
+      if (s.added > 0) {
+        this.logger.log(
+          `live-logo sync: +${s.added} crest(s) (${s.alreadyMatched}/${s.liveTeams} already matched)`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(`live-logo sync failed: ${(err as Error).message}`);
+    }
+  }
 
   /** Catalog listing for the admin UI (optionally filtered by name). */
   list(q?: string) {

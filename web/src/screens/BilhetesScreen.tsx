@@ -1,7 +1,9 @@
 // web/src/screens/BilhetesScreen.tsx — mercados + carrossel de bilhetes
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
+import { useRevalidateOnFocus } from '../lib/useRevalidateOnFocus';
+import { useGate } from '../components/TelegramGate';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
@@ -157,6 +159,7 @@ interface Props {
 
 export function BilhetesScreen({ api }: Props = {}) {
   const navigate = useNavigate();
+  const { requireUnlock } = useGate();
   const [cats, setCats] = useState<CatView[]>(DEFAULT_CATS);
   const [all, setAll] = useState<RailCard[]>([]);
   const [cat, setCat] = useState('safes');
@@ -165,32 +168,39 @@ export function BilhetesScreen({ api }: Props = {}) {
   const [explainerKey, setExplainerKey] = useState<string | null>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<HTMLDivElement>(null);
+  // Auto-pick a category only on the first load; a focus revalidation must not
+  // yank the user off the category they're currently viewing.
+  const initialized = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
+  const loadFeed = useCallback(() => {
     if (!api) return;
-    let alive = true;
     api
       .get<FeedResponse>('/bilhetes')
       .then((feed) => {
-        if (!alive) return;
         setCats(feed.categorias);
         setAll(feed.bilhetes.map(toRailCard));
-        const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
-        if (firstOpen) setCat(firstOpen.key);
+        if (!initialized.current) {
+          const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
+          if (firstOpen) setCat(firstOpen.key);
+          initialized.current = true;
+        }
       })
       .catch(() => {
-        if (!alive) return;
-        setAll([]);
+        // Only blank the rail on the first failed load; a transient focus
+        // revalidation failure keeps whatever is already on screen.
+        if (!initialized.current) setAll([]);
       });
-    return () => {
-      alive = false;
-    };
   }, [api]);
+
+  useEffect(loadFeed, [loadFeed]);
+  // After returning from the checkout tab, a just-activated plan unlocks new
+  // categories — revalidate so premium content appears without a manual reload.
+  useRevalidateOnFocus(loadFeed);
 
   const cards = all.filter((c) => c.cat === cat);
 
@@ -244,9 +254,12 @@ export function BilhetesScreen({ api }: Props = {}) {
       navigate('/planos');
       return;
     }
-    setCat(c.key);
-    setDot(0);
-    railRef.current?.scrollTo?.({ left: 0 });
+    // Opening a category is a gated app function until the Telegram wait passes.
+    requireUnlock(() => {
+      setCat(c.key);
+      setDot(0);
+      railRef.current?.scrollTo?.({ left: 0 });
+    });
   }
 
   return (
@@ -330,12 +343,15 @@ export function BilhetesScreen({ api }: Props = {}) {
                   <button
                     type="button"
                     className="spt-card__add"
-                    onClick={() => {
-                      // Send the user straight to the fixture on the sportsbook
-                      // to place the bet; fall back to the embedded book.
-                      if (c.deepLink) window.open(c.deepLink, '_blank');
-                      else bookRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() =>
+                      // Placing a bet is gated until the Telegram wait passes.
+                      requireUnlock(() => {
+                        // Send the user straight to the fixture on the sportsbook
+                        // to place the bet; fall back to the embedded book.
+                        if (c.deepLink) window.open(c.deepLink, '_blank');
+                        else bookRef.current?.scrollIntoView({ behavior: 'smooth' });
+                      })
+                    }
                   >
                     Adicionar
                   </button>

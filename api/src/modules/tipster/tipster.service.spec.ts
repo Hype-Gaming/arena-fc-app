@@ -10,6 +10,7 @@ import { MockAnalysisProvider } from './ai/mock.provider';
 
 const prismaMock = {
   match: { findMany: jest.fn(), findUnique: jest.fn() },
+  team: { findMany: jest.fn() },
   entrada: { findMany: jest.fn() },
   chatSession: { create: jest.fn() },
   chatMessage: { create: jest.fn() },
@@ -113,6 +114,36 @@ describe('TipsterService.analyze', () => {
     prismaMock.match.findUnique.mockResolvedValue(null);
     await expect(service.analyze('u1', 'missing')).rejects.toBeInstanceOf(NotFoundException);
     expect(creditsMock.applyTransaction).not.toHaveBeenCalled();
+  });
+
+  const liveEv = (id: string, homeLogo: string | null, awayLogo: string | null) => ({
+    externalId: id,
+    homeTeam: `H${id}`,
+    awayTeam: `A${id}`,
+    homeLogo,
+    awayLogo,
+  });
+
+  it('shows only fully-crested live games, capped to the display limit', async () => {
+    const crested = Array.from({ length: 14 }, (_, i) =>
+      liveEv(`c${i}`, `/api/team-logos/${i}a.png`, `/api/team-logos/${i}b.png`),
+    );
+    const noCrest = Array.from({ length: 5 }, (_, i) => liveEv(`n${i}`, null, null));
+    sportsFeedMock.fetchLive.mockResolvedValue([...noCrest, ...crested]);
+
+    const matches = await service.liveMatches();
+
+    expect(matches).toHaveLength(6); // capped
+    expect(matches.every((m) => m.homeLogo && m.awayLogo)).toBe(true); // all crested
+  });
+
+  it('drops live games without crests (strict — no bare initials)', async () => {
+    const noCrest = Array.from({ length: 4 }, (_, i) => liveEv(`n${i}`, null, null));
+    sportsFeedMock.fetchLive.mockResolvedValue(noCrest);
+
+    const matches = await service.liveMatches();
+
+    expect(matches).toHaveLength(0); // only crested games are shown
   });
 
   it('throws NotFound when the match has no entradas', async () => {
@@ -317,7 +348,7 @@ describe('TipsterService.upcomingMatches', () => {
     service = moduleRef.get(TipsterService);
   });
 
-  it('maps cached upcoming feed events to the tipster shape', async () => {
+  it('maps cached upcoming feed events, attaching catalog crests', async () => {
     sportsFeedMock.upcomingCached.mockResolvedValue([
       {
         externalId: 'e1',
@@ -330,6 +361,10 @@ describe('TipsterService.upcomingMatches', () => {
         oddAway: { toString: () => '3.20' } as never,
         deepLink: 'https://esportiva.bet.br/event/e1',
       },
+    ]);
+    // Catalog covers Argentina (crest) but not Egito (→ null / initials badge).
+    prismaMock.team.findMany.mockResolvedValue([
+      { externalId: 26, name: 'Argentina', logoUrl: 'https://src/26.png', country: 'Argentina' },
     ]);
 
     const matches = await service.upcomingMatches();
@@ -346,6 +381,8 @@ describe('TipsterService.upcomingMatches', () => {
         oddDraw: null,
         oddAway: 3.2,
         deepLink: 'https://esportiva.bet.br/event/e1',
+        homeLogo: '/api/team-logos/26.png',
+        awayLogo: null,
       },
     ]);
   });

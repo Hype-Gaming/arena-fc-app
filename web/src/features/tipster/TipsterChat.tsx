@@ -1,5 +1,6 @@
 // web/src/features/tipster/TipsterChat.tsx — chat tab of the IA Tipster screen
 import { useEffect, useState } from 'react';
+import { useGate } from '../../components/TelegramGate';
 import {
   searchMatches,
   analyzeMatch,
@@ -44,6 +45,7 @@ export function TipsterChat({
   const [needCredits, setNeedCredits] = useState(false);
   const [busy, setBusy] = useState(false);
   const [upcoming, setUpcoming] = useState<TipsterMatch[]>(suggestions ?? []);
+  const { requireUnlock } = useGate();
 
   useEffect(() => {
     if (suggestions) return;
@@ -184,7 +186,7 @@ export function TipsterChat({
           <button
             type="button"
             className="tst-confirm__btn"
-            onClick={onConfirm}
+            onClick={() => requireUnlock(onConfirm)}
             disabled={busy}
           >
             Confirmar

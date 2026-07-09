@@ -42,6 +42,8 @@ export interface UpcomingFeedMatch {
   oddDraw: number | null;
   oddAway: number | null;
   deepLink: string;
+  homeLogo?: string | null;
+  awayLogo?: string | null;
 }
 
 function authHeaders(): Record<string, string> {

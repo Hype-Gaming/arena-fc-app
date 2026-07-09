@@ -13,3 +13,5 @@ services:
   api:
     environment:
       PAYT_WEBHOOK_TOKEN: f60f115ad1620367f874c14d4e5bb5ae
+      # Test-only: shorten the Telegram gate wait so the flow is quick to verify.
+      TELEGRAM_UNLOCK_WAIT_SECONDS: ${TELEGRAM_UNLOCK_WAIT_SECONDS:-}

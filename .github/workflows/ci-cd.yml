@@ -162,6 +162,6 @@ jobs:
             git fetch --all --prune
             git checkout "${{ github.ref_name }}"
             git pull --ff-only
-            docker compose up -d --build
+            docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --build
             docker compose ps
           EOF

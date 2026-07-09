@@ -1,5 +1,6 @@
 // web/src/features/tipster/TipsterLive.tsx — "Ao Vivo" tab: in-play matches + AI
 import { useEffect, useState } from 'react';
+import { useGate } from '../../components/TelegramGate';
 import {
   liveMatches,
   analyzeLive,
@@ -35,6 +36,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
   const [result, setResult] = useState<Result | null>(null);
   const [needCredits, setNeedCredits] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { requireUnlock } = useGate();
 
   async function refresh() {
     setLoading(true);
@@ -200,8 +202,8 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
       {!loading && list.length === 0 ? (
         <div className="tst-placeholder">
           <RadioIcon />
-          <p>Nenhuma partida ao vivo agora.</p>
-          <span>Volte durante os jogos para uma análise em tempo real.</span>
+          <p>Nenhum jogo ao vivo das principais ligas agora.</p>
+          <span>Assim que rolar um jogo grande, ele aparece aqui para análise em tempo real.</span>
         </div>
       ) : (
         <ul className="tst-live__list">
@@ -210,7 +212,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
               <button
                 type="button"
                 className="tst-live__card"
-                onClick={() => onAnalyze(m)}
+                onClick={() => requireUnlock(() => onAnalyze(m))}
                 disabled={busyId === m.externalId}
                 aria-label={`Analisar ${m.homeTeam} x ${m.awayTeam} ao vivo`}
               >
@@ -258,7 +260,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
                 <button
                   type="button"
                   className="tst-live__card"
-                  onClick={() => onAnalyzeUpcoming(m)}
+                  onClick={() => requireUnlock(() => onAnalyzeUpcoming(m))}
                   disabled={busyId === m.externalId}
                   aria-label={`Analisar ${m.homeTeam} x ${m.awayTeam}`}
                 >
@@ -273,7 +275,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
 
                   <div className="tst-live__row">
                     <div className="tst-live__side">
-                      <Crest name={m.homeTeam} />
+                      <Crest name={m.homeTeam} logo={m.homeLogo} />
                       <span className="tst-live__name">{m.homeTeam}</span>
                     </div>
                     <span className="tst-live__score">
@@ -281,7 +283,7 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
                     </span>
                     <div className="tst-live__side tst-live__side--away">
                       <span className="tst-live__name">{m.awayTeam}</span>
-                      <Crest name={m.awayTeam} />
+                      <Crest name={m.awayTeam} logo={m.awayLogo} />
                     </div>
                   </div>
 
