@@ -1,5 +1,5 @@
 import { randomBytes, createHash } from 'crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -10,6 +10,13 @@ export interface TokenPair {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface AdminSession {
+  adminAccessToken: string;
+  expiresInSeconds: number;
+}
+
+const ADMIN_SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
 
 @Injectable()
 export class AuthService {
@@ -62,6 +69,38 @@ export class AuthService {
     return this.issueTokens(user.id, user.email);
   }
 
+  async issueAdminSession(userId: string, email: string): Promise<AdminSession> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true },
+    });
+    if (!user || user.email !== email) {
+      throw new UnauthorizedException('Invalid admin session');
+    }
+
+    const envAdmin = this.isAdminEmail(user.email);
+    if (envAdmin && user.role !== 'admin') {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { role: 'admin' },
+      });
+    }
+
+    if (user.role !== 'admin' && !envAdmin) {
+      throw new ForbiddenException('Admin role required');
+    }
+
+    const adminAccessToken = await this.jwt.signAsync(
+      { sub: user.id, email: user.email, purpose: 'admin' },
+      {
+        secret: this.adminJwtSecret(),
+        expiresIn: `${ADMIN_SESSION_TTL_SECONDS}s`,
+      },
+    );
+
+    return { adminAccessToken, expiresInSeconds: ADMIN_SESSION_TTL_SECONDS };
+  }
+
   private isAdminEmail(email: string): boolean {
     const raw = this.config.get<string>('ADMIN_EMAILS') ?? '';
     const admins = raw
@@ -73,6 +112,13 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private adminJwtSecret(): string | undefined {
+    return (
+      this.config.get<string>('ADMIN_JWT_SECRET') ??
+      this.config.get<string>('JWT_SECRET')
+    );
   }
 
   private async issueTokens(userId: string, email: string): Promise<TokenPair> {

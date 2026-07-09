@@ -4,6 +4,7 @@
 // so a single login populates the token used everywhere.
 const ACCESS_KEY = 'accessToken';
 const REFRESH_KEY = 'refreshToken';
+const ADMIN_ACCESS_KEY = 'adminAccessToken';
 
 export interface Tokens {
   accessToken: string;
@@ -24,5 +25,6 @@ export const tokenStorage = {
   clear(): void {
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(ADMIN_ACCESS_KEY);
   },
 };

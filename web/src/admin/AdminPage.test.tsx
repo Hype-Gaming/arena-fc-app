@@ -5,6 +5,7 @@ import { AdminPage } from './AdminPage';
 
 vi.mock('./adminApi', () => ({
   adminApi: {
+    ensureAdminSession: vi.fn().mockResolvedValue(true),
     listCategories: vi.fn().mockResolvedValue([]),
     listMatches: vi.fn().mockResolvedValue([{ id: 'm1', homeTeam: 'A', awayTeam: 'B' }]),
     listUsers: vi
@@ -22,10 +23,10 @@ describe('AdminPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders the backoffice heading and the Bilhetes tab by default', () => {
+  it('renders the backoffice heading and the Bilhetes tab by default', async () => {
     render(<AdminPage />);
     expect(screen.getByRole('heading', { name: /backoffice/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^bilhetes$/i })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: /^bilhetes$/i })).toHaveAttribute(
       'data-active',
       'true',
     );
@@ -34,14 +35,14 @@ describe('AdminPage', () => {
   it('shows matches under the Jogos tab', async () => {
     const user = userEvent.setup();
     render(<AdminPage />);
-    await user.click(screen.getByRole('button', { name: /jogos/i }));
+    await user.click(await screen.findByRole('button', { name: /jogos/i }));
     expect(await screen.findByText('A vs B')).toBeInTheDocument();
   });
 
   it('shows users with balances under the Usuários tab', async () => {
     const user = userEvent.setup();
     render(<AdminPage />);
-    await user.click(screen.getByRole('button', { name: /usuários/i }));
+    await user.click(await screen.findByRole('button', { name: /usuários/i }));
     expect(await screen.findByText(/a@x.com/)).toBeInTheDocument();
   });
 });

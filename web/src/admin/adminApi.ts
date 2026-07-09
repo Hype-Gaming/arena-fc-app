@@ -15,19 +15,52 @@ async function refreshTokens(): Promise<boolean> {
   return true;
 }
 
+function clearAdminSession(): void {
+  localStorage.removeItem('adminAccessToken');
+}
+
+async function createAdminSession(retry = true): Promise<boolean> {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return false;
+
+  const res = await fetch('/api/auth/admin/session', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (res.status === 401 && retry && (await refreshTokens())) {
+    return createAdminSession(false);
+  }
+  if (!res.ok) {
+    clearAdminSession();
+    throw new Error(`Request failed: ${res.status}`);
+  }
+
+  const session = (await res.json()) as { adminAccessToken: string };
+  localStorage.setItem('adminAccessToken', session.adminAccessToken);
+  return true;
+}
+
 async function req<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
   const token = localStorage.getItem('accessToken');
+  const adminToken = localStorage.getItem('adminAccessToken');
   const res = await fetch(`/api${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      ...(adminToken ? { 'X-Admin-Session': `Bearer ${adminToken}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
   // Access tokens are short-lived — silently refresh once and retry so a long
   // admin session doesn't 401 on every action.
-  if (res.status === 401 && retry && (await refreshTokens())) {
+  if (res.status === 401 && retry) {
+    clearAdminSession();
+    await refreshTokens();
+    await createAdminSession(false);
     return req<T>(path, init, false);
   }
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -178,6 +211,11 @@ export interface NationalTeamSyncSummary {
 }
 
 export const adminApi = {
+  ensureAdminSession: () =>
+    localStorage.getItem('adminAccessToken')
+      ? Promise.resolve(true)
+      : createAdminSession(),
+  clearAdminSession,
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>
     req<Category>('/admin/categories', { method: 'POST', body: JSON.stringify(data) }),

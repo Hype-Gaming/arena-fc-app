@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
@@ -143,5 +143,68 @@ describe('AuthService.refresh', () => {
     const whereArg = prisma.refreshToken.findFirst.mock.calls[0][0].where;
     expect(whereArg.tokenHash).toMatch(/^[a-f0-9]{64}$/);
     expect(whereArg.tokenHash).not.toBe('old-raw-token');
+  });
+});
+
+describe('AuthService.issueAdminSession', () => {
+  let service: AuthService;
+  let prisma: any;
+  let jwt: any;
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findUnique: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+      },
+      refreshToken: { create: jest.fn().mockResolvedValue({}) },
+    };
+    jwt = { signAsync: jest.fn().mockResolvedValue('admin.jwt') };
+
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: jwt },
+        {
+          provide: ConfigService,
+          useValue: configWith({
+            JWT_SECRET: 'test-secret',
+            ADMIN_JWT_SECRET: 'admin-secret',
+            ADMIN_EMAILS: 'boss@arena.com',
+          }),
+        },
+      ],
+    }).compile();
+
+    service = moduleRef.get(AuthService);
+  });
+
+  it('issues a short admin token for an admin user', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'boss@arena.com',
+      role: 'admin',
+    });
+
+    const result = await service.issueAdminSession('u1', 'boss@arena.com');
+
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      { sub: 'u1', email: 'boss@arena.com', purpose: 'admin' },
+      { secret: 'admin-secret', expiresIn: '1800s' },
+    );
+    expect(result).toEqual({ adminAccessToken: 'admin.jwt', expiresInSeconds: 1800 });
+  });
+
+  it('rejects a non-admin user', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'user@arena.com',
+      role: 'user',
+    });
+
+    await expect(
+      service.issueAdminSession('u1', 'user@arena.com'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

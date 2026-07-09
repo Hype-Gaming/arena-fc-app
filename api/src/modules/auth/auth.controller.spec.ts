@@ -1,4 +1,6 @@
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -10,11 +12,16 @@ describe('AuthController', () => {
     service = {
       login: jest.fn(),
       refresh: jest.fn(),
+      issueAdminSession: jest.fn(),
     } as unknown as jest.Mocked<AuthService>;
 
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [{ provide: AuthService, useValue: service }],
+      providers: [
+        { provide: AuthService, useValue: service },
+        { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
+        { provide: ConfigService, useValue: { get: jest.fn() } },
+      ],
     }).compile();
 
     controller = moduleRef.get(AuthController);
@@ -35,5 +42,20 @@ describe('AuthController', () => {
     const res = await controller.refresh({ refreshToken: 'ref' });
     expect(service.refresh).toHaveBeenCalledWith('ref');
     expect(res).toEqual({ accessToken: 'acc2', refreshToken: 'ref2' });
+  });
+
+  it('POST /auth/admin/session delegates to AuthService.issueAdminSession', async () => {
+    service.issueAdminSession.mockResolvedValue({
+      adminAccessToken: 'admin',
+      expiresInSeconds: 1800,
+    });
+
+    const res = await controller.adminSession({
+      userId: 'u1',
+      email: 'boss@arena.com',
+    });
+
+    expect(service.issueAdminSession).toHaveBeenCalledWith('u1', 'boss@arena.com');
+    expect(res).toEqual({ adminAccessToken: 'admin', expiresInSeconds: 1800 });
   });
 });

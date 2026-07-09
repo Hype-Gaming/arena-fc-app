@@ -15,6 +15,7 @@ describe('adminApi', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn());
     localStorage.setItem('accessToken', 'tok123');
+    localStorage.setItem('adminAccessToken', 'admin123');
   });
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -27,7 +28,10 @@ describe('adminApi', () => {
     expect(fetch).toHaveBeenCalledWith(
       '/api/admin/categories',
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer tok123' }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer tok123',
+          'X-Admin-Session': 'Bearer admin123',
+        }),
       }),
     );
     expect(res).toEqual([{ id: 'c1', name: 'Futebol' }]);
@@ -60,5 +64,23 @@ describe('adminApi', () => {
   it('throws on a non-ok response', async () => {
     (fetch as any).mockResolvedValue(mockResponse({}, { ok: false, status: 403 }));
     await expect(adminApi.listCategories()).rejects.toThrow('Request failed: 403');
+  });
+
+  it('creates a separate admin session when needed', async () => {
+    localStorage.removeItem('adminAccessToken');
+    (fetch as any).mockResolvedValue(
+      mockResponse({ adminAccessToken: 'new-admin-token', expiresInSeconds: 1800 }),
+    );
+
+    await expect(adminApi.ensureAdminSession()).resolves.toBe(true);
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/auth/admin/session',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer tok123' }),
+      }),
+    );
+    expect(localStorage.getItem('adminAccessToken')).toBe('new-admin-token');
   });
 });
