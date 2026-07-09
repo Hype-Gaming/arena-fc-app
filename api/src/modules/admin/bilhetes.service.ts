@@ -15,11 +15,15 @@ import {
 import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { AdminTeamsService } from './teams.service';
 
+const LOGO_FALLBACK_CAP = 40;
+
 function defaultHomeSelection(ev: {
   homeTeam: string;
   oddHome: unknown;
   markets?: unknown;
   mercado?: string | null;
+  selecao?: string | null;
+  linha?: number | null;
 }): { mercado: string; selecao: string; linha: number | null; odd: number } {
   const markets = Array.isArray(ev.markets) ? ev.markets : [];
   const preferredKey = ev.mercado ?? '1x2';
@@ -36,7 +40,13 @@ function defaultHomeSelection(ev: {
       (m as { key?: unknown }).key === '1x2',
   ) as { selections?: { label?: unknown; odd?: unknown; line?: unknown }[] } | undefined;
   const homeSelection =
-    market?.key === '1x2'
+    ev.selecao
+      ? market?.selections?.find(
+          (s) =>
+            s.label === ev.selecao &&
+            (ev.linha == null || s.line === ev.linha),
+        )
+      : market?.key === '1x2'
       ? market.selections?.find((s) => s.label === ev.homeTeam)
       : market?.selections?.[0];
   const fallbackHome = winner?.selections?.find((s) => s.label === ev.homeTeam);
@@ -67,11 +77,24 @@ export class AdminBilhetesService {
     const categoria = dto.categoria ?? 'safes';
     const limit = Math.min(Math.max(dto.limit ?? 12, 1), 50);
     const publishedAt = dto.publish === false ? null : new Date();
+    const pickByExternalId = new Map(
+      (dto.eventPicks ?? []).map((p) => [p.eventExternalId, p]),
+    );
+    const selectedExternalIds = new Set([
+      ...(dto.eventExternalIds ?? []),
+      ...pickByExternalId.keys(),
+    ]);
 
     // Wide window (soonest first) so crest-prioritisation can reach games in a
     // synced league even when the next hours are dominated by friendlies.
     const events = await this.prisma.sportEvent.findMany({
-      where: { oddHome: { not: null }, startsAt: { gte: new Date() } },
+      where: {
+        oddHome: { not: null },
+        startsAt: { gte: new Date() },
+        ...(selectedExternalIds.size > 0
+          ? { externalId: { in: [...selectedExternalIds] } }
+          : {}),
+      },
       orderBy: { startsAt: 'asc' },
       take: 1000,
     });
@@ -85,11 +108,25 @@ export class AdminBilhetesService {
       select: { externalId: true, name: true, logoUrl: true, country: true },
     });
     const index = buildTeamLogoIndex(teams);
-    const fallbackCrests = new Map<string, Promise<string | null>>();
-    const crest = (name: string, iso: string | null): Promise<string | null> => {
+    const catalogCrest = (name: string): string | null => {
       const ref = matchTeamLogo(name, index);
-      if (ref) return Promise.resolve(teamLogoUrl(ref.externalId));
+      return ref ? teamLogoUrl(ref.externalId) : null;
+    };
 
+    // Resolve crests up front and float games that HAVE a crest to the top, so
+    // "bring games with crests" actually does when the catalog covers them
+    // (kept soonest-first within each group — sort is stable).
+    const scored = events
+      .filter((ev) => !ev.externalId || !used.has(ev.externalId))
+      .map((ev) => ({
+        ev,
+        homeLogo: catalogCrest(ev.homeTeam),
+        awayLogo: catalogCrest(ev.awayTeam),
+      }));
+
+    let fallbackLookups = 0;
+    const fallbackCrests = new Map<string, Promise<string | null>>();
+    const fallback = (name: string, iso: string | null): Promise<string | null> => {
       const key = `${name}|${iso ?? ''}`;
       if (!fallbackCrests.has(key)) {
         fallbackCrests.set(key, this.teamsService.resolveTeamLogo(name, iso));
@@ -97,18 +134,17 @@ export class AdminBilhetesService {
       return fallbackCrests.get(key)!;
     };
 
-    // Resolve crests up front and float games that HAVE a crest to the top, so
-    // "bring games with crests" actually does when the catalog covers them
-    // (kept soonest-first within each group — sort is stable).
-    const scored = await Promise.all(
-      events
-        .filter((ev) => !ev.externalId || !used.has(ev.externalId))
-        .map(async (ev) => ({
-        ev,
-        homeLogo: await crest(ev.homeTeam, ev.countryIso),
-        awayLogo: await crest(ev.awayTeam, ev.countryIso),
-      })),
-    );
+    for (const s of scored) {
+      if (fallbackLookups >= LOGO_FALLBACK_CAP) break;
+      if (!s.homeLogo) {
+        fallbackLookups += 1;
+        s.homeLogo = await fallback(s.ev.homeTeam, s.ev.countryIso);
+      }
+      if (!s.awayLogo && fallbackLookups < LOGO_FALLBACK_CAP) {
+        fallbackLookups += 1;
+        s.awayLogo = await fallback(s.ev.awayTeam, s.ev.countryIso);
+      }
+    }
     const scoredWithCrests = scored.map((s) => ({
       ...s,
       hasCrest: !!(s.homeLogo || s.awayLogo),
@@ -117,7 +153,15 @@ export class AdminBilhetesService {
 
     const created = [];
     for (const s of scoredWithCrests.slice(0, limit)) {
-      const pick = defaultHomeSelection({ ...s.ev, mercado: dto.mercado ?? null });
+      const requested = s.ev.externalId
+        ? pickByExternalId.get(s.ev.externalId)
+        : undefined;
+      const pick = defaultHomeSelection({
+        ...s.ev,
+        mercado: requested?.mercado ?? dto.mercado ?? null,
+        selecao: requested?.selecao ?? null,
+        linha: requested?.linha ?? null,
+      });
       created.push(
         await this.prisma.bilhete.create({
           data: {
@@ -131,6 +175,7 @@ export class AdminBilhetesService {
             awayLogo: s.awayLogo,
             competition: s.ev.competition,
             startsAt: s.ev.startsAt,
+            validUntil: s.ev.startsAt,
             odd: pick.odd!,
             eventDeepLink: s.ev.deepLink,
             eventExternalId: s.ev.externalId,
@@ -179,11 +224,12 @@ export class AdminBilhetesService {
   }
 
   create(dto: CreateBilheteDto) {
-    const { publish, startsAt, ...data } = dto;
+    const { publish, startsAt, validUntil, ...data } = dto;
     return this.prisma.bilhete.create({
       data: {
         ...data,
         startsAt: new Date(startsAt),
+        validUntil: validUntil ? new Date(validUntil) : new Date(startsAt),
         // Live by default: the admin creates a ticket to sell it now.
         publishedAt: publish === false ? null : new Date(),
       },
@@ -198,10 +244,14 @@ export class AdminBilhetesService {
 
   async update(id: string, dto: UpdateBilheteDto) {
     await this.getOrThrow(id);
-    const { startsAt, ...data } = dto;
+    const { startsAt, validUntil, ...data } = dto;
     return this.prisma.bilhete.update({
       where: { id },
-      data: { ...data, ...(startsAt ? { startsAt: new Date(startsAt) } : {}) },
+      data: {
+        ...data,
+        ...(startsAt ? { startsAt: new Date(startsAt) } : {}),
+        ...(validUntil ? { validUntil: new Date(validUntil) } : {}),
+      },
     });
   }
 

@@ -1,4 +1,3 @@
-// web/src/screens/PerfilScreen.test.tsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -29,12 +28,22 @@ const gamification = {
     },
     {
       key: 'ten_unlocks',
-      name: 'Caçador de Tips',
+      name: 'Cacador de Tips',
       description: 'Destrave 10 entradas.',
       icon: 'trophy',
       unlocked: false,
       unlockedAt: null,
       progress: 1,
+      threshold: 10,
+    },
+    {
+      key: 'ten_greens',
+      name: 'Sequencia Verde',
+      description: 'Acumule 10 entradas green.',
+      icon: 'star-gold',
+      unlocked: false,
+      unlockedAt: null,
+      progress: 2,
       threshold: 10,
     },
   ],
@@ -59,13 +68,14 @@ describe('PerfilScreen', () => {
     vi.unstubAllGlobals();
   });
 
-  it('shows email, plan, level and xp', async () => {
+  it('shows email, plan, level and xp summary', async () => {
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
 
     expect(await screen.findByText('a@b.com')).toBeInTheDocument();
     expect(screen.getByText(/plano premium/i)).toBeInTheDocument();
-    expect(screen.getByText(/nível 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/nivel 3/i)).toBeInTheDocument();
     expect(screen.getByText(/250 xp/i)).toBeInTheDocument();
+    expect(screen.getByText(/detalhes completos/i)).toBeInTheDocument();
   });
 
   it('lists achievements marking unlocked ones', async () => {
@@ -73,13 +83,13 @@ describe('PerfilScreen', () => {
 
     const unlocked = await screen.findByLabelText('Primeira Entrada');
     expect(unlocked).toHaveAttribute('data-unlocked', 'true');
-    expect(screen.getByLabelText('Caçador de Tips')).toHaveAttribute(
+    expect(screen.getByLabelText('Cacador de Tips')).toHaveAttribute(
       'data-unlocked',
       'false',
     );
   });
 
-  it('treats a Diamante plan as paid (no free styling)', async () => {
+  it('treats a Diamante plan as paid', async () => {
     render(
       <PerfilScreen
         api={makeApi({ planKey: 'diamante', planName: 'Diamante' }) as never}
@@ -88,28 +98,39 @@ describe('PerfilScreen', () => {
     );
 
     const badge = await screen.findByText(/plano diamante/i);
-    expect(badge.className).toContain('ppf-badge--plan');
-    expect(badge.className).not.toContain('is-free');
+    expect(badge.className).toContain('pf-pill--plan');
   });
 
-  it('expands to show every achievement with its description', async () => {
+  it('opens the full profile from achievements to show categories and progress', async () => {
     const user = userEvent.setup();
     render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
 
     await screen.findByText('a@b.com');
-    // collapsed: descriptions are not shown
     expect(
       screen.queryByText('Destrave sua primeira entrada.'),
     ).not.toBeInTheDocument();
 
     await user.click(
-      screen.getByRole('button', { name: /ver todas as conquistas/i }),
+      screen.getByRole('button', { name: /conquistas/i }),
     );
 
-    expect(
-      screen.getByText('Destrave sua primeira entrada.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Destrave 10 entradas.')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /perfil completo/i })).toBeInTheDocument();
+    expect(screen.getByText(/conquistas diarias/i)).toBeInTheDocument();
+    expect(screen.getByText(/conquistas de streak/i)).toBeInTheDocument();
+    expect(screen.getByText('Primeira Entrada')).toBeInTheDocument();
+    expect(screen.getByText('Cacador de Tips')).toBeInTheDocument();
+    expect(screen.getAllByText('1/10').length).toBeGreaterThan(0);
+  });
+
+  it('opens the full profile from the hero card', async () => {
+    const user = userEvent.setup();
+    render(<PerfilScreen api={makeApi() as never} onLogout={vi.fn()} />);
+
+    await screen.findByText('a@b.com');
+    await user.click(screen.getByRole('button', { name: /perfil do usuario/i }));
+
+    expect(screen.getByRole('dialog', { name: /perfil completo/i })).toBeInTheDocument();
+    expect(screen.getByText(/total logins/i)).toBeInTheDocument();
   });
 
   it('opens the checkout URL in a new tab when Upgrade is clicked', async () => {

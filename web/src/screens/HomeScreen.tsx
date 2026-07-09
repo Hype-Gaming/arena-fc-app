@@ -1,5 +1,9 @@
 // web/src/screens/HomeScreen.tsx
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { CSSProperties } from 'react';
+import { ExplainerModal } from './ExplainerModal';
+import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './HomeScreen.css';
 
 type Accent = 'gold' | 'blue' | 'muted';
@@ -19,9 +23,14 @@ interface HomeCard {
   badges: Badge[];
   ctaLabel: string;
   ctaVariant: 'solid' | 'outline';
-  to: string;
+  to?: string;
   featured?: boolean;
   locked?: boolean;
+  visual?: 'tipster' | 'ai' | 'locked' | 'greens';
+  image?: string;
+  /** Opens the "how it works" popup (keyed into CATEGORY_EXPLAINERS) instead
+   *  of navigating — used by the locked "Desbloquear" cards. */
+  explainerKey?: string;
 }
 
 interface Section {
@@ -35,20 +44,22 @@ const SECTIONS: Section[] = [
     title: 'Principais',
     cards: [
       {
-        key: 'futebol',
-        title: 'Futebol',
+        key: 'entradas-dia',
+        title: 'Entradas do Dia',
         subtitle: 'Acesse as melhores entradas do dia',
-        icon: 'ball',
+        icon: 'robot',
         accent: 'gold',
         featured: true,
         badges: [{ label: 'IA Ativada', tone: 'gold' }],
         ctaLabel: 'Acessar',
         ctaVariant: 'solid',
         to: '/bilhetes',
+        visual: 'tipster',
+        image: '/entradas-do-dia.png',
       },
       {
         key: 'ia-tempo-real',
-        title: 'Análises de IA em tempo real',
+        title: 'Analises de IA em tempo real',
         subtitle: 'Pergunte sobre qualquer jogo ou escolha uma partida ao vivo.',
         icon: 'robot',
         accent: 'blue',
@@ -59,11 +70,13 @@ const SECTIONS: Section[] = [
         ctaLabel: 'Testar a IA Tipster',
         ctaVariant: 'solid',
         to: '/tipster',
+        visual: 'ai',
+        image: '/analise-de-ia.png',
       },
     ],
   },
   {
-    title: 'Acesso rápido',
+    title: 'Acesso Rapido',
     icon: 'bolt',
     cards: [
       {
@@ -77,6 +90,9 @@ const SECTIONS: Section[] = [
         ctaLabel: 'Desbloquear',
         ctaVariant: 'outline',
         to: '/planos',
+        explainerKey: 'ultra',
+        visual: 'locked',
+        image: '/odds-altas.png',
       },
       {
         key: 'alavancagem',
@@ -89,23 +105,28 @@ const SECTIONS: Section[] = [
         ctaLabel: 'Desbloquear',
         ctaVariant: 'outline',
         to: '/planos',
+        explainerKey: 'alavancagem',
+        visual: 'locked',
+        image: '/alavancagem.png',
       },
     ],
   },
   {
-    title: 'Últimos ingressos',
+    title: 'Ultimos Bilhetes',
     icon: 'tv',
     cards: [
       {
         key: 'greens',
-        title: 'Últimos Greens',
-        subtitle: 'Veja os ingressos que bateram',
+        title: 'Ultimos Greens',
+        subtitle: 'Veja os bilhetes que bateram',
         icon: 'trophy',
         accent: 'gold',
-        badges: [{ label: 'Verdes', tone: 'green' }],
-        ctaLabel: 'Visualização histórica',
+        badges: [{ label: 'Greens', tone: 'green' }],
+        ctaLabel: 'Ver historico',
         ctaVariant: 'solid',
         to: '/ultimos-greens',
+        visual: 'greens',
+        image: '/ultimos-greens.png',
       },
     ],
   },
@@ -113,6 +134,18 @@ const SECTIONS: Section[] = [
 
 export function HomeScreen() {
   const navigate = useNavigate();
+  const [explainerKey, setExplainerKey] = useState<string | null>(null);
+
+  function openCard(card: HomeCard) {
+    // Locked cards with an explainer ("Desbloquear" on Odds Altas / Alavancagem)
+    // open the "how it works" popup that funnels to plans, instead of jumping
+    // straight to the paywall.
+    if (card.explainerKey && CATEGORY_EXPLAINERS[card.explainerKey]) {
+      setExplainerKey(card.explainerKey);
+      return;
+    }
+    if (card.to) navigate(card.to);
+  }
 
   return (
     <main className="home">
@@ -125,7 +158,7 @@ export function HomeScreen() {
             </h2>
             <div className="home-section__cards">
               {section.cards.map((card) => (
-                <Card key={card.key} card={card} onOpen={() => navigate(card.to)} />
+                <Card key={card.key} card={card} onOpen={() => openCard(card)} />
               ))}
             </div>
           </section>
@@ -133,11 +166,11 @@ export function HomeScreen() {
 
         <footer className="home-footer">
           <div className="home-footer__brand">
-            Arena <span>FC</span> <Icon name="gear" />
+            Premier Ultra <span>©</span>
           </div>
-          <p className="home-footer__line">Análises processadas continuamente</p>
+          <p className="home-footer__line">Analises processadas continuamente</p>
           <p className="home-footer__fine">
-            Dados protegidos • 18+ • Jogue com responsabilidade
+            Dados protegidos - 18+ - Jogue com responsabilidade
           </p>
           <p className="home-footer__links">
             <a href="#termos">Termos e Privacidade</a>
@@ -146,6 +179,15 @@ export function HomeScreen() {
           </p>
         </footer>
       </div>
+
+      <ExplainerModal
+        explainer={explainerKey ? CATEGORY_EXPLAINERS[explainerKey] : null}
+        onClose={() => setExplainerKey(null)}
+        onInterest={() => {
+          setExplainerKey(null);
+          navigate('/planos');
+        }}
+      />
     </main>
   );
 }
@@ -157,6 +199,8 @@ function Card({ card, onOpen }: { card: HomeCard; onOpen: () => void }) {
       data-accent={card.accent}
       data-featured={card.featured ? 'true' : undefined}
       data-locked={card.locked ? 'true' : undefined}
+      data-visual={card.visual}
+      style={card.image ? ({ '--h-thumb-image': `url(${card.image})` } as CSSProperties) : undefined}
     >
       <div className="hcard__thumb">
         <Icon name={card.icon} />
@@ -190,7 +234,6 @@ function Card({ card, onOpen }: { card: HomeCard; onOpen: () => void }) {
   );
 }
 
-/* ---- inline icons ---- */
 const ICONS = {
   ball: (
     <>
@@ -257,4 +300,3 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
     </svg>
   );
 }
-

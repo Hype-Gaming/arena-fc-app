@@ -318,6 +318,7 @@ model Bilhete {
   awayLogo    String?
   competition String?
   startsAt    DateTime
+  validUntil  DateTime?
   odd         Decimal          @db.Decimal(6, 2)
   resultado   BilheteResultado @default(pending)
   publishedAt DateTime?
@@ -329,6 +330,7 @@ model Bilhete {
   eventExternalId String?
 
   @@index([categoria, startsAt])
+  @@index([validUntil])
 }
 
 model UserCategoryAccess {

@@ -1,4 +1,5 @@
-/* web/src/screens/MultiplasModal.css — "Odds Múltiplas" explainer popup */
+/* web/src/screens/ExplainerModal.css — "understand this product" popup
+   (Múltiplas, Odds Altas, Alavancagem, …) */
 
 .exp__overlay {
   position: fixed;
@@ -66,6 +67,66 @@
   font-size: 15px;
   line-height: 1.55;
   color: #8092a5;
+}
+
+/* Worked-example stepper (Alavancagem): ETAPA cards with arrows between. */
+.exp__steps {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.exp__step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(9, 20, 32, 0.8);
+  border: 1px solid rgba(140, 230, 10, 0.28);
+}
+
+.exp__step-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6fbf07;
+}
+
+.exp__step-aposta {
+  font-size: 12px;
+  font-weight: 700;
+  color: #eaf1f8;
+}
+
+.exp__step-odd {
+  font-size: 11px;
+  color: #8092a5;
+}
+
+.exp__step-ganha {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8ce60a;
+}
+
+.exp__step-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: #6fbf07;
+  flex: 0 0 auto;
+}
+
+.exp__foot {
+  margin: 0 0 20px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6d7f92;
 }
 
 .exp__cta {

@@ -1,0 +1,15 @@
+# Local-only override (not committed): another project on this machine holds
+# host port 5432, so publish our Postgres on 55432 instead. The app itself
+# connects over the internal Docker network (postgres:5432), so this only
+# affects host-side access (psql from the host uses localhost:55432).
+# !override replaces the base ports list instead of appending to it.
+services:
+  postgres:
+    ports: !override
+      - "55432:5432"
+
+  # Payt postback token = the postback's "Chave Única". Must match the ?token=
+  # in the postback URL configured on Payt. Local dev only.
+  api:
+    environment:
+      PAYT_WEBHOOK_TOKEN: f60f115ad1620367f874c14d4e5bb5ae

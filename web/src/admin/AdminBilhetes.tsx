@@ -30,6 +30,7 @@ const EMPTY = {
   selecao: '',
   linha: '',
   startsAt: '',
+  validUntil: '',
   odd: '',
   eventDeepLink: '',
   eventExternalId: '',
@@ -71,6 +72,47 @@ function toLocalInput(iso: string): string {
 }
 
 /** Common API-Football league ids for the sync selector. */
+function defaultEventPick(
+  ev: Pick<SportEvent, 'homeTeam' | 'oddHome' | 'markets'>,
+  preferredKey: string,
+  preferredSelectionKey?: string,
+): {
+  mercado: string;
+  mercadoLabel: string;
+  selecao: string;
+  linha: number | null;
+  odd: number | null;
+  hasPreferredMarket: boolean;
+} {
+  const markets = sortedMarkets(ev.markets);
+  const market = markets.find((m) => m.key === preferredKey);
+  const winner = markets.find((m) => m.key === '1x2');
+  const explicitSelection = preferredSelectionKey
+    ? market?.selections.find((s) => selectionKey(s) === preferredSelectionKey)
+    : undefined;
+  const selection =
+    explicitSelection ??
+    (market?.key === '1x2'
+      ? market.selections.find((s) => s.label === ev.homeTeam)
+      : market?.selections[0]);
+  const fallbackHome = winner?.selections.find((s) => s.label === ev.homeTeam);
+  const pick = selection ?? fallbackHome;
+  const mercado = market?.key ?? '1x2';
+
+  return {
+    mercado,
+    mercadoLabel: MARKET_LABELS[mercado] ?? market?.name ?? 'Resultado Final',
+    selecao: pick?.label ?? ev.homeTeam,
+    linha: pick?.line ?? null,
+    odd: pick?.odd != null ? Number(pick.odd) : ev.oddHome != null ? Number(ev.oddHome) : null,
+    hasPreferredMarket: !!market,
+  };
+}
+
+function selectionKey(selection: SportSelection): string {
+  return `${selection.label}|${selection.line ?? ''}`;
+}
+
 const LEAGUES = [
   { id: 71, label: 'Brasileirão Série A' },
   { id: 72, label: 'Brasileirão Série B' },
@@ -87,7 +129,15 @@ const LEAGUES = [
 /** Free API-Football plan only serves these seasons. */
 const SEASONS = [2024, 2023, 2022];
 
-export function AdminBilhetes() {
+/**
+ * `section` lets the backoffice split this monolith across tabs:
+ *  - `create`  → sync tools + preview + the create form + betslip import
+ *  - `manage`  → scoreboard + per-category rollup + filters + bilhete list
+ *  - `all`     → both (default; keeps the standalone/unit-test usage working)
+ */
+export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' | 'manage' } = {}) {
+  const showCreate = section !== 'manage';
+  const showManage = section !== 'create';
   const [items, setItems] = useState<AdminBilhete[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [events, setEvents] = useState<SportEvent[]>([]);
@@ -99,6 +149,14 @@ export function AdminBilhetes() {
   // keyed by the lowercased team name → our cache URL.
   const [resolvedCrests, setResolvedCrests] = useState<Record<string, string>>({});
   const [bulkMarket, setBulkMarket] = useState('1x2');
+  // How to order the "jogos puxados" preview. The feed list comes back oldest
+  // kickoff first (including games already finished), so the default surfaces
+  // upcoming games instead of stale ones.
+  const [previewSort, setPreviewSort] = useState<'soon' | 'recent' | 'all'>('soon');
+  const [approvedEventIds, setApprovedEventIds] = useState<string[]>([]);
+  const [eventPickOverrides, setEventPickOverrides] = useState<
+    Record<string, { mercado: string; selectionKey?: string }>
+  >({});
   const [league, setLeague] = useState(LEAGUES[0].id);
   const [season, setSeason] = useState(SEASONS[0]);
   const [betslip, setBetslip] = useState('');
@@ -120,6 +178,7 @@ export function AdminBilhetes() {
     linha: '',
     competition: '',
     startsAt: '',
+    validUntil: '',
     odd: '',
   });
 
@@ -132,6 +191,22 @@ export function AdminBilhetes() {
 
   const selectedEvent = events.find((ev) => ev.id === selectedEventId);
   const eventMarkets = sortedMarkets(selectedEvent?.markets);
+  const eventPreviewRows = useMemo(() => {
+    const now = Date.now();
+    const ts = (ev: SportEvent) => new Date(ev.startsAt).getTime();
+    let rows = events;
+    if (previewSort === 'soon') {
+      // Upcoming only, soonest first — the current/live-ish games.
+      rows = events
+        .filter((ev) => ts(ev) >= now)
+        .sort((a, b) => ts(a) - ts(b));
+    } else if (previewSort === 'recent') {
+      // Latest kickoff first.
+      rows = [...events].sort((a, b) => ts(b) - ts(a));
+    }
+    return rows.slice(0, 24);
+  }, [events, previewSort]);
+  const approvedSet = useMemo(() => new Set(approvedEventIds), [approvedEventIds]);
 
   /** Catalog match by exact name → auto-fills the crest logo on create. */
   function teamByName(name: string): Team | undefined {
@@ -186,6 +261,8 @@ export function AdminBilhetes() {
     try {
       const s = await adminApi.syncSportEvents();
       setSyncMsg(`Jogos sincronizados: ${s.upserted} (${s.provider})`);
+      setApprovedEventIds([]);
+      setEventPickOverrides({});
       refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -197,15 +274,39 @@ export function AdminBilhetes() {
   async function onCreateFromEvents() {
     setError(null);
     setSyncMsg(null);
+    if (approvedEventIds.length === 0) {
+      setError('Marque pelo menos um jogo do preview para criar bilhetes.');
+      return;
+    }
     setBusy(true);
     try {
       const r = await adminApi.createBilhetesFromEvents({
         categoria: form.categoria,
         mercado: bulkMarket,
+        limit: approvedEventIds.length,
+        eventExternalIds: approvedEventIds,
+        eventPicks: approvedEventIds
+          .map((id) => events.find((ev) => ev.externalId === id))
+          .filter((ev): ev is SportEvent => !!ev)
+          .map((ev) => {
+            const pick = pickForPreviewEvent(ev);
+            return {
+              eventExternalId: ev.externalId,
+              mercado: pick.mercado,
+              selecao: pick.selecao,
+              linha: pick.linha,
+            };
+          }),
       });
       setSyncMsg(
         `Bilhetes criados: ${r.created} (${r.withCrest} com escudo, de ${r.availableEvents} jogos)`,
       );
+      setApprovedEventIds([]);
+      setEventPickOverrides({});
+      setSelectedEventId('');
+      setPreview(null);
+      setPreviewRef('');
+      setForm(EMPTY);
       refresh();
     } catch (err) {
       setError((err as Error).message);
@@ -287,6 +388,7 @@ export function AdminBilhetes() {
       selecao: firstSelection?.label ?? ev.homeTeam,
       linha: lineValue(firstSelection?.line ?? null),
       startsAt: toLocalInput(ev.startsAt),
+      validUntil: toLocalInput(ev.startsAt),
       odd:
         firstSelection?.odd != null
           ? String(Number(firstSelection.odd))
@@ -309,6 +411,43 @@ export function AdminBilhetes() {
   }
 
   /** Paste an Esportiva match link → preview the card + its popular markets. */
+  function toggleApprovedEvent(externalId: string) {
+    setApprovedEventIds((ids) =>
+      ids.includes(externalId)
+        ? ids.filter((id) => id !== externalId)
+        : [...ids, externalId],
+    );
+  }
+
+  function toggleAllPreviewEvents() {
+    const ids = eventPreviewRows.map((ev) => ev.externalId);
+    setApprovedEventIds((current) =>
+      ids.every((id) => current.includes(id)) ? [] : ids,
+    );
+  }
+
+  function pickForPreviewEvent(ev: SportEvent) {
+    const override = eventPickOverrides[ev.externalId];
+    return defaultEventPick(ev, override?.mercado ?? bulkMarket, override?.selectionKey);
+  }
+
+  function onPreviewMarketChange(ev: SportEvent, mercado: string) {
+    setEventPickOverrides((current) => ({
+      ...current,
+      [ev.externalId]: { mercado },
+    }));
+  }
+
+  function onPreviewSelectionChange(ev: SportEvent, selection: string) {
+    setEventPickOverrides((current) => ({
+      ...current,
+      [ev.externalId]: {
+        mercado: current[ev.externalId]?.mercado ?? bulkMarket,
+        selectionKey: selection,
+      },
+    }));
+  }
+
   async function onPreviewLink() {
     setError(null);
     setBusy(true);
@@ -336,6 +475,7 @@ export function AdminBilhetes() {
         selecao: firstSelection?.label ?? p.homeTeam,
         linha: lineValue(firstSelection?.line ?? null),
         startsAt: toLocalInput(p.startsAt),
+        validUntil: toLocalInput(p.startsAt),
         odd: firstSelection?.odd != null ? String(Number(firstSelection.odd)) : f.odd,
         eventDeepLink: p.deepLink,
         eventExternalId: p.externalId,
@@ -378,6 +518,9 @@ export function AdminBilhetes() {
         awayLogo: crestUrl(form.awayTeam),
         competition: form.competition.trim() || undefined,
         startsAt: new Date(form.startsAt).toISOString(),
+        validUntil: form.validUntil
+          ? new Date(form.validUntil).toISOString()
+          : new Date(form.startsAt).toISOString(),
         odd: Number(form.odd),
         eventDeepLink: form.eventDeepLink || undefined,
         eventExternalId: form.eventExternalId || undefined,
@@ -405,8 +548,13 @@ export function AdminBilhetes() {
   }
 
   async function onDelete(id: string) {
-    await adminApi.deleteBilhete(id);
-    refresh();
+    setError(null);
+    try {
+      await adminApi.deleteBilhete(id);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   function onStartEdit(b: AdminBilhete) {
@@ -418,6 +566,7 @@ export function AdminBilhetes() {
       linha: b.linha == null ? '' : String(Number(b.linha)),
       competition: b.competition ?? '',
       startsAt: toLocalInput(b.startsAt),
+      validUntil: b.validUntil ? toLocalInput(b.validUntil) : '',
       odd: String(Number(b.odd)),
     });
   }
@@ -434,6 +583,9 @@ export function AdminBilhetes() {
         competition: editForm.competition || undefined,
         startsAt: editForm.startsAt
           ? new Date(editForm.startsAt).toISOString()
+          : undefined,
+        validUntil: editForm.validUntil
+          ? new Date(editForm.validUntil).toISOString()
           : undefined,
         odd: editForm.odd === '' ? undefined : Number(editForm.odd),
       });
@@ -551,8 +703,10 @@ export function AdminBilhetes() {
 
   return (
     <section>
-      <h2>Bilhetes</h2>
+      <h2>{section === 'create' ? 'Criar bilhete' : 'Bilhetes'}</h2>
 
+      {showCreate && (
+      <>
       <p className="ab-sync">
         <label>
           Liga{' '}
@@ -615,10 +769,125 @@ export function AdminBilhetes() {
           </select>
         </label>
         <button type="button" onClick={onCreateFromEvents} disabled={busy}>
-          Criar bilhetes dos jogos
+          Criar bilhetes aprovados
         </button>
-        <small>vira cada jogo em bilhete, com escudo do catálogo</small>
+        <small>{approvedEventIds.length} aprovados no preview</small>
       </p>
+
+      {events.length > 0 && (
+        <div className="ab-event-preview">
+          <div className="ab-event-preview__head">
+            <strong>Preview dos jogos puxados</strong>
+            <span className="ab-event-preview__tools">
+              <label>
+                Ordenar{' '}
+                <select
+                  value={previewSort}
+                  onChange={(e) => setPreviewSort(e.target.value as typeof previewSort)}
+                  aria-label="Ordenar jogos do preview"
+                >
+                  <option value="soon">Próximos (mais recentes)</option>
+                  <option value="recent">Último horário primeiro</option>
+                  <option value="all">Todos (por horário)</option>
+                </select>
+              </label>
+              <button type="button" onClick={toggleAllPreviewEvents} disabled={busy}>
+                {eventPreviewRows.length > 0 &&
+                eventPreviewRows.every((ev) => approvedSet.has(ev.externalId))
+                  ? 'Limpar selecao'
+                  : 'Aprovar todos'}
+              </button>
+            </span>
+          </div>
+          {eventPreviewRows.length === 0 ? (
+            <p className="ab-market-empty">
+              Nenhum jogo futuro nos sincronizados. Troque a ordenação para “Todos”
+              para ver os jogos já iniciados.
+            </p>
+          ) : (
+          <div className="ab-event-preview__grid">
+            {eventPreviewRows.map((ev) => {
+              const checked = approvedSet.has(ev.externalId);
+              const markets = sortedMarkets(ev.markets);
+              const override = eventPickOverrides[ev.externalId];
+              const selectedMarketKey = override?.mercado ?? bulkMarket;
+              const selectedMarket = markets.find((m) => m.key === selectedMarketKey);
+              const pick = pickForPreviewEvent(ev);
+              const line = pick.linha == null ? '' : ` (${Number(pick.linha).toFixed(2)})`;
+              return (
+                <div className="ab-game-preview" data-checked={checked} key={ev.externalId}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleApprovedEvent(ev.externalId)}
+                  />
+                  <span className="ab-game-preview__teams">
+                    <span>
+                      {crestUrl(ev.homeTeam) && (
+                        <img className="ab-crest ab-crest--sm" src={crestUrl(ev.homeTeam)} alt="" />
+                      )}
+                      {ev.homeTeam}
+                    </span>
+                    <i>x</i>
+                    <span>
+                      {crestUrl(ev.awayTeam) && (
+                        <img className="ab-crest ab-crest--sm" src={crestUrl(ev.awayTeam)} alt="" />
+                      )}
+                      {ev.awayTeam}
+                    </span>
+                  </span>
+                  <span className="ab-game-preview__meta">
+                    {ev.competition ?? 'Futebol'} -{' '}
+                    {new Date(ev.startsAt).toLocaleString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                  <span className="ab-game-preview__market">
+                    {pick.mercadoLabel}: {pick.selecao}
+                    {line}
+                    {pick.odd != null ? ` @${pick.odd.toFixed(2)}` : ''}
+                    {!pick.hasPreferredMarket ? ' (fallback)' : ''}
+                  </span>
+                  {markets.length > 0 && (
+                    <span className="ab-game-preview__controls">
+                      <select
+                        value={selectedMarketKey}
+                        onChange={(e) => onPreviewMarketChange(ev, e.target.value)}
+                        aria-label={`Mercado de ${ev.homeTeam} x ${ev.awayTeam}`}
+                      >
+                        {markets.map((market) => (
+                          <option key={market.key} value={market.key}>
+                            {marketTitle(market)}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={override?.selectionKey ?? ''}
+                        onChange={(e) => onPreviewSelectionChange(ev, e.target.value)}
+                        aria-label={`Selecao de ${ev.homeTeam} x ${ev.awayTeam}`}
+                      >
+                        <option value="">Padrao do mercado</option>
+                        {(selectedMarket?.selections ?? []).map((selection) => (
+                          <option key={selectionKey(selection)} value={selectionKey(selection)}>
+                            {selection.label}
+                            {selection.line == null ? '' : ` (${Number(selection.line).toFixed(2)})`}
+                            {' @'}
+                            {Number(selection.odd).toFixed(2)}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          )}
+        </div>
+      )}
 
       <p className="ab-sync">
         <button type="button" onClick={onSyncLiveLogos} disabled={busy}>
@@ -802,6 +1071,14 @@ export function AdminBilhetes() {
           />
         </label>
         <label>
+          Validade{' '}
+          <input
+            type="datetime-local"
+            value={form.validUntil}
+            onChange={(e) => setForm({ ...form, validUntil: e.target.value })}
+          />
+        </label>
+        <label>
           Mercado{' '}
           <input
             value={form.mercado}
@@ -880,7 +1157,11 @@ export function AdminBilhetes() {
           </button>
         </div>
       </div>
+      </>
+      )}
 
+      {showManage && (
+      <>
       {items.length > 0 && (
         <div className="ab-stats">
           <div className="ab-stat">
@@ -1099,6 +1380,14 @@ export function AdminBilhetes() {
                       />
                     </label>
                     <label>
+                      Validade
+                      <input
+                        type="datetime-local"
+                        value={editForm.validUntil}
+                        onChange={(e) => setEditForm({ ...editForm, validUntil: e.target.value })}
+                      />
+                    </label>
+                    <label>
                       Odd
                       <input
                         type="number"
@@ -1127,6 +1416,8 @@ export function AdminBilhetes() {
             );
           })}
         </ul>
+      )}
+      </>
       )}
     </section>
   );

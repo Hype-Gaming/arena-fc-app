@@ -1,5 +1,7 @@
 import {
+  ArrayMaxSize,
   IsBoolean,
+  IsArray,
   IsIn,
   IsISO8601,
   IsNumber,
@@ -25,6 +27,7 @@ export class CreateBilheteDto {
   @IsOptional() @IsString() awayLogo?: string;
   @IsOptional() @IsString() competition?: string;
   @IsISO8601() startsAt!: string;
+  @IsOptional() @IsISO8601() validUntil?: string;
   @IsNumber() @IsPositive() odd!: number;
   @IsOptional() @IsString() eventDeepLink?: string;
   @IsOptional() @IsString() eventExternalId?: string;
@@ -36,6 +39,13 @@ export class FromEventsDto {
   @IsOptional() @IsIn(CATEGORIA_KEYS) categoria?: BilheteCategoria;
   @IsOptional() @IsString() mercado?: string;
   @IsOptional() @IsNumber() @IsPositive() limit?: number;
+  @IsOptional() @IsArray() @ArrayMaxSize(50) @IsString({ each: true }) eventExternalIds?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(50) eventPicks?: {
+    eventExternalId: string;
+    mercado?: string;
+    selecao?: string;
+    linha?: number | null;
+  }[];
   @IsOptional() @IsBoolean() publish?: boolean;
 }
 
@@ -60,6 +70,7 @@ export class UpdateBilheteDto {
   @IsOptional() @IsString() awayLogo?: string;
   @IsOptional() @IsString() competition?: string;
   @IsOptional() @IsISO8601() startsAt?: string;
+  @IsOptional() @IsISO8601() validUntil?: string;
   @IsOptional() @IsNumber() @IsPositive() odd?: number;
 }
 

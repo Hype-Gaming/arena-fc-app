@@ -31,7 +31,12 @@ async function req<T>(path: string, init?: RequestInit, retry = true): Promise<T
     return req<T>(path, init, false);
   }
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-  return res.json() as Promise<T>;
+  // Some endpoints (e.g. DELETE) reply 204/200 with an empty body — calling
+  // res.json() on that throws "Unexpected end of JSON input", which used to make
+  // deletes look like they failed. Tolerate an empty body and return undefined.
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 export interface Category { id: string; name: string; slug: string; icon: string; }
@@ -68,6 +73,7 @@ export interface AdminBilhete {
   awayLogo: string | null;
   competition: string | null;
   startsAt: string;
+  validUntil: string | null;
   odd: string | number;
   resultado: 'pending' | 'green' | 'red';
   publishedAt: string | null;
@@ -88,6 +94,7 @@ export interface CreateBilheteInput {
   awayLogo?: string;
   competition?: string;
   startsAt: string;
+  validUntil?: string;
   odd: number;
   eventDeepLink?: string;
   eventExternalId?: string;
@@ -242,7 +249,18 @@ export const adminApi = {
       body: JSON.stringify(data),
     }),
   createBilhetesFromEvents: (
-    data: { categoria?: BilheteCategoria; mercado?: string; limit?: number } = {},
+    data: {
+      categoria?: BilheteCategoria;
+      mercado?: string;
+      limit?: number;
+      eventExternalIds?: string[];
+      eventPicks?: {
+        eventExternalId: string;
+        mercado?: string;
+        selecao?: string;
+        linha?: number | null;
+      }[];
+    } = {},
   ) =>
     req<{ created: number; withCrest: number; availableEvents: number }>(
       '/admin/bilhetes/from-events',

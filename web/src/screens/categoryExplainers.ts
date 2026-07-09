@@ -17,4 +17,18 @@ export const CATEGORY_EXPLAINERS: Record<string, Explainer> = {
     imageAlt: 'Odds Altas — Arena FC',
     body: 'Entradas selecionadas pela IA com odds elevadas e alto potencial de retorno. Mais ousadia, mais multiplicação — para quem busca lucros maiores no dia.',
   },
+  alavancagem: {
+    title: 'Entenda como funciona a Alavancagem',
+    // Popup art — troque este arquivo pela imagem final da Alavancagem.
+    imageSrc: '/alavancagem.png',
+    imageAlt: 'Alavancagem — Arena FC',
+    body: 'Sequência de 3 odds de baixo risco no mesmo dia. A cada acerto, o ganho é reinvestido no próximo, multiplicando o retorno final.',
+    steps: [
+      { label: 'Etapa 1', aposta: 'Aposta R$ 100', odd: 'Odd 1.5x', ganha: 'Ganha R$ 150' },
+      { label: 'Etapa 2', aposta: 'Aposta R$ 150', odd: 'Odd 1.5x', ganha: 'Ganha R$ 225' },
+      { label: 'Etapa 3', aposta: 'Aposta R$ 225', odd: 'Odd 1.5x', ganha: 'Ganha R$ 337' },
+    ],
+    footnote:
+      'Cada acerto reinveste o ganho na próxima entrada, multiplicando o retorno final.',
+  },
 };

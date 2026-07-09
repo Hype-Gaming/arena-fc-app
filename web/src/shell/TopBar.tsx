@@ -59,8 +59,7 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
             aria-label="Arena FC — Início"
             onClick={() => navigate('/')}
           >
-            <ArenaBadge />
-            <ArenaWordmark className="topbar__wordmark" />
+            <img className="topbar__logo-img" src="/logo-simplificada.png" alt="" />
           </button>
         </div>
         <div className="topbar__right">

@@ -71,6 +71,84 @@ describe('AdminBilhetesService', () => {
     expect(call.data.eventExternalId).toBe('e2');
   });
 
+  it('createFromEvents can create only approved Esportiva events', async () => {
+    const prisma = makePrisma();
+    (prisma as unknown as { sportEvent: unknown }).sportEvent = {
+      findMany: jest.fn().mockResolvedValue([
+        { externalId: 'ev-approved', homeTeam: 'Bahia', awayTeam: 'Vitoria', competition: 'Baiano', startsAt: new Date('2026-07-10T12:00:00Z'), oddHome: 1.6, deepLink: 'https://x/e1' },
+      ]),
+    };
+    (prisma as unknown as { team: unknown }).team = {
+      findMany: jest.fn().mockResolvedValue([]),
+    };
+
+    const svc = new AdminBilhetesService(prisma, teams);
+    await svc.createFromEvents({
+      categoria: 'safes',
+      mercado: '1x2',
+      limit: 1,
+      eventExternalIds: ['ev-approved'],
+    });
+
+    expect((prisma.sportEvent.findMany as jest.Mock).mock.calls[0][0].where).toMatchObject({
+      externalId: { in: ['ev-approved'] },
+    });
+    expect((prisma.bilhete.create as jest.Mock).mock.calls[0][0].data.eventExternalId).toBe(
+      'ev-approved',
+    );
+  });
+
+  it('createFromEvents respects the approved event market and selection', async () => {
+    const prisma = makePrisma();
+    (prisma as unknown as { sportEvent: unknown }).sportEvent = {
+      findMany: jest.fn().mockResolvedValue([
+        {
+          externalId: 'ev-total',
+          homeTeam: 'Bahia',
+          awayTeam: 'Vitoria',
+          competition: 'Baiano',
+          startsAt: new Date('2026-07-10T12:00:00Z'),
+          oddHome: 1.6,
+          deepLink: 'https://x/e1',
+          markets: [
+            {
+              key: 'over_under',
+              selections: [
+                { label: 'Mais de 2.5', odd: 2.05, line: 2.5 },
+                { label: 'Menos de 2.5', odd: 1.72, line: 2.5 },
+              ],
+            },
+          ],
+        },
+      ]),
+    };
+    (prisma as unknown as { team: unknown }).team = {
+      findMany: jest.fn().mockResolvedValue([]),
+    };
+
+    const svc = new AdminBilhetesService(prisma, teams);
+    await svc.createFromEvents({
+      categoria: 'pro',
+      eventPicks: [
+        {
+          eventExternalId: 'ev-total',
+          mercado: 'over_under',
+          selecao: 'Menos de 2.5',
+          linha: 2.5,
+        },
+      ],
+    });
+
+    const call = (prisma.bilhete.create as jest.Mock).mock.calls[0][0];
+    expect(call.data).toMatchObject({
+      categoria: 'pro',
+      mercado: 'over_under',
+      selecao: 'Menos de 2.5',
+      linha: 2.5,
+      odd: 1.72,
+    });
+  });
+
   it('create with publish=false stays a draft', async () => {
     const svc = new AdminBilhetesService(makePrisma(), teams);
     const created = await svc.create({ ...CREATE, publish: false });

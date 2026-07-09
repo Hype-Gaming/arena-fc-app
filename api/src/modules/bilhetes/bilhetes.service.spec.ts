@@ -29,6 +29,7 @@ const b = (id: string, categoria: string, odd = 1.5) => ({
   awayColor: null,
   competition: 'Copa',
   startsAt: new Date('2026-07-10T16:00:00Z'),
+  validUntil: new Date('2026-07-10T16:00:00Z'),
   odd,
   resultado: 'pending',
   publishedAt: new Date(),
@@ -64,7 +65,10 @@ describe('BilhetesService.getFeed', () => {
       where: {
         publishedAt: { not: null },
         resultado: 'pending',
-        startsAt: { gte: expect.any(Date) },
+        OR: [
+          { validUntil: { gt: expect.any(Date) } },
+          { validUntil: null, startsAt: { gte: expect.any(Date) } },
+        ],
       },
       orderBy: { startsAt: 'asc' },
     });
@@ -140,6 +144,7 @@ describe('BilhetesService.getFeed', () => {
       titulo: 'Bilhete Especial',
       mercado: '1x2',
       selecao: 'A',
+      validUntil: new Date('2026-07-10T16:00:00Z'),
     });
   });
 });

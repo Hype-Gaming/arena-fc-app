@@ -1,0 +1,36 @@
+# Production overrides for the VPS deploy.
+#
+# Run the stack with BOTH files (order matters — this one wins):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What it changes vs. the base compose:
+#  - restart: unless-stopped  → containers come back after a crash or reboot
+#    (this is the job PM2 would do; Docker does it for us).
+#  - Postgres and API are NOT published to the host at all (`ports: !override []`
+#    clears the base list). They still talk to each other over Compose's internal
+#    network (api → postgres:5432, nginx → api:3000), so nothing needs a host
+#    port. This avoids clashing with anything else on the VPS (e.g. PM2 apps or
+#    another Postgres already using 5432/3000) and keeps them off the internet.
+#    To reach the DB for debugging, use: `docker compose exec postgres psql -U <user> <db>`.
+#  - Only the app's internal nginx is published, on 127.0.0.1:8080. The HOST
+#    nginx (with TLS for app.arenafcapp.com) is the single door to the internet.
+#    If 8080 is already taken on this VPS, change it here (e.g. 127.0.0.1:8090:80)
+#    and point the host nginx's proxy_pass at the same port.
+#
+# `!override` replaces the base "ports" list instead of appending to it.
+services:
+  postgres:
+    restart: unless-stopped
+    ports: !override []
+
+  api:
+    restart: unless-stopped
+    ports: !override []
+
+  web:
+    restart: unless-stopped
+
+  nginx:
+    restart: unless-stopped
+    ports: !override
+      - "127.0.0.1:8080:80"

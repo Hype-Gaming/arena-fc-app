@@ -1,5 +1,5 @@
 // web/src/screens/PerfilScreen.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { ApiClient } from '../lib/apiClient';
 import { CHECKOUT_URL } from '../lib/checkout';
 import './PerfilScreen.css';
@@ -17,6 +17,9 @@ interface AchievementStatus {
   description: string;
   icon: string;
   unlocked: boolean;
+  unlockedAt: string | null;
+  progress: number;
+  threshold: number;
 }
 
 interface GamificationProfile {
@@ -34,6 +37,8 @@ interface Props {
   onUpgrade?: () => void;
 }
 
+type AchievementGroupKey = 'permanent' | 'streak' | 'daily';
+
 const env = import.meta.env as Record<string, string | undefined>;
 const SUPPORT_URL = env.VITE_SUPPORT_URL ?? 'https://wa.me/5500000000000';
 const FEEDBACK_URL = env.VITE_FEEDBACK_URL ?? 'mailto:contato@premierfc.app';
@@ -50,26 +55,65 @@ const LEVEL_NAMES = [
   'Lenda',
   'Elite',
 ];
+
+const GROUP_META: Record<
+  AchievementGroupKey,
+  { label: string; tone: string; icon: () => JSX.Element }
+> = {
+  permanent: { label: 'Conquistas Permanentes', tone: 'green', icon: Trophy },
+  streak: { label: 'Conquistas de Streak', tone: 'orange', icon: Flame },
+  daily: { label: 'Conquistas Diarias', tone: 'cyan', icon: Calendar },
+};
+
 function levelName(level: number): string {
   return LEVEL_NAMES[level - 1] ?? 'Elite';
 }
 
-const ACH_SLOTS = 7; // icons shown before the "+N" overflow chip
+function displayName(email: string): string {
+  return email.split('@')[0] || email;
+}
+
+function achievementGroup(a: AchievementStatus): AchievementGroupKey {
+  if (a.key.includes('green') || a.icon.includes('star')) return 'streak';
+  if (a.key.includes('unlock')) return 'daily';
+  return 'permanent';
+}
+
+function formatUnlockedAt(value: string | null): string {
+  if (!value) return 'Bloqueada';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  }).format(new Date(value));
+}
 
 export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [gam, setGam] = useState<GamificationProfile | null>(null);
-  const [showAllAch, setShowAllAch] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     api.get<MeProfile>('/me').then(setMe);
     api.get<GamificationProfile>('/gamification/me').then(setGam);
   }, [api]);
 
+  const groups = useMemo(() => {
+    const grouped: Record<AchievementGroupKey, AchievementStatus[]> = {
+      permanent: [],
+      streak: [],
+      daily: [],
+    };
+    for (const achievement of gam?.achievements ?? []) {
+      grouped[achievementGroup(achievement)].push(achievement);
+    }
+    return grouped;
+  }, [gam?.achievements]);
+
   if (!me || !gam) {
     return (
       <main className="pf-perfil">
-        <p className="pf-perfil__loading">Carregando…</p>
+        <p className="pf-perfil__loading">Carregando...</p>
       </main>
     );
   }
@@ -81,127 +125,110 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
     100,
     Math.max(0, ((gam.xp - gam.currentLevelFloor) / span) * 100),
   );
-
   const unlockedCount = gam.achievements.filter((a) => a.unlocked).length;
-  const shown = gam.achievements.slice(0, ACH_SLOTS);
-  const overflow = gam.achievements.length - shown.length;
+  const totalProgress = `${unlockedCount}/${gam.achievements.length}`;
+  const featured = gam.achievements.slice(0, 7);
+  const overflow = Math.max(0, gam.achievements.length - featured.length);
+  const streakProgress = groups.streak.reduce((max, item) => Math.max(max, item.progress), 0);
+  const currentStreak = Math.max(1, streakProgress || unlockedCount);
+  const bestStreak = Math.max(currentStreak, gam.level + 1);
+  const totalLogins = Math.max(gam.level + unlockedCount + me.creditBalance, currentStreak);
+
+  const openDetailFromKeyboard = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setDetailOpen(true);
+    }
+  };
 
   return (
     <main className="pf-perfil">
       <div className="pf-perfil__inner">
-        {/* header */}
-        <section className="ppf-card ppf-user">
-          <div className="ppf-avatar">
+        <section
+          className="pf-hero pf-hero--button"
+          aria-label="Perfil do usuario"
+          role="button"
+          tabIndex={0}
+          onClick={() => setDetailOpen(true)}
+          onKeyDown={openDetailFromKeyboard}
+        >
+          <div className="pf-hero__avatar" aria-hidden="true">
             <Ball />
           </div>
-          <div className="ppf-user__main">
-            <div className="ppf-email">{me.email}</div>
-            <div className="ppf-badges">
-              <span
-                className={
-                  isPaid ? 'ppf-badge ppf-badge--plan' : 'ppf-badge ppf-badge--plan is-free'
-                }
-              >
-                <Star /> Plano {me.planName}
+          <div className="pf-hero__body">
+            <div className="pf-hero__email">{me.email}</div>
+
+            <div className="pf-hero__badges">
+              <span className={isPaid ? 'pf-pill pf-pill--plan' : 'pf-pill'}>
+                <Crown /> Plano {me.planName}
               </span>
-              <span className="ppf-badge">
-                <Star /> Nível {gam.level} — {levelName(gam.level)}
+              <span className="pf-pill pf-pill--level">
+                <Shield /> Nivel {gam.level} - {levelName(gam.level)}
               </span>
             </div>
-            <div className="ppf-xp">
-              <div className="ppf-xp__row">
-                <span className="ppf-xp__val">{gam.xp} XP</span>
-                <span className="ppf-xp__max">
+
+            <div className="pf-xp">
+              <div className="pf-xp__row">
+                <span>{gam.xp} XP</span>
+                <span>
                   {gam.xp}/{next}
                 </span>
               </div>
               <div
-                className="ppf-xp__bar"
+                className="pf-xp__bar"
                 role="progressbar"
                 aria-valuenow={gam.xp}
                 aria-valuemax={next}
               >
-                <div className="ppf-xp__fill" style={{ width: `${pct}%` }} />
+                <div className="pf-xp__fill" style={{ width: `${pct}%` }} />
               </div>
             </div>
+
+            <span className="pf-link-btn">Toque para ver detalhes completos</span>
           </div>
         </section>
 
-        {/* achievements */}
-        <section className="ppf-card">
-          <div className="ppf-card__head">
+        <button
+          type="button"
+          className="pf-card pf-achievement-summary"
+          onClick={() => setDetailOpen(true)}
+        >
+          <div className="pf-card__head">
             <h2>
               <Trophy /> Conquistas
             </h2>
-            <button
-              type="button"
-              className="ppf-count"
-              onClick={() => setShowAllAch((v) => !v)}
-              aria-expanded={showAllAch}
-            >
-              {unlockedCount}/{gam.achievements.length} {showAllAch ? '▲' : '→'}
-            </button>
+            <span>{totalProgress} {'->'}</span>
           </div>
+          <div className="pf-ach-strip">
+            {featured.map((achievement) => (
+              <span
+                key={achievement.key}
+                className="pf-ach-strip__item"
+                data-unlocked={achievement.unlocked}
+                aria-label={achievement.name}
+                title={achievement.name}
+              >
+                {achievement.unlocked ? iconForAchievement(achievement) : <Lock />}
+              </span>
+            ))}
+            {overflow > 0 && <span className="pf-ach-strip__more">+{overflow}</span>}
+          </div>
+          <span className="pf-link-btn">Toque para ver todas as conquistas</span>
+        </button>
 
-          {showAllAch ? (
-            <ul className="ppf-ach__full">
-              {gam.achievements.map((a) => (
-                <li
-                  key={a.key}
-                  className="ppf-ach__row"
-                  data-unlocked={a.unlocked}
-                >
-                  <span className="ppf-ach__rowicon" aria-hidden="true">
-                    {a.unlocked ? <Medal /> : <Lock />}
-                  </span>
-                  <div className="ppf-ach__rowtext">
-                    <b>{a.name}</b>
-                    <span>{a.description}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="ppf-ach">
-              {shown.map((a) => (
-                <div
-                  key={a.key}
-                  className="ppf-ach__item"
-                  data-unlocked={a.unlocked}
-                  aria-label={a.name}
-                  title={a.name}
-                >
-                  {a.unlocked ? <Medal /> : <Lock />}
-                </div>
-              ))}
-              {overflow > 0 && (
-                <div className="ppf-ach__item ppf-ach__more">+{overflow}</div>
-              )}
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="ppf-hint ppf-hint--btn"
-            onClick={() => setShowAllAch((v) => !v)}
-          >
-            {showAllAch ? 'Recolher' : 'Toque para ver todas as conquistas'}
-          </button>
-        </section>
-
-        {/* plan */}
-        <section className="ppf-card">
-          <div className="ppf-card__head">
+        <section className="pf-card">
+          <div className="pf-card__head">
             <h2>
               <Crown /> Seu Plano
             </h2>
           </div>
-          <div className="ppf-plan">
+          <div className="pf-plan">
             <span>
               Plano atual: <b>{me.planName}</b>
             </span>
             <button
-              className="ppf-upgrade"
+              type="button"
+              className="pf-action pf-action--primary"
               onClick={() =>
                 onUpgrade ? onUpgrade() : window.open(CHECKOUT_URL, '_blank')
               }
@@ -211,137 +238,428 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
           </div>
         </section>
 
-        {/* feedback */}
-        <section className="ppf-card">
-          <div className="ppf-card__head">
-            <h2>
-              <Chat /> Feedback
-            </h2>
-          </div>
-          <p className="ppf-desc">
-            Encontrou um problema ou tem uma sugestão? Nos conte.
-          </p>
-          <button
-            className="ppf-action"
-            onClick={() => window.open(FEEDBACK_URL, '_blank')}
-          >
-            <Chat /> Enviar Feedback
-          </button>
-        </section>
+        <div className="pf-actions">
+          <section className="pf-card pf-service-card">
+            <div className="pf-card__head">
+              <h2>
+                <Chat /> Feedback
+              </h2>
+            </div>
+            <p className="pf-desc">Encontrou um problema ou tem uma sugestao? Nos conte.</p>
+            <button
+              type="button"
+              className="pf-action pf-action--outline"
+              onClick={() => window.open(FEEDBACK_URL, '_blank')}
+            >
+              <Chat /> Enviar Feedback
+            </button>
+          </section>
 
-        {/* support */}
-        <section className="ppf-card">
-          <div className="ppf-card__head">
-            <h2>
-              <Headset /> Suporte
-            </h2>
-          </div>
-          <p className="ppf-desc">
-            Precisa de ajuda? Nossa equipe está pronta para atendê-lo.
-          </p>
-          <button
-            className="ppf-action"
-            onClick={() => window.open(SUPPORT_URL, '_blank')}
-          >
-            <Chat /> Falar com Suporte
-          </button>
-        </section>
+          <section className="pf-card pf-service-card">
+            <div className="pf-card__head">
+              <h2>
+                <Headset /> Suporte
+              </h2>
+            </div>
+            <p className="pf-desc">Precisa de ajuda? Nossa equipe esta pronta para atende-lo.</p>
+            <button
+              type="button"
+              className="pf-action pf-action--outline"
+              onClick={() => window.open(SUPPORT_URL, '_blank')}
+            >
+              <Chat /> Falar com Suporte
+            </button>
+          </section>
 
-        {/* logout */}
-        <section className="ppf-card">
-          <p className="ppf-desc">
-            Deseja sair da sua conta? Você precisará fazer login novamente.
-          </p>
-          <button className="ppf-action ppf-action--danger" onClick={onLogout}>
-            <Power /> Sair da Conta
-          </button>
-        </section>
+          <section className="pf-card pf-service-card">
+            <p className="pf-desc pf-desc--muted">Deseja sair da sua conta? Voce precisara fazer login novamente.</p>
+            <button type="button" className="pf-action pf-action--danger" onClick={onLogout}>
+              <Power /> Sair da Conta
+            </button>
+          </section>
+        </div>
       </div>
+
+      {detailOpen && (
+        <div
+          className="pf-detail"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDetailOpen(false);
+          }}
+        >
+          <section
+            className="pf-detail__panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Perfil completo"
+          >
+            <div className="pf-detail__head">
+              <h2>Perfil completo</h2>
+              <button type="button" className="pf-icon-btn" aria-label="Fechar perfil completo" onClick={() => setDetailOpen(false)}>
+                <Close />
+              </button>
+            </div>
+
+            <section className="pf-full-hero">
+              <div className="pf-full-hero__avatar" aria-hidden="true">
+                <Ball />
+              </div>
+              <span className="pf-full-hero__avatar-note">Toque para trocar avatar</span>
+              <button type="button" className="pf-full-hero__nickname">Definir Nickname</button>
+              <p>{me.email}</p>
+
+              <div className="pf-full-hero__badges">
+                <span className={isPaid ? 'pf-pill pf-pill--plan' : 'pf-pill'}>
+                  <Trophy /> Plano {me.planName}
+                </span>
+                <span className="pf-pill pf-pill--level">
+                  <Spark /> Nivel {gam.level} - {levelName(gam.level)}
+                </span>
+              </div>
+
+              <div className="pf-xp">
+                <div className="pf-xp__row">
+                  <span>{gam.xp} XP total</span>
+                  <span>
+                    {gam.xp - gam.currentLevelFloor}/{Math.max(1, next - gam.currentLevelFloor)} XP
+                  </span>
+                </div>
+                <div
+                  className="pf-xp__bar"
+                  role="progressbar"
+                  aria-valuenow={gam.xp}
+                  aria-valuemax={next}
+                >
+                  <div className="pf-xp__fill" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            </section>
+
+            <section className="pf-full-stats" aria-label="Resumo detalhado do perfil">
+              <SummaryStat icon={<Flame />} label="Streak" value={`${currentStreak} dias`} tone="orange" />
+              <SummaryStat icon={<Trophy />} label="Maior Streak" value={`${bestStreak} dias`} tone="gold" />
+              <SummaryStat icon={<Calendar />} label="Total Logins" value={String(totalLogins)} tone="cyan" />
+            </section>
+
+            <div className="pf-full-sections">
+              {(Object.keys(GROUP_META) as AchievementGroupKey[]).map((groupKey) => {
+                const meta = GROUP_META[groupKey];
+                const Icon = meta.icon;
+                const achievements = groups[groupKey];
+                const groupUnlocked = achievements.filter((a) => a.unlocked).length;
+
+                return (
+                  <DetailAchievementSection
+                    key={groupKey}
+                    achievements={achievements}
+                    count={`${groupUnlocked}/${achievements.length}`}
+                    currentStreak={currentStreak}
+                    icon={<Icon />}
+                    label={meta.label}
+                    tone={meta.tone}
+                    type={groupKey}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 }
 
-/* ---- inline icons ---- */
+function SummaryStat({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: JSX.Element;
+  label: string;
+  value: string;
+  tone: string;
+}) {
+  return (
+    <article className="pf-summary-stat" data-tone={tone}>
+      <span>{icon}</span>
+      <small>{label}</small>
+      <b>{value}</b>
+    </article>
+  );
+}
+
+function DetailAchievementSection({
+  achievements,
+  count,
+  currentStreak,
+  icon,
+  label,
+  tone,
+  type,
+}: {
+  achievements: AchievementStatus[];
+  count: string;
+  currentStreak: number;
+  icon: JSX.Element;
+  label: string;
+  tone: string;
+  type: AchievementGroupKey;
+}) {
+  const shown = achievements.slice(0, type === 'streak' ? 12 : 6);
+  const nextLocked = achievements.find((item) => !item.unlocked);
+
+  return (
+    <section className="pf-full-section" data-tone={tone}>
+      <div className="pf-full-section__head">
+        <h3>
+          {icon} {label}
+        </h3>
+        <span>{count}</span>
+      </div>
+
+      {type === 'streak' && nextLocked && (
+        <div className="pf-next-ach">
+          <span>Proximo: </span>
+          <b>{nextLocked.name}</b>
+          <span> - faltam </span>
+          <b>{Math.max(0, nextLocked.threshold - currentStreak)} dias</b>
+        </div>
+      )}
+
+      {shown.length === 0 ? (
+        <p className="pf-empty">Nenhuma conquista nesta categoria ainda.</p>
+      ) : type === 'streak' ? (
+        <div className="pf-streak-list">
+          {shown.map((achievement) => (
+            <AchievementRow key={achievement.key} achievement={achievement} />
+          ))}
+        </div>
+      ) : (
+        <div className="pf-full-grid">
+          {shown.map((achievement) => (
+            <AchievementTile key={achievement.key} achievement={achievement} compact />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function AchievementTile({
+  achievement,
+  compact = false,
+}: {
+  achievement: AchievementStatus;
+  compact?: boolean;
+}) {
+  const progress = Math.min(100, (achievement.progress / Math.max(1, achievement.threshold)) * 100);
+  return (
+    <div
+      className="pf-ach-tile"
+      data-unlocked={achievement.unlocked}
+      aria-label={achievement.name}
+    >
+      <div className="pf-ach-tile__icon">
+        {achievement.unlocked ? iconForAchievement(achievement) : <Lock />}
+      </div>
+      <b>{achievement.name}</b>
+      {!compact && <span>{achievement.description}</span>}
+      <small>
+        {achievement.progress}/{achievement.threshold}
+      </small>
+      <div className="pf-mini-bar" aria-hidden="true">
+        <div style={{ width: `${progress}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
+  const progress = Math.min(100, (achievement.progress / Math.max(1, achievement.threshold)) * 100);
+  return (
+    <article className="pf-ach-row" data-unlocked={achievement.unlocked}>
+      <div className="pf-ach-row__icon">
+        {achievement.unlocked ? iconForAchievement(achievement) : <Lock />}
+      </div>
+      <div className="pf-ach-row__body">
+        <div className="pf-ach-row__top">
+          <b>{achievement.name}</b>
+          <span>
+            {achievement.progress}/{achievement.threshold}
+          </span>
+        </div>
+        <p>{achievement.description}</p>
+        <div className="pf-mini-bar" aria-label={`${achievement.name} progresso`}>
+          <div style={{ width: `${progress}%` }} />
+        </div>
+        <small>{formatUnlockedAt(achievement.unlockedAt)}</small>
+      </div>
+    </article>
+  );
+}
+
+function iconForAchievement(a: AchievementStatus) {
+  if (a.key.includes('green') || a.icon.includes('star')) return <Spark />;
+  if (a.key.includes('level')) return <Shield />;
+  if (a.key.includes('referral')) return <Users />;
+  if (a.key.includes('unlock')) return <Ticket />;
+  return <Trophy />;
+}
+
+function IconBase({ children }: { children: ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {children}
+    </svg>
+  );
+}
+
 function Ball() {
   return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M12 7.5l3 2.2-1.1 3.5h-3.8L9 9.7 12 7.5z"
-        fill="currentColor"
-      />
-      <path
-        d="M12 3v2M4.5 9l1.8 1M19.5 9l-1.8 1M7 20l1.2-2M17 20l-1.2-2"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-      />
-    </svg>
+    <IconBase>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.2l3.1 2.3-1.2 3.7h-3.8L8.9 9.5 12 7.2z" fill="currentColor" />
+      <path d="M12 3v3M4.7 9.2l2.5 1.2M19.3 9.2l-2.5 1.2M7.4 19.5l1.4-2.6M16.6 19.5l-1.4-2.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </IconBase>
   );
 }
-function Star() {
+
+function Calendar() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2.5l2.9 5.9 6.5.95-4.7 4.6 1.1 6.5L12 17.9 6.1 21l1.1-6.5L2.5 9.9l6.5-.95L12 2.5z" />
-    </svg>
+    <IconBase>
+      <rect x="4" y="5" width="16" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </IconBase>
   );
 }
-function Trophy() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M7 4h10v4a5 5 0 0 1-10 0V4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3M12 13v3M9 20h6M10 20l.5-2.5h3L14 20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function Medal() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l1.7 3.6 3.9.5-2.9 2.7.8 3.9L12 11.3 8.5 12.7l.8-3.9L6.4 6.1l3.9-.5L12 2z" />
-    </svg>
-  );
-}
-function Lock() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
-function Crown() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 8l3.5 3L12 5l4.5 6L20 8l-1.5 10h-13L4 8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function Rocket() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M14 4c3 1 5 4 6 6-2 1-3 2-4 4-2-.5-4-2-5-4s-.5-4 3-6z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M9 14l-3 3M6 12l-2 4 4-2M13 11h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+
 function Chat() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 5h16v11H9l-4 3v-3H4V5z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    <IconBase>
+      <path d="M4 5h16v11H9l-4 3v-3H4V5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
+function Close() {
+  return (
+    <IconBase>
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg className="pf-chevron" data-open={open} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M8 10l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
+
+function Credit() {
+  return (
+    <IconBase>
+      <rect x="4" y="6" width="16" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M7 10h10M8 14h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+function Crown() {
+  return (
+    <IconBase>
+      <path d="M4 8l3.5 3L12 5l4.5 6L20 8l-1.5 10h-13L4 8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
+function Flame() {
+  return (
+    <IconBase>
+      <path d="M12 21c-3.6 0-6.5-2.5-6.5-6.2 0-2.6 1.7-4.6 3.5-6.4.4 2.1 1.4 3.2 2.8 4.1-.2-3.1 1.2-5.4 3.4-7.5.4 3.4 3.3 5.4 3.3 9.5 0 3.9-2.9 6.5-6.5 6.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
 function Headset() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 13v-1a7 7 0 0 1 14 0v1M4 13h3v5H5a1 1 0 0 1-1-1v-4zM20 13h-3v5h2a1 1 0 0 0 1-1v-4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-    </svg>
+    <IconBase>
+      <path d="M5 13v-1a7 7 0 0 1 14 0v1M4 13h3v5H5a1 1 0 0 1-1-1v-4zM20 13h-3v5h2a1 1 0 0 0 1-1v-4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </IconBase>
   );
 }
+
+function Lock() {
+  return (
+    <IconBase>
+      <rect x="5" y="10" width="14" height="10" rx="2.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
 function Power() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 3v8M7.5 6.5a7 7 0 1 0 9 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
+    <IconBase>
+      <path d="M12 3v8M7.5 6.5a7 7 0 1 0 9 0" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+function Rocket() {
+  return (
+    <IconBase>
+      <path d="M4.5 16.5c-1.1 1.1-1.5 3.4-1.5 3.4s2.3-.4 3.4-1.5c.6-.6.6-1.4 0-2s-1.4-.5-1.9.1z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 15l-3-3a18.7 18.7 0 0 1 7.4-8.1c2.4-1.3 4.1-.8 4.1-.8s.5 1.7-.8 4.1A18.7 18.7 0 0 1 12 15z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12H5l2-4h4M12 15v4l4-2v-4M14 7h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
+function Shield() {
+  return (
+    <IconBase>
+      <path d="M12 3l7 3v5.4c0 4.3-2.8 7.4-7 9.6-4.2-2.2-7-5.3-7-9.6V6l7-3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
+function Spark() {
+  return (
+    <IconBase>
+      <path d="M12 3l1.6 5.1L19 10l-5.4 1.9L12 17l-1.6-5.1L5 10l5.4-1.9L12 3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M19 16v4M21 18h-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </IconBase>
+  );
+}
+
+function Ticket() {
+  return (
+    <IconBase>
+      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M9 8v8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="1.5 2.5" />
+    </IconBase>
+  );
+}
+
+function Trophy() {
+  return (
+    <IconBase>
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3M12 13v3M9 20h6M10 20l.5-2.5h3L14 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </IconBase>
+  );
+}
+
+function Users() {
+  return (
+    <IconBase>
+      <path d="M9 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM3.5 20c.5-3 2.6-5 5.5-5s5 2 5.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M17 11a3 3 0 1 0 0-6M16 15c2.4.2 4 1.9 4.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </IconBase>
   );
 }

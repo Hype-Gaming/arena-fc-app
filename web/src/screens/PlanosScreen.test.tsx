@@ -56,7 +56,7 @@ describe('PlanosScreen', () => {
 
     expect(window.open).toHaveBeenCalledTimes(1);
     const [url, target] = (window.open as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(String(url)).toContain('plano=diamante');
+    expect(url).toBe('https://checkout.payt.com.br/10c39db1ebf3ea9668be934041c9bf94');
     expect(target).toBe('_blank');
   });
 

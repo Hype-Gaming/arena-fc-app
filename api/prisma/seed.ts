@@ -9,7 +9,9 @@ async function main(prisma: PrismaClient): Promise<void> {
   await seedPlans(prisma);
   await seedAchievements(prisma);
   await seedProducts(prisma);
-  await seedBilhetes(prisma);
+  if (process.env.SEED_EXAMPLE_BILHETES === 'true') {
+    await seedBilhetes(prisma);
+  }
   await seedTutorial(prisma);
 }
 

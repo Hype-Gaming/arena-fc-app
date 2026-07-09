@@ -1,12 +1,27 @@
 // web/src/screens/ExplainerModal.tsx — reusable "understand this product" popup
-// (Múltiplas, Odds Altas, …). Opened from a category chip; the CTA leads to plans.
+// (Múltiplas, Odds Altas, Alavancagem, …). Opened from a category chip; the CTA
+// leads to plans. Some products (Alavancagem) show a worked example as a row of
+// steps under the body.
+import { Fragment } from 'react';
 import './ExplainerModal.css';
+
+/** One stage of a worked example (e.g. an Alavancagem reinvestment step). */
+export interface ExplainerStep {
+  label: string;
+  aposta: string;
+  odd: string;
+  ganha: string;
+}
 
 export interface Explainer {
   title: string;
   imageSrc: string;
   imageAlt: string;
   body: string;
+  /** Optional worked-example stepper shown between the body and the CTA. */
+  steps?: ExplainerStep[];
+  /** Small caption under the stepper. */
+  footnote?: string;
 }
 
 export function ExplainerModal({
@@ -50,6 +65,28 @@ export function ExplainerModal({
         />
 
         <p className="exp__body">{explainer.body}</p>
+
+        {explainer.steps && explainer.steps.length > 0 && (
+          <div className="exp__steps">
+            {explainer.steps.map((s, i) => (
+              <Fragment key={s.label}>
+                {i > 0 && (
+                  <span className="exp__step-arrow" aria-hidden="true">
+                    <Arrow />
+                  </span>
+                )}
+                <div className="exp__step">
+                  <span className="exp__step-label">{s.label}</span>
+                  <span className="exp__step-aposta">{s.aposta}</span>
+                  <span className="exp__step-odd">{s.odd}</span>
+                  <span className="exp__step-ganha">{s.ganha}</span>
+                </div>
+              </Fragment>
+            ))}
+          </div>
+        )}
+
+        {explainer.footnote && <p className="exp__foot">{explainer.footnote}</p>}
 
         <button type="button" className="exp__cta" onClick={onInterest}>
           Entendi, tenho interesse <Arrow />

@@ -69,7 +69,7 @@ export function TutorialOverlay() {
         </button>
 
         <div className="tutorial-card__brand" aria-hidden="true">
-          <img src="/arenafc-logo.png" alt="" />
+          <img src="/logo-simplificada.png" alt="" />
         </div>
 
         <div className="tutorial-card__kicker">{progressLabel}</div>

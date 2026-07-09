@@ -20,6 +20,7 @@ export interface BilheteCardDto {
   awayLogo: string | null;
   competition: string | null;
   startsAt: Date;
+  validUntil: Date | null;
   odd: number;
   resultado: string;
   deepLink: string | null;
@@ -83,7 +84,10 @@ export class BilhetesService {
       where: {
         publishedAt: { not: null },
         resultado: 'pending',
-        startsAt: { gte: now },
+        OR: [
+          { validUntil: { gt: now } },
+          { validUntil: null, startsAt: { gte: now } },
+        ],
       },
       orderBy: { startsAt: 'asc' },
     });
@@ -139,9 +143,10 @@ export class BilhetesService {
       awayColor: b.awayColor,
       homeLogo: b.homeLogo,
       awayLogo: b.awayLogo,
-      competition: b.competition,
-      startsAt: b.startsAt,
-      odd: Number(b.odd),
+        competition: b.competition,
+        startsAt: b.startsAt,
+        validUntil: b.validUntil,
+        odd: Number(b.odd),
       resultado: b.resultado,
       deepLink: b.eventDeepLink,
     };

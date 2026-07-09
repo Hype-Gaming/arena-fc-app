@@ -30,6 +30,7 @@ interface RailCard {
   away: Team;
   /** kickoff instant (ms since epoch) — drives the countdown + time label */
   koMs: number;
+  validMs: number;
   odd: number;
   resultado: 'pending' | 'green' | 'red';
   /** opens the fixture on the sportsbook; null → fall back to the iframe */
@@ -56,6 +57,7 @@ interface FeedResponse {
     awayLogo: string | null;
     competition: string | null;
     startsAt: string;
+    validUntil: string | null;
     odd: number;
     resultado: 'pending' | 'green' | 'red';
     deepLink: string | null;
@@ -68,60 +70,15 @@ const TIER_TONE: Record<string, string> = {
   'Ultra': 'ultra',
 };
 
-/* ---- mock fallback (shown until the admin publishes real bilhetes) ---- */
-
 const DEFAULT_CATS: CatView[] = [
-  { key: 'safes', label: 'Odds Safes', count: 4, locked: false },
-  { key: 'pro', label: 'Odds Pró', count: 3, locked: false },
-  { key: 'ultra', label: 'Odds Ultra', count: 2, locked: false },
-  { key: 'alavancagem', label: 'Alavancagem', count: 1, locked: true },
-  { key: 'multiplas', label: 'Múltiplas', count: 1, locked: true },
-  { key: 'secundario', label: 'Merc. Secundário', count: 3, locked: true },
+  { key: 'safes', label: 'Odds Safes', count: 0, locked: false },
+  { key: 'pro', label: 'Odds Pró', count: 0, locked: false },
+  { key: 'ultra', label: 'Odds Ultra', count: 0, locked: false },
+  { key: 'alavancagem', label: 'Alavancagem', count: 0, locked: true },
+  { key: 'multiplas', label: 'Múltiplas', count: 0, locked: true },
+  { key: 'secundario', label: 'Merc. Secundário', count: 0, locked: true },
   { key: 'ligas', label: 'Ligas Americanas', count: 0, locked: true },
 ];
-
-const MOCK_TIER: Record<string, string> = {
-  safes: 'Básico',
-  pro: 'Pró',
-  ultra: 'Ultra',
-};
-
-const t = (name: string, short: string, color: string): Team => ({ name, short, color });
-
-const MOCK_SEED: {
-  id: string;
-  cat: string;
-  home: Team;
-  away: Team;
-  inHours: number;
-  odd: number;
-}[] = [
-  { id: 's1', cat: 'safes', home: t('Espanha', 'ESP', '#c60b1e'), away: t('Áustria', 'AUT', '#ed2939'), inHours: 2.2, odd: 1.53 },
-  { id: 's2', cat: 'safes', home: t('Portugal', 'POR', '#006600'), away: t('Croácia', 'CRO', '#ff2400'), inHours: 6.2, odd: 1.57 },
-  { id: 's3', cat: 'safes', home: t('Cuiabá', 'CUI', '#f5c518'), away: t('América Mineiro', 'AME', '#0b7a3b'), inHours: 6.2, odd: 1.47 },
-  { id: 's4', cat: 'safes', home: t('Estados Unidos', 'EUA', '#3c3b6e'), away: t('Bósnia', 'BIH', '#002395'), inHours: 9.5, odd: 1.62 },
-  { id: 'p1', cat: 'pro', home: t('Suíça', 'SUI', '#d52b1e'), away: t('Argélia', 'ALG', '#006233'), inHours: 12.1, odd: 2.1 },
-  { id: 'p2', cat: 'pro', home: t('Austrália', 'AUS', '#012169'), away: t('Egito', 'EGY', '#ce1126'), inHours: 26.4, odd: 2.35 },
-  { id: 'p3', cat: 'pro', home: t('Flamengo', 'FLA', '#e63946'), away: t('Palmeiras', 'PAL', '#1b998b'), inHours: 29.0, odd: 1.95 },
-  { id: 'u1', cat: 'ultra', home: t('Inglaterra', 'ING', '#cf081f'), away: t('RD Congo', 'COD', '#007fff'), inHours: 30.2, odd: 3.4 },
-  { id: 'u2', cat: 'ultra', home: t('França', 'FRA', '#0055a4'), away: t('Marrocos', 'MAR', '#c1272d'), inHours: 50.7, odd: 3.85 },
-];
-
-function buildMockCards(): RailCard[] {
-  const now = Date.now();
-  return MOCK_SEED.map((m) => ({
-    id: m.id,
-    cat: m.cat,
-    tierLabel: MOCK_TIER[m.cat] ?? 'Ultra',
-    pickLabel: 'Bilhete Especial',
-    home: m.home,
-    away: m.away,
-    koMs: now + m.inHours * 3_600_000,
-    odd: m.odd,
-    resultado: 'pending' as const,
-    deepLink: null,
-  }));
-}
 
 /* ---- server mapping ---- */
 
@@ -136,6 +93,8 @@ function fallbackColor(name: string): string {
   for (const ch of name) h = (h * 31 + ch.codePointAt(0)!) >>> 0;
   return CREST_FALLBACKS[h % CREST_FALLBACKS.length];
 }
+
+const team = (name: string, short: string, color: string): Team => ({ name, short, color });
 
 const MARKET_LABELS: Record<string, string> = {
   '1x2': 'Resultado Final',
@@ -155,14 +114,15 @@ function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
     tierLabel: b.tierLabel,
     pickLabel: market ? `${market}: ${pick}` : pick,
     home: {
-      ...t(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
+      ...team(b.homeTeam, shortName(b.homeTeam), b.homeColor ?? fallbackColor(b.homeTeam)),
       logo: b.homeLogo,
     },
     away: {
-      ...t(b.awayTeam, shortName(b.awayTeam), b.awayColor ?? fallbackColor(b.awayTeam)),
+      ...team(b.awayTeam, shortName(b.awayTeam), b.awayColor ?? fallbackColor(b.awayTeam)),
       logo: b.awayLogo,
     },
     koMs: new Date(b.startsAt).getTime(),
+    validMs: new Date(b.validUntil ?? b.startsAt).getTime(),
     odd: b.odd,
     resultado: b.resultado,
     deepLink: b.deepLink,
@@ -198,7 +158,7 @@ interface Props {
 export function BilhetesScreen({ api }: Props = {}) {
   const navigate = useNavigate();
   const [cats, setCats] = useState<CatView[]>(DEFAULT_CATS);
-  const [all, setAll] = useState<RailCard[]>(buildMockCards);
+  const [all, setAll] = useState<RailCard[]>([]);
   const [cat, setCat] = useState('safes');
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
@@ -217,15 +177,15 @@ export function BilhetesScreen({ api }: Props = {}) {
     api
       .get<FeedResponse>('/bilhetes')
       .then((feed) => {
-        // Until the admin publishes content, keep the demo rail on screen.
-        if (!alive || feed.bilhetes.length === 0) return;
+        if (!alive) return;
         setCats(feed.categorias);
         setAll(feed.bilhetes.map(toRailCard));
         const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
         if (firstOpen) setCat(firstOpen.key);
       })
       .catch(() => {
-        /* mock fallback stays */
+        if (!alive) return;
+        setAll([]);
       });
     return () => {
       alive = false;
@@ -333,10 +293,10 @@ export function BilhetesScreen({ api }: Props = {}) {
             aria-label="Bilhetes do mercado"
           >
             {cards.map((c) => (
-              <article className="spt-card" key={c.id}>
+              <article className="spt-card" data-tone={TIER_TONE[c.tierLabel] ?? 'ultra'} key={c.id}>
                 <div className="spt-card__meta">
                   <span className="spt-card__timer">
-                    <Clock /> {countdown(c.koMs, now)}
+                    <Clock /> {countdown(c.validMs, now)}
                   </span>
                   <span
                     className="spt-card__tier"
@@ -378,6 +338,12 @@ export function BilhetesScreen({ api }: Props = {}) {
                     }}
                   >
                     Adicionar
+                  </button>
+                  <button type="button" className="spt-card__icon" aria-label="Detalhes">
+                    ?
+                  </button>
+                  <button type="button" className="spt-card__icon" aria-label="Estatisticas">
+                    <Bars />
                   </button>
                 </div>
               </article>
@@ -449,6 +415,16 @@ function Clock() {
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+function Bars() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19h16" />
+      <path d="M7 16V9" />
+      <path d="M12 16V5" />
+      <path d="M17 16v-4" />
     </svg>
   );
 }
