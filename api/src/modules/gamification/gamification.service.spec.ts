@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GamificationService } from './gamification.service';
 
@@ -87,6 +88,24 @@ describe('GamificationService — XP & levels', () => {
     await expect(
       service.handleEvent({ eventName: 'daily.login', userId: 'ghost' }),
     ).rejects.toThrow('User ghost not found');
+  });
+
+  it('silently ignores a stale async event when the user was deleted', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 0, level: 1 });
+    prisma.tx.user.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Record to update not found', {
+        code: 'P2025',
+        clientVersion: 'test',
+      }),
+    );
+
+    await expect(
+      service.onDomainEvent({
+        eventName: 'entrada.unlocked',
+        userId: 'u1',
+        entradaId: 'e1',
+      }),
+    ).resolves.toBeUndefined();
   });
 });
 

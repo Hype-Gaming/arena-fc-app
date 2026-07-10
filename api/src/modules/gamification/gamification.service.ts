@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { levelForXp, xpForEvent, LEVEL_THRESHOLDS } from './level.util';
 import {
@@ -31,7 +32,23 @@ export class GamificationService {
   @OnEvent('entrada.green')
   @OnEvent('referral')
   async onDomainEvent(payload: GamificationEventPayload): Promise<void> {
-    await this.handleEvent(payload);
+    try {
+      await this.handleEvent(payload);
+    } catch (err) {
+      // Events are asynchronous. A test teardown (or a real account deletion)
+      // may remove the user after the originating transaction emitted the
+      // event but before this listener acquires its lock. That stale event has
+      // nothing left to update and must not be reported as an application
+      // error by EventEmitter2.
+      if (
+        err instanceof NotFoundException ||
+        (err instanceof Prisma.PrismaClientKnownRequestError &&
+          err.code === 'P2025')
+      ) {
+        return;
+      }
+      throw err;
+    }
   }
 
   /**
