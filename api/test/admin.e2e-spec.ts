@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { signTestAccess } from './utils/auth';
+import { signTestAccess, signTestAdminSession } from './utils/auth';
 
 describe('Admin (e2e) — guard', () => {
   let app: INestApplication;
@@ -41,6 +41,7 @@ describe('Admin (e2e) — admin CRUD', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let adminToken: string;
+  let adminSession: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
@@ -52,13 +53,18 @@ describe('Admin (e2e) — admin CRUD', () => {
       data: { email: `admin-${Date.now()}@x.com`, role: 'admin' },
     });
     adminToken = await signTestAccess(admin.id, admin.email);
+    adminSession = await signTestAdminSession(admin.id, admin.email);
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  const auth = (req: request.Test) => req.set('Authorization', `Bearer ${adminToken}`);
+  // Admin routes need both factors: the access token AND the admin-session header.
+  const auth = (req: request.Test) =>
+    req
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('X-Admin-Session', `Bearer ${adminSession}`);
 
   it('creates a category, match, entrada and marks it green', async () => {
     const cat = await auth(

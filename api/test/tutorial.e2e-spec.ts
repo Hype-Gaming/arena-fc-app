@@ -3,12 +3,13 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { signTestAccess } from './utils/auth';
+import { signTestAccess, signTestAdminSession } from './utils/auth';
 
 describe('Tutorial (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let adminToken: string;
+  let adminSession: string;
   let userToken: string;
 
   beforeAll(async () => {
@@ -25,6 +26,7 @@ describe('Tutorial (e2e)', () => {
       data: { email: `tuser-${Date.now()}@x.com`, role: 'user' },
     });
     adminToken = await signTestAccess(admin.id, admin.email);
+    adminSession = await signTestAdminSession(admin.id, admin.email);
     userToken = await signTestAccess(user.id, user.email);
   });
 
@@ -36,6 +38,7 @@ describe('Tutorial (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/tutorial/versions')
       .set('Authorization', `Bearer ${adminToken}`)
+      .set('X-Admin-Session', `Bearer ${adminSession}`)
       .send({ steps: [{ title: 'Bem-vindo', body: 'Comece aqui' }] })
       .expect(201);
     expect(res.body.version).toBe(1);
