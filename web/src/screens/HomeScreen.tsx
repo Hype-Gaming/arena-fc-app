@@ -107,7 +107,7 @@ const SECTIONS: Section[] = [
         to: '/planos',
         explainerKey: 'alavancagem',
         visual: 'locked',
-        image: '/alavancagem.png',
+        image: '/alavancagem-2.png',
       },
     ],
   },
