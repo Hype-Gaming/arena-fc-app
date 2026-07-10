@@ -1,5 +1,6 @@
 // web/src/shell/FreeOddModal.tsx — the "Resgate sua odd grátis" popup, opened
 // from the free-user CTA in the TopBar. Funnels the user to the Telegram group.
+import { createPortal } from 'react-dom';
 import './FreeOddModal.css';
 
 const TELEGRAM_URL =
@@ -15,7 +16,10 @@ export function FreeOddModal({
 }) {
   if (!open) return null;
 
-  return (
+  // Portal to <body>: the TopBar has backdrop-filter, which would otherwise make
+  // this fixed overlay position relative to the TopBar (stuck at the top) instead
+  // of the viewport.
+  return createPortal(
     <div
       className="free-odd__overlay"
       role="dialog"
@@ -47,7 +51,8 @@ export function FreeOddModal({
           <PaperPlane /> Resgatar Odd Grátis
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
