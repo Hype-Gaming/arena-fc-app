@@ -13,7 +13,7 @@ export const CATEGORY_EXPLAINERS: Record<string, Explainer> = {
   },
   ultra: {
     title: 'Entenda como funciona as Odds Altas',
-    imageSrc: '/odds-altas.png',
+    imageSrc: '/odds-multiplas.png',
     imageAlt: 'Odds Altas — Arena FC',
     body: 'Entradas selecionadas pela IA com odds elevadas e alto potencial de retorno. Mais ousadia, mais multiplicação — para quem busca lucros maiores no dia.',
   },
