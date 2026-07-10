@@ -65,6 +65,15 @@ model User {
   level     Int      @default(1)
   xp        Int      @default(0)
   role      Role     @default(user)
+  // Profile identity (self-chosen). nickname is not enforced unique — display
+  // handles may collide; avatarKey selects one of the preset emblem avatars.
+  nickname  String?
+  avatarKey String?
+  // Daily-login streak (Phase 3). currentLoginStreak resets to 1 on a missed
+  // day; bestLoginStreak is the all-time high; lastLoginAt gates one count/day.
+  currentLoginStreak Int       @default(0)
+  bestLoginStreak    Int       @default(0)
+  lastLoginAt        DateTime?
   // While set and in the future, IA Tipster analyses don't consume credits
   // ("acesso ilimitado" pass). Extended by ia_unlimited product grants.
   iaUnlimitedUntil DateTime?
@@ -240,6 +249,11 @@ model Achievement {
   description String
   icon        String?
   criteria    Json
+  // Grouping for the Perfil screen (permanent | streak | daily), persisted so
+  // the front no longer infers it from key/icon. rewardXp is the bonus granted
+  // when the achievement unlocks.
+  category    String @default("permanent")
+  rewardXp    Int    @default(0)
 
   userAchievements UserAchievement[]
 }

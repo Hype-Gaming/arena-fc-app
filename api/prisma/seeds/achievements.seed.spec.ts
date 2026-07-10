@@ -32,6 +32,25 @@ describe('achievements.seed', () => {
     expect(firstUnlock.name).toBeTruthy();
     expect(firstUnlock.description).toBeTruthy();
     expect(firstUnlock.icon).toBeTruthy();
+    expect(firstUnlock.category).toBe('permanent');
+    expect(firstUnlock.rewardXp).toBeGreaterThan(0);
+  });
+
+  it('defines the login-streak ladder in the streak category', () => {
+    const streaks = ACHIEVEMENT_SEEDS.filter((a) => a.category === 'streak');
+    expect(streaks.map((a) => a.key)).toEqual(
+      expect.arrayContaining(['streak_3', 'streak_7', 'streak_30', 'streak_100']),
+    );
+    for (const a of streaks) {
+      expect(a.criteria.type).toBe('login_streak');
+    }
+  });
+
+  it('every seed has a category and a non-negative reward', () => {
+    for (const a of ACHIEVEMENT_SEEDS) {
+      expect(['permanent', 'streak', 'daily']).toContain(a.category);
+      expect(a.rewardXp).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('every seed has a unique key', () => {
@@ -40,7 +59,13 @@ describe('achievements.seed', () => {
   });
 
   it('every criteria has a supported type', () => {
-    const supported = ['unlock_count', 'green_count', 'level_reached', 'referral_count'];
+    const supported = [
+      'unlock_count',
+      'green_count',
+      'level_reached',
+      'referral_count',
+      'login_streak',
+    ];
     for (const a of ACHIEVEMENT_SEEDS) {
       expect(supported).toContain((a.criteria as any).type);
     }

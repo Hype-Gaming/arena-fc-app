@@ -8,13 +8,23 @@ function makePrismaMock() {
   // client that takes an advisory lock and does the increment + level updates.
   const tx = {
     $executeRaw: jest.fn().mockResolvedValue(1),
-    user: { update: jest.fn().mockResolvedValue({ xp: 0 }) },
+    user: {
+      update: jest.fn().mockResolvedValue({ xp: 0 }),
+      // registerDailyLogin reads inside the tx; default to "already logged
+      // today" so it's a no-op unless a test overrides lastLoginAt.
+      findUnique: jest.fn().mockResolvedValue({
+        lastLoginAt: new Date(),
+        currentLoginStreak: 0,
+        bestLoginStreak: 0,
+      }),
+    },
   };
   return {
     tx,
     $transaction: jest.fn((cb: (t: typeof tx) => unknown) => cb(tx)),
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     entradaUnlock: { count: jest.fn().mockResolvedValue(0) },
     entrada: { count: jest.fn().mockResolvedValue(0) },
@@ -130,8 +140,8 @@ describe('GamificationService — achievement unlocking', () => {
     prisma.entradaUnlock.count.mockResolvedValue(1);
     prisma.entrada.count.mockResolvedValue(0);
     prisma.achievement.findMany.mockResolvedValue([
-      { key: 'first_unlock', criteria: { type: 'unlock_count', threshold: 1 } },
-      { key: 'ten_unlocks', criteria: { type: 'unlock_count', threshold: 10 } },
+      { key: 'first_unlock', rewardXp: 0, criteria: { type: 'unlock_count', threshold: 1 } },
+      { key: 'ten_unlocks', rewardXp: 0, criteria: { type: 'unlock_count', threshold: 10 } },
     ]);
     prisma.userAchievement.findMany.mockResolvedValue([]); // none yet
     prisma.userAchievement.createMany.mockResolvedValue({ count: 1 });
@@ -154,7 +164,7 @@ describe('GamificationService — achievement unlocking', () => {
     prisma.tx.user.update.mockResolvedValue({ xp: 10 });
     prisma.entradaUnlock.count.mockResolvedValue(1);
     prisma.achievement.findMany.mockResolvedValue([
-      { key: 'first_unlock', criteria: { type: 'unlock_count', threshold: 1 } },
+      { key: 'first_unlock', rewardXp: 0, criteria: { type: 'unlock_count', threshold: 1 } },
     ]);
     prisma.userAchievement.findMany.mockResolvedValue([
       { achievementKey: 'first_unlock' },
@@ -174,7 +184,7 @@ describe('GamificationService — achievement unlocking', () => {
     prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 980, level: 4 });
     prisma.tx.user.update.mockResolvedValue({ xp: 1005 });
     prisma.achievement.findMany.mockResolvedValue([
-      { key: 'level_5', criteria: { type: 'level_reached', threshold: 5 } },
+      { key: 'level_5', rewardXp: 0, criteria: { type: 'level_reached', threshold: 5 } },
     ]);
     prisma.userAchievement.findMany.mockResolvedValue([]);
     prisma.userAchievement.createMany.mockResolvedValue({ count: 1 });
@@ -187,6 +197,33 @@ describe('GamificationService — achievement unlocking', () => {
 
     expect(result.level).toBe(5);
     expect(result.newAchievementKeys).toEqual(['level_5']);
+  });
+
+  it('grants the achievement reward XP on unlock', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      xp: 0,
+      level: 1,
+      currentLoginStreak: 0,
+    });
+    prisma.tx.user.update.mockResolvedValue({ xp: 10 });
+    prisma.entradaUnlock.count.mockResolvedValue(1);
+    prisma.achievement.findMany.mockResolvedValue([
+      { key: 'first_unlock', rewardXp: 20, criteria: { type: 'unlock_count', threshold: 1 } },
+    ]);
+    prisma.userAchievement.findMany.mockResolvedValue([]);
+    prisma.userAchievement.createMany.mockResolvedValue({ count: 1 });
+
+    await service.handleEvent({
+      eventName: 'entrada.unlocked',
+      userId: 'u1',
+      entradaId: 'e1',
+    });
+
+    // The reward XP is applied as an atomic +20 increment on the user.
+    expect(prisma.tx.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { xp: { increment: 20 } }, select: { xp: true } }),
+    );
   });
 });
 
@@ -205,11 +242,18 @@ describe('GamificationService — profile read', () => {
     service = moduleRef.get(GamificationService);
   });
 
-  it('returns xp, level, next-level progress and achievements', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 120, level: 2 });
+  it('returns xp, level, next-level progress, streak and achievements', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      xp: 120,
+      level: 2,
+      currentLoginStreak: 4,
+      bestLoginStreak: 9,
+    });
     prisma.achievement.findMany.mockResolvedValue([
-      { key: 'first_unlock', name: 'Primeira Entrada', description: 'd', icon: 'i', criteria: { type: 'unlock_count', threshold: 1 } },
-      { key: 'ten_unlocks', name: 'Caçador de Tips', description: 'd', icon: 'i', criteria: { type: 'unlock_count', threshold: 10 } },
+      { key: 'first_unlock', name: 'Primeira Entrada', description: 'd', icon: 'i', category: 'permanent', rewardXp: 20, criteria: { type: 'unlock_count', threshold: 1 } },
+      { key: 'ten_unlocks', name: 'Caçador de Tips', description: 'd', icon: 'i', category: 'permanent', rewardXp: 40, criteria: { type: 'unlock_count', threshold: 10 } },
+      { key: 'streak_3', name: 'Aquecendo', description: 'd', icon: 'flame', category: 'streak', rewardXp: 15, criteria: { type: 'login_streak', threshold: 3 } },
     ]);
     prisma.userAchievement.findMany.mockResolvedValue([
       { achievementKey: 'first_unlock', unlockedAt: new Date('2026-06-01T00:00:00Z'), progress: 1 },
@@ -221,11 +265,19 @@ describe('GamificationService — profile read', () => {
     expect(dto.level).toBe(2);
     expect(dto.currentLevelFloor).toBe(100); // threshold for level 2
     expect(dto.nextLevelXp).toBe(250); // threshold for level 3
-    expect(dto.achievements).toHaveLength(2);
+    expect(dto.currentLoginStreak).toBe(4);
+    expect(dto.bestLoginStreak).toBe(9);
+    expect(dto.achievements).toHaveLength(3);
     const first = dto.achievements.find((a) => a.key === 'first_unlock')!;
     expect(first.unlocked).toBe(true);
+    expect(first.category).toBe('permanent');
+    expect(first.rewardXp).toBe(20);
     const ten = dto.achievements.find((a) => a.key === 'ten_unlocks')!;
     expect(ten.unlocked).toBe(false);
+    // Locked streak shows live progress (currentLoginStreak) toward its threshold.
+    const streak = dto.achievements.find((a) => a.key === 'streak_3')!;
+    expect(streak.unlocked).toBe(false);
+    expect(streak.progress).toBe(3); // min(threshold 3, streak 4)
   });
 
   it('throws NotFound for an unknown user', async () => {
@@ -233,5 +285,77 @@ describe('GamificationService — profile read', () => {
     await expect(service.getProfileGamification('ghost')).rejects.toThrow(
       'User ghost not found',
     );
+  });
+});
+
+describe('GamificationService — daily login streak', () => {
+  let service: GamificationService;
+  let prisma: ReturnType<typeof makePrismaMock>;
+
+  beforeEach(async () => {
+    prisma = makePrismaMock();
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        GamificationService,
+        { provide: PrismaService, useValue: prisma },
+      ],
+    }).compile();
+    service = moduleRef.get(GamificationService);
+  });
+
+  it('advances the streak and fires daily.login on a new day', async () => {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    prisma.tx.user.findUnique.mockResolvedValue({
+      lastLoginAt: yesterday,
+      currentLoginStreak: 2,
+      bestLoginStreak: 5,
+    });
+    // handleEvent('daily.login') reads the top-level user for the XP award.
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 0, level: 1, currentLoginStreak: 3 });
+    prisma.tx.user.update.mockResolvedValue({ xp: 5 });
+
+    const res = await service.registerDailyLogin('u1');
+
+    expect(res).toEqual({ counted: true, currentLoginStreak: 3, bestLoginStreak: 5 });
+    // Streak row persisted with the advanced count.
+    expect(prisma.tx.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ currentLoginStreak: 3, bestLoginStreak: 5 }),
+      }),
+    );
+    // daily.login handled (top-level user read happened).
+    expect(prisma.user.findUnique).toHaveBeenCalled();
+  });
+
+  it('resets the streak to 1 after a missed day', async () => {
+    const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+    prisma.tx.user.findUnique.mockResolvedValue({
+      lastLoginAt: threeDaysAgo,
+      currentLoginStreak: 9,
+      bestLoginStreak: 9,
+    });
+    prisma.user.findUnique.mockResolvedValue({ id: 'u1', xp: 0, level: 1, currentLoginStreak: 1 });
+    prisma.tx.user.update.mockResolvedValue({ xp: 5 });
+
+    const res = await service.registerDailyLogin('u1');
+
+    expect(res.counted).toBe(true);
+    expect(res.currentLoginStreak).toBe(1);
+    expect(res.bestLoginStreak).toBe(9); // best is preserved
+  });
+
+  it('is a no-op when already counted today (no XP, no event)', async () => {
+    prisma.tx.user.findUnique.mockResolvedValue({
+      lastLoginAt: new Date(),
+      currentLoginStreak: 4,
+      bestLoginStreak: 7,
+    });
+
+    const res = await service.registerDailyLogin('u1');
+
+    expect(res).toEqual({ counted: false, currentLoginStreak: 4, bestLoginStreak: 7 });
+    expect(prisma.tx.user.update).not.toHaveBeenCalled();
+    // handleEvent never ran → no top-level user read.
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 });

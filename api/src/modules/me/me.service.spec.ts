@@ -1,11 +1,12 @@
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
+import { GamificationService } from '../gamification/gamification.service';
 import { MeService } from './me.service';
 
 function makePrismaMock() {
   return {
-    user: { findUniqueOrThrow: jest.fn() },
+    user: { findUniqueOrThrow: jest.fn(), update: jest.fn() },
     subscription: { findUnique: jest.fn() },
   };
 }
@@ -14,15 +15,24 @@ describe('MeService', () => {
   let service: MeService;
   let prisma: ReturnType<typeof makePrismaMock>;
   let credits: { getBalance: jest.Mock };
+  let gamification: { registerDailyLogin: jest.Mock };
 
   beforeEach(async () => {
     prisma = makePrismaMock();
     credits = { getBalance: jest.fn().mockResolvedValue(0) };
+    gamification = {
+      registerDailyLogin: jest.fn().mockResolvedValue({
+        counted: false,
+        currentLoginStreak: 0,
+        bestLoginStreak: 0,
+      }),
+    };
     const moduleRef = await Test.createTestingModule({
       providers: [
         MeService,
         { provide: PrismaService, useValue: prisma },
         { provide: CreditsService, useValue: credits },
+        { provide: GamificationService, useValue: gamification },
       ],
     }).compile();
     service = moduleRef.get(MeService);
@@ -31,6 +41,8 @@ describe('MeService', () => {
   it('returns Free plan and live credit balance when the user has no subscription', async () => {
     prisma.user.findUniqueOrThrow.mockResolvedValue({
       email: 'a@b.com',
+      nickname: null,
+      avatarKey: null,
       iaUnlimitedUntil: null,
     });
     prisma.subscription.findUnique.mockResolvedValue(null);
@@ -40,6 +52,8 @@ describe('MeService', () => {
 
     expect(me).toEqual({
       email: 'a@b.com',
+      nickname: null,
+      avatarKey: null,
       planKey: 'free',
       planName: 'Livre',
       creditBalance: 3,
@@ -47,11 +61,14 @@ describe('MeService', () => {
       iaUnlimitedUntil: null,
     });
     expect(credits.getBalance).toHaveBeenCalledWith('u1');
+    expect(gamification.registerDailyLogin).toHaveBeenCalledWith('u1');
   });
 
   it('reports the Premium plan when the subscription is active within its period', async () => {
     prisma.user.findUniqueOrThrow.mockResolvedValue({
       email: 'p@b.com',
+      nickname: 'Craque',
+      avatarKey: 'flame',
       iaUnlimitedUntil: null,
     });
     prisma.subscription.findUnique.mockResolvedValue({
@@ -65,12 +82,36 @@ describe('MeService', () => {
 
     expect(me).toEqual({
       email: 'p@b.com',
+      nickname: 'Craque',
+      avatarKey: 'flame',
       planKey: 'premium',
       planName: 'Premium',
       creditBalance: 12,
       iaUnlimited: false,
       iaUnlimitedUntil: null,
     });
+  });
+
+  it('updates nickname and avatar, then returns the fresh profile', async () => {
+    prisma.user.findUniqueOrThrow.mockResolvedValue({
+      email: 'p@b.com',
+      nickname: 'NovoNick',
+      avatarKey: 'crown',
+      iaUnlimitedUntil: null,
+    });
+    prisma.subscription.findUnique.mockResolvedValue(null);
+
+    const me = await service.updateProfile('u2', {
+      nickname: '  NovoNick  ',
+      avatarKey: 'crown',
+    });
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u2' },
+      data: { nickname: 'NovoNick', avatarKey: 'crown' },
+    });
+    expect(me.nickname).toBe('NovoNick');
+    expect(me.avatarKey).toBe('crown');
   });
 
   it('reports an active unlimited pass with its expiry', async () => {

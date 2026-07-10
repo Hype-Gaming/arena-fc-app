@@ -9,7 +9,11 @@ import {
   SPORTS_FEED_PROVIDER,
   SportsFeedProvider,
 } from './sports-feed.types';
-import { buildTeamLogoIndex, matchTeamLogo } from './team-logo.match';
+import {
+  buildTeamLogoIndex,
+  matchTeamLogo,
+  TeamLogoIndex,
+} from './team-logo.match';
 import { teamLogoUrl } from './team-logo-cache.service';
 import { parseEsportivaEventId } from './esportiva-link';
 
@@ -19,6 +23,13 @@ export interface SyncEventsSummary {
   upserted: number;
 }
 
+/** In-play odds/scores move fast, but not per-request: a short shared cache
+ *  collapses a burst of viewers into one upstream call. Override via env. */
+const LIVE_FEED_TTL_MS = Number(process.env.LIVE_FEED_TTL_MS ?? 8_000);
+/** The crest catalog only changes on a sync; the index is safe to reuse for a
+ *  minute rather than re-scanning the Team table on every feed call. */
+const TEAM_INDEX_TTL_MS = Number(process.env.TEAM_INDEX_TTL_MS ?? 60_000);
+
 @Injectable()
 export class SportsFeedService {
   constructor(
@@ -26,6 +37,30 @@ export class SportsFeedService {
     @Inject(SPORTS_FEED_PROVIDER)
     private readonly provider: SportsFeedProvider,
   ) {}
+
+  /** Enriched live feed, memoized for LIVE_FEED_TTL_MS (see fetchLive). */
+  private liveCache: { at: number; data: NormalizedLiveEvent[] } | null = null;
+  /** Built logo index, memoized for TEAM_INDEX_TTL_MS (see teamLogoIndex). */
+  private indexCache: { at: number; index: TeamLogoIndex } | null = null;
+
+  /**
+   * The crest lookup index, cached. Every feed path (live, upcoming, preview)
+   * needs it, and building it means a full Team-table scan + Map construction —
+   * far too heavy to repeat on each request. Rebuilt at most once per TTL; a
+   * freshly-synced crest shows up within that window.
+   */
+  async teamLogoIndex(): Promise<TeamLogoIndex> {
+    const now = Date.now();
+    if (this.indexCache && now - this.indexCache.at < TEAM_INDEX_TTL_MS) {
+      return this.indexCache.index;
+    }
+    const teams = await this.prisma.team.findMany({
+      select: { externalId: true, name: true, logoUrl: true, country: true },
+    });
+    const index = buildTeamLogoIndex(teams);
+    this.indexCache = { at: now, index };
+    return index;
+  }
 
   /** Upcoming prematch events straight from the provider (not cached). */
   fetchUpcoming(): Promise<NormalizedEvent[]> {
@@ -47,10 +82,7 @@ export class SportsFeedService {
     }
     const preview = await this.provider.fetchEventPreview(id);
 
-    const teams = await this.prisma.team.findMany({
-      select: { externalId: true, name: true, logoUrl: true, country: true },
-    });
-    const index = buildTeamLogoIndex(teams);
+    const index = await this.teamLogoIndex();
     const crest = (name: string): string | null => {
       const ref = matchTeamLogo(name, index, preview.countryIso);
       return ref ? teamLogoUrl(ref.externalId) : null;
@@ -68,25 +100,30 @@ export class SportsFeedService {
    * teams keep null logos (the UI falls back to an initials badge).
    */
   async fetchLive(): Promise<NormalizedLiveEvent[]> {
+    const now = Date.now();
+    if (this.liveCache && now - this.liveCache.at < LIVE_FEED_TTL_MS) {
+      return this.liveCache.data;
+    }
+
     const events = await this.provider.fetchLive();
-    if (events.length === 0) return events;
+    if (events.length === 0) {
+      this.liveCache = { at: now, data: events };
+      return events;
+    }
 
-    const teams = await this.prisma.team.findMany({
-      select: { externalId: true, name: true, logoUrl: true, country: true },
-    });
-    if (teams.length === 0) return events;
-
-    const index = buildTeamLogoIndex(teams);
+    const index = await this.teamLogoIndex();
     const logo = (name: string, iso: string | null): string | null => {
       const ref = matchTeamLogo(name, index, iso);
       // Point at our cached, self-hosted copy — never hotlink the source.
       return ref ? teamLogoUrl(ref.externalId) : null;
     };
-    return events.map((e) => ({
+    const enriched = events.map((e) => ({
       ...e,
       homeLogo: logo(e.homeTeam, e.countryIso) ?? e.homeLogo,
       awayLogo: logo(e.awayTeam, e.countryIso) ?? e.awayLogo,
     }));
+    this.liveCache = { at: now, data: enriched };
+    return enriched;
   }
 
   /** Cached fixtures for the admin picker (soonest first, optional name filter). */

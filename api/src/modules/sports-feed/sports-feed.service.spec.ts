@@ -113,7 +113,7 @@ describe('SportsFeedService.fetchLive', () => {
     awayLogo: null,
   };
 
-  it('delegates to the provider (live is ephemeral, never cached)', async () => {
+  it('delegates to the provider and does not touch the events table', async () => {
     const prisma = makePrisma();
     const provider = makeProvider([]);
     (provider.fetchLive as jest.Mock).mockResolvedValue([liveEvent]);
@@ -123,6 +123,20 @@ describe('SportsFeedService.fetchLive', () => {
 
     expect(provider.fetchLive).toHaveBeenCalled();
     expect(prisma.sportEvent.findMany).not.toHaveBeenCalled();
+  });
+
+  it('serves a burst of callers from one upstream fetch (short-TTL cache)', async () => {
+    const prisma = makePrisma();
+    const provider = makeProvider([]);
+    (provider.fetchLive as jest.Mock).mockResolvedValue([liveEvent]);
+    const svc = new SportsFeedService(prisma, provider);
+
+    await svc.fetchLive();
+    await svc.fetchLive();
+    await svc.fetchLive();
+
+    // Three viewers within the TTL collapse to a single upstream call.
+    expect(provider.fetchLive).toHaveBeenCalledTimes(1);
   });
 
   it('cross-matches crests from the catalog and points at the cache URL', async () => {
@@ -139,6 +153,21 @@ describe('SportsFeedService.fetchLive', () => {
     // Mjallby AIF → Mjällby (id 42), served from our cache, not hotlinked.
     expect(ev.homeLogo).toBe('/api/team-logos/42.png');
     expect(ev.awayLogo).toBeNull(); // no catalog match → stays null
+  });
+});
+
+describe('SportsFeedService.teamLogoIndex', () => {
+  it('scans the Team table once and reuses the built index within the TTL', async () => {
+    const prisma = makePrisma();
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { externalId: 42, name: 'Mjällby', logoUrl: 'https://src/mjallby.png' },
+    ]);
+    const svc = new SportsFeedService(prisma, makeProvider([]));
+
+    await svc.teamLogoIndex();
+    await svc.teamLogoIndex();
+
+    expect(prisma.team.findMany).toHaveBeenCalledTimes(1);
   });
 });
 

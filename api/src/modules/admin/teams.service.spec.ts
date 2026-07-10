@@ -298,6 +298,45 @@ describe('AdminTeamsService.syncNationalTeams', () => {
   });
 });
 
+describe('AdminTeamsService.syncTopLeaguesJob', () => {
+  const OLD_ENV = process.env;
+  let fetchMock: jest.Mock;
+  beforeEach(() => {
+    process.env = { ...OLD_ENV, API_FOOTBALL_KEY: 'k123' };
+    fetchMock = jest.fn().mockResolvedValue({
+      json: () => Promise.resolve({ errors: [], results: 1, response: [ROW(1, 'Team')] }),
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    jest.clearAllMocks();
+  });
+  afterEach(() => {
+    process.env = OLD_ENV;
+  });
+
+  it('pulls the top leagues for the configured season', async () => {
+    process.env.API_FOOTBALL_SEASON = '2025';
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+
+    await svc.syncTopLeaguesJob();
+
+    const urls = fetchMock.mock.calls.map((c) => c[0] as string);
+    expect(urls.some((u) => u.includes('league=39&season=2025'))).toBe(true); // PL
+    expect(urls.some((u) => u.includes('league=71&season=2025'))).toBe(true); // Brasileirão
+    // One request per curated league — a couple dozen, all distinct.
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(20);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it('no-ops (no requests) when the API key is absent', async () => {
+    delete process.env.API_FOOTBALL_KEY;
+    const svc = new AdminTeamsService(makePrisma(), sportsFeed, logoCache);
+
+    await svc.syncTopLeaguesJob();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('AdminTeamsService.syncEsportivaLeagues', () => {
   const OLD_ENV = process.env;
   let fetchMock: jest.Mock;

@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreditsService } from '../credits/credits.service';
 import { InsufficientCreditsError } from '../credits/errors';
 import { SportsFeedService } from '../sports-feed/sports-feed.service';
+import { buildTeamLogoIndex } from '../sports-feed/team-logo.match';
 import { AI_ANALYSIS_PROVIDER } from './ai/ai-analysis.types';
 import { MockAnalysisProvider } from './ai/mock.provider';
 
@@ -24,6 +25,7 @@ const sportsFeedMock = {
   fetchLive: jest.fn(),
   upcomingCached: jest.fn(),
   getEventPreview: jest.fn(),
+  teamLogoIndex: jest.fn(),
 };
 // Real deterministic provider so message assertions match the shipped output;
 // spied so we can assert it is NOT called on the pre-check short-circuit.
@@ -363,9 +365,12 @@ describe('TipsterService.upcomingMatches', () => {
       },
     ]);
     // Catalog covers Argentina (crest) but not Egito (→ null / initials badge).
-    prismaMock.team.findMany.mockResolvedValue([
-      { externalId: 26, name: 'Argentina', logoUrl: 'https://src/26.png', country: 'Argentina' },
-    ]);
+    // The feed owns the shared logo index now, so hand the built index back.
+    sportsFeedMock.teamLogoIndex.mockResolvedValue(
+      buildTeamLogoIndex([
+        { externalId: 26, name: 'Argentina', logoUrl: 'https://src/26.png', country: 'Argentina' },
+      ]),
+    );
 
     const matches = await service.upcomingMatches();
 

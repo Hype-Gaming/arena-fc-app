@@ -6,6 +6,8 @@ import './PerfilScreen.css';
 
 interface MeProfile {
   email: string;
+  nickname: string | null;
+  avatarKey: string | null;
   planKey: string;
   planName: string;
   creditBalance: number;
@@ -16,6 +18,8 @@ interface AchievementStatus {
   name: string;
   description: string;
   icon: string;
+  category: string;
+  rewardXp: number;
   unlocked: boolean;
   unlockedAt: string | null;
   progress: number;
@@ -27,11 +31,13 @@ interface GamificationProfile {
   level: number;
   currentLevelFloor: number;
   nextLevelXp: number | null;
+  currentLoginStreak: number;
+  bestLoginStreak: number;
   achievements: AchievementStatus[];
 }
 
 interface Props {
-  api: Pick<ApiClient, 'get'>;
+  api: Pick<ApiClient, 'get' | 'patch'>;
   onLogout: () => void;
   /** Opens the plan comparison. Falls back to the external checkout when absent. */
   onUpgrade?: () => void;
@@ -65,17 +71,31 @@ const GROUP_META: Record<
   daily: { label: 'Conquistas Diarias', tone: 'cyan', icon: Calendar },
 };
 
+// Preset avatar emblems — must mirror AVATAR_KEYS on the API (avatar.constants.ts).
+const AVATAR_META: Record<string, { icon: () => JSX.Element; tone: string }> = {
+  ball: { icon: Ball, tone: 'green' },
+  flame: { icon: Flame, tone: 'orange' },
+  crown: { icon: Crown, tone: 'gold' },
+  shield: { icon: Shield, tone: 'blue' },
+  rocket: { icon: Rocket, tone: 'violet' },
+  star: { icon: Spark, tone: 'cyan' },
+  bolt: { icon: Bolt, tone: 'yellow' },
+  trophy: { icon: Trophy, tone: 'gold' },
+};
+const AVATAR_KEYS = Object.keys(AVATAR_META);
+const DEFAULT_AVATAR = 'ball';
+
 function levelName(level: number): string {
   return LEVEL_NAMES[level - 1] ?? 'Elite';
 }
 
-function displayName(email: string): string {
-  return email.split('@')[0] || email;
+function displayName(me: MeProfile): string {
+  if (me.nickname && me.nickname.trim()) return me.nickname.trim();
+  return me.email.split('@')[0] || me.email;
 }
 
 function achievementGroup(a: AchievementStatus): AchievementGroupKey {
-  if (a.key.includes('green') || a.icon.includes('star')) return 'streak';
-  if (a.key.includes('unlock')) return 'daily';
+  if (a.category === 'streak' || a.category === 'daily') return a.category;
   return 'permanent';
 }
 
@@ -88,10 +108,24 @@ function formatUnlockedAt(value: string | null): string {
   }).format(new Date(value));
 }
 
+function AvatarEmblem({ avatarKey }: { avatarKey: string | null }) {
+  const meta = AVATAR_META[avatarKey ?? ''] ?? AVATAR_META[DEFAULT_AVATAR];
+  const Icon = meta.icon;
+  return (
+    <span className="pf-emblem" data-tone={meta.tone} aria-hidden="true">
+      <Icon />
+    </span>
+  );
+}
+
 export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [gam, setGam] = useState<GamificationProfile | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     api.get<MeProfile>('/me').then(setMe);
@@ -109,6 +143,35 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
     }
     return grouped;
   }, [gam?.achievements]);
+
+  async function saveProfile(patch: { nickname?: string; avatarKey?: string }) {
+    setSaving(true);
+    try {
+      const updated = await api.patch<MeProfile>('/me/profile', patch);
+      setMe(updated);
+    } catch {
+      // Keep the current profile; the control stays where it is so the user can retry.
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function pickAvatar(key: string) {
+    setAvatarPickerOpen(false);
+    if (me && key !== me.avatarKey) await saveProfile({ avatarKey: key });
+  }
+
+  function startEditingNickname() {
+    setNicknameDraft(me?.nickname ?? '');
+    setEditingNickname(true);
+  }
+
+  async function saveNickname() {
+    const value = nicknameDraft.trim();
+    if (value.length < 2 || value.length > 24) return;
+    await saveProfile({ nickname: value });
+    setEditingNickname(false);
+  }
 
   if (!me || !gam) {
     return (
@@ -129,10 +192,8 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
   const totalProgress = `${unlockedCount}/${gam.achievements.length}`;
   const featured = gam.achievements.slice(0, 7);
   const overflow = Math.max(0, gam.achievements.length - featured.length);
-  const streakProgress = groups.streak.reduce((max, item) => Math.max(max, item.progress), 0);
-  const currentStreak = Math.max(1, streakProgress || unlockedCount);
-  const bestStreak = Math.max(currentStreak, gam.level + 1);
-  const totalLogins = Math.max(gam.level + unlockedCount + me.creditBalance, currentStreak);
+  const currentStreak = gam.currentLoginStreak;
+  const bestStreak = gam.bestLoginStreak;
 
   const openDetailFromKeyboard = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -152,10 +213,11 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
           onClick={() => setDetailOpen(true)}
           onKeyDown={openDetailFromKeyboard}
         >
-          <div className="pf-hero__avatar" aria-hidden="true">
-            <Ball />
+          <div className="pf-hero__avatar">
+            <AvatarEmblem avatarKey={me.avatarKey} />
           </div>
           <div className="pf-hero__body">
+            <div className="pf-hero__name">{displayName(me)}</div>
             <div className="pf-hero__email">{me.email}</div>
 
             <div className="pf-hero__badges">
@@ -165,6 +227,11 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
               <span className="pf-pill pf-pill--level">
                 <Shield /> Nivel {gam.level} - {levelName(gam.level)}
               </span>
+              {currentStreak > 0 && (
+                <span className="pf-pill pf-pill--streak">
+                  <Flame /> {currentStreak}d
+                </span>
+              )}
             </div>
 
             <div className="pf-xp">
@@ -302,11 +369,75 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
             </div>
 
             <section className="pf-full-hero">
-              <div className="pf-full-hero__avatar" aria-hidden="true">
-                <Ball />
-              </div>
-              <span className="pf-full-hero__avatar-note">Toque para trocar avatar</span>
-              <button type="button" className="pf-full-hero__nickname">Definir Nickname</button>
+              <button
+                type="button"
+                className="pf-full-hero__avatar-btn"
+                aria-label="Trocar avatar"
+                onClick={() => setAvatarPickerOpen((v) => !v)}
+              >
+                <span className="pf-full-hero__avatar">
+                  <AvatarEmblem avatarKey={me.avatarKey} />
+                </span>
+                <span className="pf-full-hero__avatar-note">Toque para trocar avatar</span>
+              </button>
+
+              {avatarPickerOpen && (
+                <div className="pf-avatar-picker" role="group" aria-label="Escolher avatar">
+                  {AVATAR_KEYS.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className="pf-avatar-option"
+                      aria-label={`Avatar ${key}`}
+                      aria-pressed={me.avatarKey === key}
+                      data-selected={me.avatarKey === key}
+                      disabled={saving}
+                      onClick={() => pickAvatar(key)}
+                    >
+                      <AvatarEmblem avatarKey={key} />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {editingNickname ? (
+                <div className="pf-nickname-edit">
+                  <input
+                    className="pf-nickname-input"
+                    value={nicknameDraft}
+                    onChange={(e) => setNicknameDraft(e.target.value)}
+                    maxLength={24}
+                    placeholder="Seu nickname"
+                    aria-label="Nickname"
+                    autoFocus
+                  />
+                  <div className="pf-nickname-actions">
+                    <button
+                      type="button"
+                      className="pf-action pf-action--primary pf-action--sm"
+                      onClick={saveNickname}
+                      disabled={saving || nicknameDraft.trim().length < 2}
+                    >
+                      Salvar
+                    </button>
+                    <button
+                      type="button"
+                      className="pf-action pf-action--outline pf-action--sm"
+                      onClick={() => setEditingNickname(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="pf-full-hero__nickname"
+                  onClick={startEditingNickname}
+                >
+                  {me.nickname ? me.nickname : 'Definir Nickname'}
+                </button>
+              )}
               <p>{me.email}</p>
 
               <div className="pf-full-hero__badges">
@@ -337,9 +468,9 @@ export function PerfilScreen({ api, onLogout, onUpgrade }: Props) {
             </section>
 
             <section className="pf-full-stats" aria-label="Resumo detalhado do perfil">
-              <SummaryStat icon={<Flame />} label="Streak" value={`${currentStreak} dias`} tone="orange" />
+              <SummaryStat icon={<Flame />} label="Streak Atual" value={`${currentStreak} dias`} tone="orange" />
               <SummaryStat icon={<Trophy />} label="Maior Streak" value={`${bestStreak} dias`} tone="gold" />
-              <SummaryStat icon={<Calendar />} label="Total Logins" value={String(totalLogins)} tone="cyan" />
+              <SummaryStat icon={<Spark />} label="Conquistas" value={totalProgress} tone="cyan" />
             </section>
 
             <div className="pf-full-sections">
@@ -469,6 +600,7 @@ function AchievementTile({
       <small>
         {achievement.progress}/{achievement.threshold}
       </small>
+      {achievement.rewardXp > 0 && <span className="pf-ach-reward">+{achievement.rewardXp} XP</span>}
       <div className="pf-mini-bar" aria-hidden="true">
         <div style={{ width: `${progress}%` }} />
       </div>
@@ -494,13 +626,17 @@ function AchievementRow({ achievement }: { achievement: AchievementStatus }) {
         <div className="pf-mini-bar" aria-label={`${achievement.name} progresso`}>
           <div style={{ width: `${progress}%` }} />
         </div>
-        <small>{formatUnlockedAt(achievement.unlockedAt)}</small>
+        <div className="pf-ach-row__foot">
+          <small>{formatUnlockedAt(achievement.unlockedAt)}</small>
+          {achievement.rewardXp > 0 && <small className="pf-ach-reward">+{achievement.rewardXp} XP</small>}
+        </div>
       </div>
     </article>
   );
 }
 
 function iconForAchievement(a: AchievementStatus) {
+  if (a.category === 'streak' || a.icon.includes('flame')) return <Flame />;
   if (a.key.includes('green') || a.icon.includes('star')) return <Spark />;
   if (a.key.includes('level')) return <Shield />;
   if (a.key.includes('referral')) return <Users />;
@@ -526,6 +662,14 @@ function Ball() {
   );
 }
 
+function Bolt() {
+  return (
+    <IconBase>
+      <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
+    </IconBase>
+  );
+}
+
 function Calendar() {
   return (
     <IconBase>
@@ -547,23 +691,6 @@ function Close() {
   return (
     <IconBase>
       <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </IconBase>
-  );
-}
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg className="pf-chevron" data-open={open} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M8 10l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function Credit() {
-  return (
-    <IconBase>
-      <rect x="4" y="6" width="16" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M7 10h10M8 14h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </IconBase>
   );
 }

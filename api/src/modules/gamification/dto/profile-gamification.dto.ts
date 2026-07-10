@@ -6,6 +6,10 @@ export class AchievementStatusDto {
   name!: string;
   description!: string;
   icon!: string;
+  /** Persisted grouping: permanent | streak | daily. */
+  category!: string;
+  /** XP granted when this achievement unlocks. */
+  rewardXp!: number;
   unlocked!: boolean;
   unlockedAt!: string | null;
   progress!: number;
@@ -19,5 +23,8 @@ export class ProfileGamificationDto {
   currentLevelFloor!: number;
   /** Cumulative XP needed to reach the next level, or null if max level. */
   nextLevelXp!: number | null;
+  /** Consecutive-day login streak (Phase 3). */
+  currentLoginStreak!: number;
+  bestLoginStreak!: number;
   achievements!: AchievementStatusDto[];
 }

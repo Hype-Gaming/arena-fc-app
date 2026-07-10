@@ -73,10 +73,47 @@ export interface NationalTeamSyncSummary {
   teamsUpserted: number;
 }
 
-/** Free API-Football tier only covers up to this season. */
-const CATALOG_SEASON = 2024;
-/** Cap league syncs per run so one click can't burn the daily quota. */
-const LEAGUE_CAP = 30;
+/**
+ * Season the catalog pulls squads for. The free tier only covered up to 2024;
+ * a paid tier covers the current season, so this is env-driven — bump
+ * API_FOOTBALL_SEASON when the new season's squads are published.
+ */
+function catalogSeason(): number {
+  return Number(process.env.API_FOOTBALL_SEASON ?? 2025);
+}
+/**
+ * Cap league syncs per run so one click/cron can't burn the daily quota.
+ * Free tier is 100/day → keep it low; Pro is 7.500/day → 80 leagues is cheap.
+ */
+function leagueCap(): number {
+  return Number(process.env.API_FOOTBALL_LEAGUE_CAP ?? 80);
+}
+/** Max /teams searches one live-logo sync spends (protects the daily quota). */
+function searchCap(): number {
+  return Number(process.env.API_FOOTBALL_SEARCH_CAP ?? 200);
+}
+
+/**
+ * Curated top competitions whose current-season squads we keep fresh on a
+ * schedule, so promoted / newly-added teams resolve crests without an admin
+ * ever clicking "sync". ~25 leagues = ~25 API requests per run — trivial on a
+ * paid tier. IDs are API-Football league ids.
+ */
+const TOP_LEAGUES: number[] = [
+  39, 40, // England: Premier League, Championship
+  140, 141, // Spain: LaLiga, LaLiga 2
+  135, 136, // Italy: Serie A, Serie B
+  78, 79, // Germany: Bundesliga, 2. Bundesliga
+  61, 62, // France: Ligue 1, Ligue 2
+  94, // Portugal: Primeira Liga
+  88, // Netherlands: Eredivisie
+  71, 72, // Brazil: Série A, Série B
+  128, // Argentina: Liga Profesional
+  253, 262, // USA MLS, Mexico Liga MX
+  307, // Saudi Pro League
+  2, 3, 848, // UEFA: Champions League, Europa League, Conference League
+  13, 11, // CONMEBOL: Libertadores, Sul-Americana
+];
 
 // National-team competitions (API-Football league/season) whose squads are the
 // seleções that show up in international fixtures. Three requests cover ~50+
@@ -92,8 +129,6 @@ const NATIONAL_TEAM_COMPETITIONS: { league: number; season: number }[] = [
 // Reserve/youth sides API-Football returns for a plain name search — never the
 // crest we want for a first-team live match.
 const RESERVE = /\b(ii|iii|b|u-?1\d|u-?2\d|sub-?\d+|reserves?|youth|academy)\b/i;
-// One live-logo sync fires at most this many /teams searches (free tier = 100/day).
-const SEARCH_CAP = 40;
 
 function apiKey(): string | undefined {
   return process.env.API_FOOTBALL_KEY;
@@ -119,12 +154,11 @@ export class AdminTeamsService {
    * cache is cumulative, so the "Ao Vivo" tab shows more crests over time with no
    * admin action. No-ops when API_FOOTBALL_KEY isn't configured.
    *
-   * Cadence is deliberately conservative: each run spends up to SEARCH_CAP (40)
-   * API-Football searches and the free tier is ~100/day, so the default every-6h
-   * (≤4 runs/day) stays within budget. Override with LIVE_LOGO_SYNC_CRON on a
-   * paid tier to fill crests faster.
+   * Cadence: each run spends up to searchCap() API-Football searches. On the
+   * Pro tier (7.500/day) the default every-2h (≤12 runs/day × 200 = 2.400) is
+   * well within budget. Override with LIVE_LOGO_SYNC_CRON / API_FOOTBALL_SEARCH_CAP.
    */
-  @Cron(process.env.LIVE_LOGO_SYNC_CRON || '0 0 */6 * * *')
+  @Cron(process.env.LIVE_LOGO_SYNC_CRON || '0 0 */2 * * *')
   async syncLiveLogosJob(): Promise<void> {
     if (!apiKey()) return;
     try {
@@ -136,6 +170,34 @@ export class AdminTeamsService {
       }
     } catch (err) {
       this.logger.warn(`live-logo sync failed: ${(err as Error).message}`);
+    }
+  }
+
+  /**
+   * Keep the catalog current: re-pull the top competitions' squads for the
+   * current season on a daily schedule, so promoted / newly-added clubs resolve
+   * crests on the live and "próximos jogos" tabs without any admin action.
+   * ~25 requests/run — negligible on a paid tier. No-ops without a key.
+   */
+  @Cron(process.env.TOP_LEAGUE_SYNC_CRON || '0 30 4 * * *')
+  async syncTopLeaguesJob(): Promise<void> {
+    if (!apiKey()) return;
+    const season = catalogSeason();
+    let synced = 0;
+    let teams = 0;
+    for (const id of TOP_LEAGUES) {
+      try {
+        const r = await this.sync(id, season);
+        teams += r.upserted;
+        synced += 1;
+      } catch {
+        // Season not published yet / transient — skip this league, keep going.
+      }
+    }
+    if (synced > 0) {
+      this.logger.log(
+        `top-league sync: ${synced}/${TOP_LEAGUES.length} leagues, ${teams} team(s) (season ${season})`,
+      );
     }
   }
 
@@ -253,8 +315,9 @@ export class AdminTeamsService {
     let notFound = 0;
     let skippedForCap = 0;
 
+    const cap = searchCap();
     for (const name of unmatched) {
-      if (searched >= SEARCH_CAP) {
+      if (searched >= cap) {
         skippedForCap += 1;
         continue;
       }
@@ -358,13 +421,14 @@ export class AdminTeamsService {
       else if (e.competition) unmapped.add(e.competition);
     }
 
-    const ids = [...leagueIds].slice(0, LEAGUE_CAP);
+    const ids = [...leagueIds].slice(0, leagueCap());
+    const season = catalogSeason();
     let synced = 0;
     let failed = 0;
     let teamsUpserted = 0;
     for (const id of ids) {
       try {
-        const r = await this.sync(id, CATALOG_SEASON);
+        const r = await this.sync(id, season);
         teamsUpserted += r.upserted;
         synced += 1;
       } catch {

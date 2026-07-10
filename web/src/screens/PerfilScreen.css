@@ -1090,3 +1090,121 @@
     transition: none;
   }
 }
+
+/* ── Preset avatar emblems (Phase 2) ─────────────────────────────────── */
+.pf-emblem {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--pf-green);
+}
+.pf-emblem[data-tone='green'] { color: var(--pf-green); }
+.pf-emblem[data-tone='gold'] { color: var(--pf-gold); }
+.pf-emblem[data-tone='cyan'] { color: var(--pf-cyan); }
+.pf-emblem[data-tone='orange'] { color: var(--pf-orange); }
+.pf-emblem[data-tone='blue'] { color: #4aa3ff; }
+.pf-emblem[data-tone='violet'] { color: #a888ff; }
+.pf-emblem[data-tone='yellow'] { color: #ffd23f; }
+
+.pf-pill--streak {
+  color: var(--pf-orange);
+  border-color: rgba(255, 123, 50, 0.4);
+  background: rgba(255, 123, 50, 0.1);
+}
+
+/* Avatar button + picker grid (in the full-profile hero) */
+.pf-full-hero__avatar-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pf-avatar-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: min(100%, 320px);
+  margin: 4px auto 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pf-line-soft);
+  border-radius: 14px;
+}
+
+.pf-avatar-option {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border: 1.5px solid var(--pf-line-soft);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.05s;
+}
+.pf-avatar-option svg { width: 26px; height: 26px; }
+.pf-avatar-option:hover { border-color: rgba(0, 239, 130, 0.5); }
+.pf-avatar-option:active { transform: scale(0.96); }
+.pf-avatar-option[data-selected='true'] {
+  border-color: var(--pf-green);
+  box-shadow: 0 0 0 3px rgba(0, 239, 130, 0.16);
+}
+.pf-avatar-option:disabled { opacity: 0.5; cursor: default; }
+
+/* Nickname inline editor */
+.pf-nickname-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: min(100%, 280px);
+  margin: 0 auto;
+}
+.pf-nickname-input {
+  width: 100%;
+  padding: 10px 14px;
+  color: var(--pf-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--pf-line);
+  border-radius: 10px;
+  font-family: var(--pf-display);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: center;
+}
+.pf-nickname-input:focus {
+  outline: none;
+  border-color: var(--pf-green);
+  box-shadow: 0 0 0 3px rgba(0, 239, 130, 0.14);
+}
+.pf-nickname-actions {
+  display: flex;
+  gap: 8px;
+}
+.pf-action--sm {
+  min-height: 34px;
+  padding: 6px 16px;
+  font-size: 13px;
+}
+
+/* Achievement reward chip + row footer */
+.pf-ach-reward {
+  color: var(--pf-green);
+  font-family: var(--pf-display);
+  font-weight: 800;
+  font-size: 11px;
+}
+.pf-ach-tile .pf-ach-reward { margin-top: 2px; }
+.pf-ach-row__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.pf-ach-row__foot small { color: var(--pf-muted); font-size: 11px; }

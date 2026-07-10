@@ -4,7 +4,7 @@ import { CreditsService } from '../credits/credits.service';
 import { InsufficientCreditsError } from '../credits/errors';
 import { SportsFeedService } from '../sports-feed/sports-feed.service';
 import { NormalizedLiveEvent } from '../sports-feed/sports-feed.types';
-import { buildTeamLogoIndex, matchTeamLogo } from '../sports-feed/team-logo.match';
+import { matchTeamLogo } from '../sports-feed/team-logo.match';
 import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { rankMatches } from './match-search.util';
 import {
@@ -87,11 +87,9 @@ export class TipsterService {
     if (events.length === 0) return [];
 
     // Attach catalog crests (same source as the live tab) so the "Próximos
-    // jogos" cards show logos instead of bare initials.
-    const teams = await this.prisma.team.findMany({
-      select: { externalId: true, name: true, logoUrl: true, country: true },
-    });
-    const index = buildTeamLogoIndex(teams);
+    // jogos" cards show logos instead of bare initials. Reuse the feed's cached
+    // index rather than re-scanning the Team table here.
+    const index = await this.sportsFeed.teamLogoIndex();
     const logo = (name: string): string | null => {
       const ref = matchTeamLogo(name, index);
       return ref ? teamLogoUrl(ref.externalId) : null;

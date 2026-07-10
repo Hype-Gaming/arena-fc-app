@@ -5,6 +5,8 @@ import { PerfilScreen } from './PerfilScreen';
 
 const me = {
   email: 'a@b.com',
+  nickname: null as string | null,
+  avatarKey: null as string | null,
   planKey: 'premium',
   planName: 'Premium',
   creditBalance: 7,
@@ -15,12 +17,16 @@ const gamification = {
   level: 3,
   currentLevelFloor: 200,
   nextLevelXp: 400,
+  currentLoginStreak: 4,
+  bestLoginStreak: 9,
   achievements: [
     {
       key: 'first_unlock',
       name: 'Primeira Entrada',
       description: 'Destrave sua primeira entrada.',
       icon: 'trophy',
+      category: 'permanent',
+      rewardXp: 20,
       unlocked: true,
       unlockedAt: '2026-06-01T00:00:00.000Z',
       progress: 1,
@@ -31,27 +37,35 @@ const gamification = {
       name: 'Cacador de Tips',
       description: 'Destrave 10 entradas.',
       icon: 'trophy',
+      category: 'permanent',
+      rewardXp: 40,
       unlocked: false,
       unlockedAt: null,
       progress: 1,
       threshold: 10,
     },
     {
-      key: 'ten_greens',
-      name: 'Sequencia Verde',
-      description: 'Acumule 10 entradas green.',
-      icon: 'star-gold',
+      key: 'streak_3',
+      name: 'Aquecendo',
+      description: 'Acesse o app 3 dias seguidos.',
+      icon: 'flame',
+      category: 'streak',
+      rewardXp: 15,
       unlocked: false,
       unlockedAt: null,
-      progress: 2,
-      threshold: 10,
+      progress: 3,
+      threshold: 3,
     },
   ],
 };
 
 function makeApi(meOverride?: Partial<typeof me>) {
   const profile = { ...me, ...meOverride };
+  const patch = vi.fn((_path: string, body: Record<string, unknown>) =>
+    Promise.resolve({ ...profile, ...body }),
+  );
   return {
+    patch,
     get: vi.fn((path: string) => {
       if (path === '/me') return Promise.resolve(profile);
       if (path === '/gamification/me') return Promise.resolve(gamification);
