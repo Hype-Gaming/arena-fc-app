@@ -20,7 +20,7 @@ export const CATEGORY_EXPLAINERS: Record<string, Explainer> = {
   alavancagem: {
     title: 'Entenda como funciona a Alavancagem',
     // Popup art — troque este arquivo pela imagem final da Alavancagem.
-    imageSrc: '/alavancagem.png',
+    imageSrc: '/Alavancagem.png',
     imageAlt: 'Alavancagem — Arena FC',
     body: 'Sequência de 3 odds de baixo risco no mesmo dia. A cada acerto, o ganho é reinvestido no próximo, multiplicando o retorno final.',
     steps: [
