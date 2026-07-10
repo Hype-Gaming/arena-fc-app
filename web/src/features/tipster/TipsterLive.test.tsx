@@ -67,7 +67,7 @@ describe('TipsterLive', () => {
   it('renders an empty state when no matches are live', () => {
     render(<TipsterLive matches={[]} />);
     expect(
-      screen.getByText(/nenhuma partida ao vivo agora/i),
+      screen.getByText(/nenhum jogo ao vivo das principais ligas/i),
     ).toBeInTheDocument();
   });
 });

@@ -142,7 +142,9 @@ jobs:
   deploy:
     name: Deploy by SSH
     runs-on: ubuntu-latest
-    needs: publish
+    # Depends on the build validation (docker), not publish: the VPS rebuilds the
+    # images itself via `up --build`, so a GHCR publish hiccup never blocks deploy.
+    needs: docker
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.ENABLE_SSH_DEPLOY == 'true'
     environment: production
 
