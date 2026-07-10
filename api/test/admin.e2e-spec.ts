@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { signTestAccess, signTestAdminSession } from './utils/auth';
+import { signTestAccess } from './utils/auth';
 
 describe('Admin (e2e) — guard', () => {
   let app: INestApplication;
@@ -53,7 +53,11 @@ describe('Admin (e2e) — admin CRUD', () => {
       data: { email: `admin-${Date.now()}@x.com`, role: 'admin' },
     });
     adminToken = await signTestAccess(admin.id, admin.email);
-    adminSession = await signTestAdminSession(admin.id, admin.email);
+    const session = await request(app.getHttpServer())
+      .post('/auth/admin/session')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(201);
+    adminSession = session.body.adminAccessToken;
   });
 
   afterAll(async () => {
