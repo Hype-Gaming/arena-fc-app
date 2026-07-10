@@ -56,7 +56,7 @@ describe('Admin (e2e) — admin CRUD', () => {
     const session = await request(app.getHttpServer())
       .post('/auth/admin/session')
       .set('Authorization', `Bearer ${adminToken}`)
-      .expect(201);
+      .expect(200);
     adminSession = session.body.adminAccessToken;
   });
 

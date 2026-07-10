@@ -30,7 +30,7 @@ describe('Tutorial (e2e)', () => {
     const session = await request(app.getHttpServer())
       .post('/auth/admin/session')
       .set('Authorization', `Bearer ${adminToken}`)
-      .expect(201);
+      .expect(200);
     adminSession = session.body.adminAccessToken;
   });
 
