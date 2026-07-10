@@ -1,7 +1,7 @@
 // web/src/features/sportsbook/SportsbookFrame.tsx
 // POC: embed the Esportiva sportsbook directly in an iframe inside the Tips tab.
 // Hardcoded URL for now; the platform sends no X-Frame-Options/CSP, so it frames.
-const SPORTSBOOK_URL = 'https://esportiva.bet.br/';
+const SPORTSBOOK_URL = 'https://esportiva.bet.br/sports/soccer/sp-66';
 
 export function SportsbookFrame() {
   return (
