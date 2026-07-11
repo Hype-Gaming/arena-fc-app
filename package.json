@@ -7,6 +7,6 @@
     "up": "docker compose up -d --build",
     "down": "docker compose down",
     "logs": "docker compose logs -f",
-    "test:infra": "node test/workspace.test.js && node test/infra.test.js && node test/compose.test.js"
+    "test:infra": "node test/workspace.test.js && node test/infra.test.js && node test/compose.test.js && node test/workflow.test.js"
   }
 }

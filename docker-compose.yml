@@ -36,6 +36,18 @@ services:
       - "3000"
     ports:
       - "3000:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/health').then(async (res) => { if (!res.ok) process.exit(1); const body = await res.json(); if (body.status !== 'ok' || body.db !== 'up') process.exit(1); }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 60s
 
   web:
     build:
@@ -51,8 +63,10 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - api
-      - web
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
 
 volumes:
   pgdata:

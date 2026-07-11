@@ -147,6 +147,12 @@ jobs:
     needs: docker
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.ENABLE_SSH_DEPLOY == 'true'
     environment: production
+    concurrency:
+      group: production-deploy-${{ github.repository }}
+      # Let the running deploy finish. GitHub keeps only the newest pending job,
+      # so rapid pushes converge on the latest validated revision without two
+      # Compose operations racing on the VPS.
+      cancel-in-progress: false
 
     steps:
       - name: Install SSH key
@@ -159,11 +165,47 @@ jobs:
       - name: Deploy application
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" << 'EOF'
-            set -e
+            set -euo pipefail
             cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch --all --prune
-            git checkout "${{ github.ref_name }}"
-            git pull --ff-only
-            docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-            docker compose ps
+
+            readonly EXPECTED_SHA="${{ github.sha }}"
+            git fetch --prune origin "${{ github.ref_name }}"
+            git checkout --detach "$EXPECTED_SHA"
+            test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+            compose() {
+              docker compose \
+                --env-file .env.production \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                "$@"
+            }
+
+            diagnostics() {
+              compose ps || true
+              compose logs --no-color --tail=200 api web nginx || true
+            }
+
+            # `--wait` observes the API healthcheck, which only turns healthy
+            # after migrations, seed, Nest boot and a successful DB query.
+            if ! compose up -d --build --wait --wait-timeout 240; then
+              diagnostics
+              exit 1
+            fi
+
+            # Verify the same public path used by clients through nginx.
+            if ! health_payload="$(curl --fail --silent --show-error \
+              --retry 10 --retry-delay 3 --retry-connrefused \
+              http://127.0.0.1:8080/api/health)"; then
+              diagnostics
+              exit 1
+            fi
+            if ! printf '%s' "$health_payload" | grep -q '"status":"ok"' || \
+               ! printf '%s' "$health_payload" | grep -q '"db":"up"'; then
+              printf 'Unexpected health response: %s\n' "$health_payload"
+              diagnostics
+              exit 1
+            fi
+
+            compose ps
           EOF
