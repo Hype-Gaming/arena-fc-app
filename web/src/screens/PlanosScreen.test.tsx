@@ -1,6 +1,6 @@
 // web/src/screens/PlanosScreen.test.tsx
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlanosScreen } from './PlanosScreen';
 
@@ -35,7 +35,9 @@ describe('PlanosScreen', () => {
 
     // current plan (premium) is not upgradeable
     const premium = await screen.findByLabelText('Plano Premium');
-    expect(premium).toHaveAttribute('data-state', 'current');
+    await waitFor(() =>
+      expect(premium).toHaveAttribute('data-state', 'current'),
+    );
 
     // higher plan shows a paid upgrade CTA
     const diamante = screen.getByLabelText('Plano Diamante');

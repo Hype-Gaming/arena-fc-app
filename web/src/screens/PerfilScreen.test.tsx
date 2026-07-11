@@ -144,7 +144,8 @@ describe('PerfilScreen', () => {
     await user.click(screen.getByRole('button', { name: /perfil do usuario/i }));
 
     expect(screen.getByRole('dialog', { name: /perfil completo/i })).toBeInTheDocument();
-    expect(screen.getByText(/total logins/i)).toBeInTheDocument();
+    expect(screen.getByText(/streak atual/i)).toBeInTheDocument();
+    expect(screen.getByText(/maior streak/i)).toBeInTheDocument();
   });
 
   it('opens the checkout URL in a new tab when Upgrade is clicked', async () => {
