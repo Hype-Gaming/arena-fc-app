@@ -65,7 +65,8 @@ describe('Gamification (e2e)', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(res.body.xp).toBe(120);
+    // Opening the profile registers today's first login and awards +5 XP.
+    expect(res.body.xp).toBe(125);
     expect(res.body.level).toBe(2);
     expect(res.body.currentLevelFloor).toBe(100);
     expect(res.body.nextLevelXp).toBe(250);

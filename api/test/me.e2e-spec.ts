@@ -58,6 +58,8 @@ describe('Me (e2e)', () => {
 
     expect(res.body).toEqual({
       email: 'me-free@test.dev',
+      nickname: null,
+      avatarKey: null,
       planKey: 'free',
       planName: 'Livre',
       creditBalance: 5,
