@@ -47,7 +47,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 24
-      start_period: 60s
+      # The container applies migrations and runs the idempotent seed before
+      # Nest starts listening, so production needs a generous grace period.
+      start_period: 120s
 
   web:
     build:

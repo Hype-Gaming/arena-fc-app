@@ -9,8 +9,12 @@ const workflow = fs.readFileSync(
 );
 
 assert.ok(
-  /group:\s*production-deploy-\$\{\{ github\.repository \}\}/.test(workflow),
-  'production deploys must share an exclusive concurrency group',
+  workflow.includes("group: ci-cd-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 'production' || github.ref }}"),
+  'production workflows must share an exclusive concurrency group',
+);
+assert.ok(
+  workflow.includes("cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}"),
+  'production workflows must never be cancelled mid-deploy',
 );
 assert.ok(
   /EXPECTED_SHA="\$\{\{ github\.sha \}\}"/.test(workflow),
@@ -21,11 +25,20 @@ assert.ok(
   'deploy must check out the validated SHA instead of the moving branch',
 );
 assert.ok(
+  /git status --porcelain --untracked-files=all/.test(workflow),
+  'deploy must reject a dirty checkout',
+);
+assert.ok(
+  /if \[ "\$REMOTE_SHA" != "\$EXPECTED_SHA" \]/.test(workflow),
+  'a stale validated run must not roll production back',
+);
+assert.ok(!/git pull(?:\s|$)/.test(workflow), 'deploy must not follow a moving branch');
+assert.ok(
   /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SHA"/.test(workflow),
   'deploy must verify the checked-out revision',
 );
 assert.ok(
-  /compose up -d --build --wait --wait-timeout 240/.test(workflow),
+  /compose up -d --build --wait --wait-timeout 300/.test(workflow),
   'deploy must wait for container health',
 );
 assert.ok(

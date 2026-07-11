@@ -12,6 +12,13 @@ permissions:
   contents: read
   packages: write
 
+# Serialize production revisions from validation through publishing/deploy. A
+# newer feature-branch run may replace an older one, but a production run is
+# never interrupted while migrations or Compose changes may be in progress.
+concurrency:
+  group: ci-cd-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 'production' || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
 env:
   NODE_VERSION: "20"
   POSTGRES_USER: tips
@@ -147,12 +154,6 @@ jobs:
     needs: docker
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.ENABLE_SSH_DEPLOY == 'true'
     environment: production
-    concurrency:
-      group: production-deploy-${{ github.repository }}
-      # Let the running deploy finish. GitHub keeps only the newest pending job,
-      # so rapid pushes converge on the latest validated revision without two
-      # Compose operations racing on the VPS.
-      cancel-in-progress: false
 
     steps:
       - name: Install SSH key
@@ -165,11 +166,29 @@ jobs:
       - name: Deploy application
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" << 'EOF'
-            set -euo pipefail
+            set -eu
             cd "${{ secrets.DEPLOY_PATH }}"
 
             readonly EXPECTED_SHA="${{ github.sha }}"
-            git fetch --prune origin "${{ github.ref_name }}"
+            readonly DEPLOY_REF="${{ github.ref_name }}"
+
+            if [ -n "$(git status --porcelain --untracked-files=all)" ]; then
+              echo "Deployment checkout is dirty; refusing to mix local changes into the image." >&2
+              git status --short >&2
+              exit 1
+            fi
+
+            git fetch --prune origin \
+              "+refs/heads/$DEPLOY_REF:refs/remotes/origin/$DEPLOY_REF"
+            readonly REMOTE_SHA="$(git rev-parse "refs/remotes/origin/$DEPLOY_REF")"
+
+            # If main advanced while this run was validating, the newer queued
+            # run owns the deploy. Never roll production back to this stale SHA.
+            if [ "$REMOTE_SHA" != "$EXPECTED_SHA" ]; then
+              echo "Skipping stale deploy: validated $EXPECTED_SHA, branch is now $REMOTE_SHA."
+              exit 0
+            fi
+
             git checkout --detach "$EXPECTED_SHA"
             test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
@@ -182,13 +201,15 @@ jobs:
             }
 
             diagnostics() {
-              compose ps || true
+              compose ps --all || true
               compose logs --no-color --tail=200 api web nginx || true
             }
 
+            compose config >/dev/null
+
             # `--wait` observes the API healthcheck, which only turns healthy
             # after migrations, seed, Nest boot and a successful DB query.
-            if ! compose up -d --build --wait --wait-timeout 240; then
+            if ! compose up -d --build --wait --wait-timeout 300; then
               diagnostics
               exit 1
             fi
@@ -200,8 +221,8 @@ jobs:
               diagnostics
               exit 1
             fi
-            if ! printf '%s' "$health_payload" | grep -q '"status":"ok"' || \
-               ! printf '%s' "$health_payload" | grep -q '"db":"up"'; then
+            if ! printf '%s' "$health_payload" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' || \
+               ! printf '%s' "$health_payload" | grep -Eq '"db"[[:space:]]*:[[:space:]]*"up"'; then
               printf 'Unexpected health response: %s\n' "$health_payload"
               diagnostics
               exit 1
