@@ -27,6 +27,9 @@ services:
       LASTLINK_WEBHOOK_SECRET: ${LASTLINK_WEBHOOK_SECRET}
       PAYT_WEBHOOK_TOKEN: ${PAYT_WEBHOOK_TOKEN}
       API_FOOTBALL_KEY: ${API_FOOTBALL_KEY:-}
+      # Espera do "confirmar banca no Telegram" antes de liberar o app (segundos).
+      # Vazio = default do código (600s = 10 min).
+      TELEGRAM_UNLOCK_WAIT_SECONDS: ${TELEGRAM_UNLOCK_WAIT_SECONDS:-}
       ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-false}
       NODE_ENV: ${NODE_ENV}
     depends_on:
