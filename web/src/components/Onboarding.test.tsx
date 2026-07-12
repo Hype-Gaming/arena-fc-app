@@ -61,5 +61,9 @@ describe('Onboarding', () => {
     expect(window.open).toHaveBeenCalled();
     // Lands on the final "ready" screen.
     expect(await screen.findByRole('heading', { name: /tudo certo/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /verificar bot no telegram/i })).toHaveAttribute(
+      'href',
+      'https://t.me/arenaofc_bot?start=onboarding',
+    );
   });
 });

@@ -11,6 +11,7 @@ import './Onboarding.css';
 const TELEGRAM_URL =
   (import.meta.env.VITE_TELEGRAM_URL as string | undefined) ??
   'https://t.me/+arena_fc';
+const TELEGRAM_BOT_ONBOARDING_URL = 'https://t.me/arenaofc_bot?start=onboarding';
 const TOUR_VIDEO_URL = import.meta.env.VITE_ONBOARDING_TOUR_URL as
   | string
   | undefined;
@@ -124,15 +125,26 @@ export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = 
             <span className="onb__pill">✳ ACESSO RÁPIDO AO APP</span>
             <h2 className="onb__title">ARENA FC NO SEU CELULAR.</h2>
             <p className="onb__sub">Você abre com um toque, sem precisar procurar.</p>
-            <div className="onb__phone" aria-hidden="true">
-              <span className="onb__phone-label">TELA INICIAL</span>
-              <div className="onb__grid">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <span key={i} className={i === 7 ? 'onb__app onb__app--brand' : 'onb__app'}>
-                    {i === 7 && <Hex />}
+            <div className="onb__install-preview" aria-hidden="true">
+              <div className="onb__phone">
+                <div className="onb__phone-top">
+                  <span>9:41</span>
+                  <i />
+                  <span className="onb__phone-signal">● ◒</span>
+                </div>
+                <span className="onb__phone-label">SUA TELA INICIAL</span>
+                <div className="onb__grid">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <span key={i} className="onb__app" />
+                  ))}
+                  <span className="onb__app-wrap">
+                    <span className="onb__app onb__app--brand"><Hex /></span>
+                    <b>ARENA FC</b>
                   </span>
-                ))}
+                </div>
+                <div className="onb__dock"><i /><i /><i /></div>
               </div>
+              <span className="onb__phone-callout"><Check /> Acesso em 1 toque</span>
             </div>
             {install.installed ? (
               <p className="onb__ok"><Check /> App já está na sua tela inicial.</p>
@@ -146,7 +158,20 @@ export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = 
                 No iPhone: toque em <b>Compartilhar</b> → <b>Adicionar à Tela de Início</b>.
               </p>
             )}
-            <span className="onb__os">iOS · Android</span>
+            {!install.installed && !iosHint && (
+              <div className="onb__install-tip">
+                <span className="onb__install-tip-ico"><Download /></span>
+                <span>
+                  <b>{install.isIOS ? 'Instalação no iPhone' : 'Instalação rápida e segura'}</b>
+                  <small>
+                    {install.isIOS
+                      ? 'Use Compartilhar e selecione “Adicionar à Tela de Início”.'
+                      : 'Não ocupa quase espaço e abre como um aplicativo.'}
+                  </small>
+                </span>
+              </div>
+            )}
+            <span className="onb__os">DISPONÍVEL PARA iOS E ANDROID</span>
             <Nav onBack={() => go(1)} onNext={() => go(3)} nextLabel="Próximo passo" />
           </section>
         )}
@@ -184,6 +209,14 @@ export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = 
               Você já pode explorar o app. As funções liberam automaticamente assim que o
               Telegram confirmar (até 10 minutos).
             </p>
+            <a
+              className="onb__cta onb__cta--blue"
+              href={TELEGRAM_BOT_ONBOARDING_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Send /> Verificar bot no Telegram
+            </a>
             <button type="button" className="onb__cta" onClick={() => setOpen(false)}>
               Começar a usar <Arrow />
             </button>

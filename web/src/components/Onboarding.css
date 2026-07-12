@@ -185,6 +185,7 @@
   color: #0a1420;
   font-size: 16px;
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(140, 230, 10, 0.28);
   transition: filter 0.15s, transform 0.05s;
@@ -252,27 +253,84 @@
 .onb__video-ph small { font-size: 12.5px; opacity: 0.8; }
 
 /* phone mockup (shortcut step) */
+.onb__install-preview {
+  position: relative;
+  padding: 8px 34px 2px;
+}
 .onb__phone {
-  width: 168px;
-  padding: 14px 12px 12px;
-  border-radius: 22px;
-  background: #0b1622;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  position: relative;
+  width: 184px;
+  padding: 10px 14px 14px;
+  overflow: hidden;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 20% 25%, rgba(140, 230, 10, 0.2), transparent 34%),
+    linear-gradient(155deg, #132739 0%, #07111c 72%);
+  border: 4px solid #1e2a36;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.onb__phone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.07), transparent 35%);
+}
+.onb__phone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 13px;
+  color: #dce5ed;
+  font-size: 7px;
+  font-weight: 700;
+}
+.onb__phone-top > i {
+  width: 48px;
+  height: 13px;
+  border-radius: 999px;
+  background: #03070b;
+}
+.onb__phone-signal { font-size: 6px; letter-spacing: 1px; }
+.onb__phone-callout {
+  position: absolute;
+  right: -7px;
+  bottom: 30px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border-radius: 999px;
+  color: #102007;
+  background: #9ee61e;
+  box-shadow: 0 8px 20px rgba(140, 230, 10, 0.32);
+  font-size: 10px;
+  font-weight: 800;
 }
 .onb__phone-label {
   display: block;
   text-align: center;
-  font-size: 9px;
+  font-size: 7px;
   letter-spacing: 0.14em;
-  color: #6b7c8d;
-  margin-bottom: 10px;
+  color: #8293a4;
+  margin: 9px 0 12px;
 }
-.onb__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.onb__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px 10px; }
 .onb__app {
+  display: block;
   aspect-ratio: 1;
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.035);
+}
+.onb__app-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #f3f8fc;
+  font-size: 6px;
+  letter-spacing: 0.03em;
 }
 .onb__app--brand {
   display: flex;
@@ -282,7 +340,43 @@
   background: #fff;
   box-shadow: 0 0 0 2px rgba(140, 230, 10, 0.5), 0 6px 14px rgba(140, 230, 10, 0.35);
 }
-.onb__os { font-size: 11px; letter-spacing: 0.1em; color: #6b7c8d; }
+.onb__dock {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 7px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.onb__dock i { width: 27px; height: 27px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); }
+.onb__install-tip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: 13px;
+  color: #dbe5ee;
+  text-align: left;
+  background: rgba(140, 230, 10, 0.06);
+  border: 1px solid rgba(140, 230, 10, 0.18);
+}
+.onb__install-tip-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  color: #8ce60a;
+  background: rgba(140, 230, 10, 0.12);
+}
+.onb__install-tip > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.onb__install-tip b { font-size: 12.5px; }
+.onb__install-tip small { color: #8193a5; font-size: 11px; line-height: 1.35; }
+.onb__os { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #627486; }
 .onb__ok { display: inline-flex; align-items: center; gap: 7px; color: #8ce60a; font-size: 14px; font-weight: 600; margin: 0; }
 .onb__hint { font-size: 13px; color: #b9c6d4; margin: 0; max-width: 32ch; }
 
