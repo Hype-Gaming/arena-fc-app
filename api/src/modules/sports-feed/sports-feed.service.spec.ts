@@ -40,6 +40,7 @@ function makePrisma() {
     sportEvent: {
       findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn().mockResolvedValue({}),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     team: { findMany: jest.fn().mockResolvedValue([]) },
   } as unknown as PrismaService;
@@ -62,6 +63,12 @@ describe('SportsFeedService.sync', () => {
       homeTeam: 'Botafogo',
       oddHome: 1.9,
       deepLink: 'https://esportiva.bet.br/e/16027580',
+    });
+    expect(prisma.sportEvent.deleteMany).toHaveBeenCalledWith({
+      where: {
+        provider: 'altenar',
+        startsAt: { lt: expect.any(Date) },
+      },
     });
   });
 });
@@ -172,11 +179,24 @@ describe('SportsFeedService.teamLogoIndex', () => {
 });
 
 describe('SportsFeedService.list', () => {
-  it('filters by either team name when q is given', async () => {
+  it('lists only upcoming cached fixtures', async () => {
+    const prisma = makePrisma();
+    const svc = new SportsFeedService(prisma, makeProvider([]));
+    await svc.list();
+    const call = (prisma.sportEvent.findMany as jest.Mock).mock.calls[0][0];
+    expect(call).toMatchObject({
+      where: { startsAt: { gte: expect.any(Date) } },
+      orderBy: { startsAt: 'asc' },
+      take: 200,
+    });
+  });
+
+  it('filters upcoming cached fixtures by either team name when q is given', async () => {
     const prisma = makePrisma();
     const svc = new SportsFeedService(prisma, makeProvider([]));
     await svc.list('bota');
     const where = (prisma.sportEvent.findMany as jest.Mock).mock.calls[0][0].where;
+    expect(where.startsAt).toEqual({ gte: expect.any(Date) });
     expect(where.OR).toEqual([
       { homeTeam: { contains: 'bota', mode: 'insensitive' } },
       { awayTeam: { contains: 'bota', mode: 'insensitive' } },

@@ -126,17 +126,20 @@ export class SportsFeedService {
     return enriched;
   }
 
-  /** Cached fixtures for the admin picker (soonest first, optional name filter). */
+  /** Cached upcoming fixtures for the admin picker (soonest first, optional name filter). */
   list(q?: string) {
     return this.prisma.sportEvent.findMany({
-      where: q
-        ? {
-            OR: [
-              { homeTeam: { contains: q, mode: 'insensitive' } },
-              { awayTeam: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where: {
+        startsAt: { gte: new Date() },
+        ...(q
+          ? {
+              OR: [
+                { homeTeam: { contains: q, mode: 'insensitive' } },
+                { awayTeam: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
       orderBy: { startsAt: 'asc' },
       take: 200,
     });
@@ -168,7 +171,17 @@ export class SportsFeedService {
       await Promise.all(slice.map((e) => this.upsertEvent(e)));
       upserted += slice.length;
     }
+    await this.prunePastEvents();
     return { provider: this.provider.name, fetched: events.length, upserted };
+  }
+
+  private prunePastEvents() {
+    return this.prisma.sportEvent.deleteMany({
+      where: {
+        provider: this.provider.name,
+        startsAt: { lt: new Date() },
+      },
+    });
   }
 
   private upsertEvent(e: NormalizedEvent) {
