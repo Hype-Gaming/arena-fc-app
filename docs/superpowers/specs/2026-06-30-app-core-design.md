@@ -8,7 +8,7 @@
 
 ## 1. Contexto e objetivo
 
-Clone de um app de palpites esportivos (referência: "Premier FC"). O produto central é uma
+Clone de um app de palpites esportivos (referência: "Arena FC"). O produto central é uma
 **IA Tipster**: o usuário escolhe/digita um jogo e o app entrega uma **entrada** (palpite:
 mercado + seleção + odd + justificativa) de forma conversacional, **consumindo créditos**.
 

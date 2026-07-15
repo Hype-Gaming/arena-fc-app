@@ -47,7 +47,7 @@ type AchievementGroupKey = 'permanent' | 'streak' | 'daily';
 
 const env = import.meta.env as Record<string, string | undefined>;
 const SUPPORT_URL = env.VITE_SUPPORT_URL ?? 'https://wa.me/5500000000000';
-const FEEDBACK_URL = env.VITE_FEEDBACK_URL ?? 'mailto:contato@premierfc.app';
+const FEEDBACK_URL = env.VITE_FEEDBACK_URL ?? 'mailto:contato@arenafc.app';
 
 const LEVEL_NAMES = [
   'Novato',
