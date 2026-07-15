@@ -1,0 +1,359 @@
+// api/src/modules/sports-feed/altenar.normalize.spec.ts
+import {
+  normalizeAltenar,
+  normalizeAltenarLive,
+  normalizeAltenarEventDetails,
+  AltenarRaw,
+  AltenarEventDetails,
+} from './altenar.normalize';
+
+const NOW = new Date('2026-07-10T00:00:00Z');
+const link = (id: number) => `https://esportiva.bet.br/e/${id}`;
+
+// Mirrors the live shape confirmed against Altenar's GetEvents.
+function sample(): AltenarRaw {
+  return {
+    events: [
+      {
+        id: 16027580,
+        name: 'Botafogo vs. Santos',
+        startDate: '2026-07-16T22:30:00Z',
+        status: 0,
+        competitorIds: [56845, 54850],
+        marketIds: [1588971991, 1588971992, 1588971993, 1588971994],
+        champId: 11318,
+        catId: 593,
+      },
+    ],
+    competitors: [
+      { id: 56845, name: 'Botafogo', abbreviation: 'BOT' },
+      { id: 54850, name: 'Santos', abbreviation: 'SAN' },
+    ],
+    markets: [
+      {
+        id: 1588971991,
+        typeId: 1,
+        name: 'Vencedor do encontro',
+        oddIds: [4049572921, 4049572922, 4049572923],
+      },
+      { id: 1588971992, typeId: 18, name: 'Total de gols', oddIds: [50, 51] },
+      { id: 1588971993, typeId: 29, name: 'Ambas marcam', oddIds: [60, 61] },
+      // typeId 7 is not a core market — must be dropped from `markets`.
+      { id: 1588971994, typeId: 7, name: 'Handicap asiático', oddIds: [70] },
+    ],
+    odds: [
+      { id: 4049572921, price: 1.9091, name: 'Botafogo', competitorId: 56845 },
+      { id: 4049572922, price: 3.4, name: 'Empate' }, // draw: no competitorId
+      { id: 4049572923, price: 4.1, name: 'Santos', competitorId: 54850 },
+      { id: 50, price: 1.72, name: 'Mais de 2.5' },
+      { id: 51, price: 2.05, name: 'Menos de 2.5' },
+      { id: 60, price: 1.8, name: 'Sim' },
+      { id: 61, price: 1.95, name: 'Não' },
+      { id: 70, price: 1.9, name: 'Botafogo -1' },
+    ],
+    champs: [{ id: 11318, name: 'Brasileirão A' }],
+    categories: [{ id: 593, name: 'Brasil', iso: 'BRA' }],
+  };
+}
+
+describe('normalizeAltenar', () => {
+  it('maps a prematch event with 1X2 odds, competition, country and deep link', () => {
+    const [ev] = normalizeAltenar(sample(), link, NOW);
+    expect(ev).toEqual({
+      externalId: '16027580',
+      homeTeam: 'Botafogo',
+      awayTeam: 'Santos',
+      competition: 'Brasileirão A',
+      countryIso: 'BRA',
+      startsAt: new Date('2026-07-16T22:30:00Z'),
+      oddHome: 1.9091,
+      oddDraw: 3.4,
+      oddAway: 4.1,
+      markets: [
+        {
+          typeId: 1,
+          key: '1x2',
+          name: 'Vencedor do encontro',
+          selections: [
+            { label: 'Botafogo', odd: 1.9091, line: null },
+            { label: 'Empate', odd: 3.4, line: null },
+            { label: 'Santos', odd: 4.1, line: null },
+          ],
+        },
+        {
+          typeId: 18,
+          key: 'over_under',
+          name: 'Total de gols',
+          selections: [
+            { label: 'Mais de 2.5', odd: 1.72, line: 2.5 },
+            { label: 'Menos de 2.5', odd: 2.05, line: 2.5 },
+          ],
+        },
+        {
+          typeId: 29,
+          key: 'btts',
+          name: 'Ambas marcam',
+          selections: [
+            { label: 'Sim', odd: 1.8, line: null },
+            { label: 'Não', odd: 1.95, line: null },
+          ],
+        },
+      ],
+      deepLink: 'https://esportiva.bet.br/e/16027580',
+    });
+  });
+
+  it('drops non-core markets and suspended (price 0) selections', () => {
+    const raw = sample();
+    // Suspend one leg of the Over/Under market → it should not appear.
+    raw.odds!.find((o) => o.id === 50)!.price = 0;
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 'btts']);
+    const ou = ev.markets.find((m) => m.key === 'over_under')!;
+    expect(ou.selections).toEqual([{ label: 'Menos de 2.5', odd: 2.05, line: 2.5 }]);
+    // typeId 7 (Handicap) is never surfaced.
+    expect(ev.markets.some((m) => m.typeId === 7)).toBe(false);
+  });
+
+  it('omits a market whose every leg is suspended', () => {
+    const raw = sample();
+    raw.odds!.find((o) => o.id === 60)!.price = 0;
+    raw.odds!.find((o) => o.id === 61)!.price = 0;
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.markets.some((m) => m.key === 'btts')).toBe(false);
+  });
+
+  it('skips live/started events (status != 0 or already kicked off)', () => {
+    const raw = sample();
+    raw.events!.push({
+      ...raw.events![0],
+      id: 2,
+      status: 1, // live
+    });
+    raw.events!.push({
+      ...raw.events![0],
+      id: 3,
+      startDate: '2026-07-01T00:00:00Z', // in the past relative to NOW
+    });
+    const out = normalizeAltenar(raw, link, NOW);
+    expect(out.map((e) => e.externalId)).toEqual(['16027580']);
+  });
+
+  it('keeps an event with no 1X2 market, odds null', () => {
+    const raw = sample();
+    raw.events![0].marketIds = [];
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.oddHome).toBeNull();
+    expect(ev.oddDraw).toBeNull();
+    expect(ev.oddAway).toBeNull();
+    expect(ev.homeTeam).toBe('Botafogo');
+  });
+
+  it('falls back to splitting the event name when competitors are missing', () => {
+    const raw = sample();
+    raw.competitors = [];
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.homeTeam).toBe('Botafogo');
+    expect(ev.awayTeam).toBe('Santos');
+  });
+
+  it('does not clobber the draw price with an unrelated competitor outcome', () => {
+    const raw = sample();
+    // An extra outcome for a competitor that is neither home nor away.
+    raw.markets![0].oddIds.push(4049572999);
+    raw.odds!.push({ id: 4049572999, price: 9.9, name: 'Outro', competitorId: 99999 });
+    const [ev] = normalizeAltenar(raw, link, NOW);
+    expect(ev.oddDraw).toBe(3.4); // still the real draw, not 9.9
+    expect(ev.oddHome).toBe(1.9091);
+    expect(ev.oddAway).toBe(4.1);
+  });
+
+  it('returns [] for an empty payload', () => {
+    expect(normalizeAltenar({}, link, NOW)).toEqual([]);
+  });
+});
+
+// Mirrors the live shape confirmed against Altenar's GetLiveEvents.
+function liveSample(): AltenarRaw {
+  return {
+    events: [
+      {
+        id: 16946643,
+        name: 'Caac Brasil FC RJ vs. Barcelona EC RJ',
+        startDate: '2026-07-03T17:18:00Z',
+        status: 1,
+        liveTime: "25'",
+        ls: '1ª parte',
+        score: [1, 0],
+        competitorIds: [144935, 115736],
+        marketIds: [1631242256],
+        champId: 8461,
+        catId: 55,
+      },
+    ],
+    categories: [{ id: 55, name: 'Brasil', iso: 'BRA' }],
+    competitors: [
+      { id: 144935, name: 'Caac Brasil FC RJ' },
+      { id: 115736, name: 'Barcelona EC RJ' },
+    ],
+    markets: [
+      { id: 1631242256, typeId: 1, name: 'Vencedor do encontro', oddIds: [1, 2, 3] },
+    ],
+    odds: [
+      { id: 1, price: 1.8, name: 'Caac Brasil FC RJ', competitorId: 144935 },
+      { id: 2, price: 3.2, name: 'Empate' },
+      { id: 3, price: 4.5, name: 'Barcelona EC RJ', competitorId: 115736 },
+    ],
+    champs: [{ id: 8461, name: 'Carioca, Série C' }],
+  };
+}
+
+// Mirrors GetEventDetails: markets carry `sv` (line) + nested `desktopOddIds`,
+// prices live in a separate `odds` array, and `marketGroups[Principal]` defines
+// the popular set.
+function detailsSample(): AltenarEventDetails {
+  return {
+    competitors: [
+      { id: 1, name: 'Suíça' },
+      { id: 2, name: 'Colômbia' },
+    ],
+    marketGroups: [
+      { id: 1, name: 'Principal', sortOrder: 0, marketIds: [100, 101, 102, 200, 300, 900] },
+      { id: 5, name: 'Escanteios', sortOrder: 5, marketIds: [999] },
+    ],
+    markets: [
+      { id: 100, typeId: 1, name: 'Vencedor do encontro', sv: '', desktopOddIds: [[10], [11], [12]] },
+      { id: 101, typeId: 18, name: 'Total de gols', sv: '1.5', desktopOddIds: [[20], [21]] },
+      { id: 102, typeId: 18, name: 'Total de gols', sv: '2.5', desktopOddIds: [[22], [23]] },
+      { id: 200, typeId: 45, name: 'Resultado Correto', sv: '1:0', desktopOddIds: [[30], [31]] },
+      { id: 300, typeId: 17725, name: 'Monitor VAR', sv: '', desktopOddIds: [[40]] },
+      { id: 900, typeId: 21001, name: 'Jogador para Marcar Gol', sv: '', desktopOddIds: [[9999]] },
+      { id: 999, typeId: 166, name: 'Total de escanteios', sv: '8.5', desktopOddIds: [[50], [51]] },
+    ],
+    odds: [
+      { id: 10, price: 1.9, name: 'Suíça', competitorId: 1 },
+      { id: 11, price: 3.4, name: 'Empate' },
+      { id: 12, price: 4.1, name: 'Colômbia', competitorId: 2 },
+      { id: 20, price: 1.7, name: 'Mais de 1.5' },
+      { id: 21, price: 2.1, name: 'Menos de 1.5' },
+      { id: 22, price: 2.4, name: 'Mais de 2.5' },
+      { id: 23, price: 1.55, name: 'Menos de 2.5' },
+      { id: 30, price: 7.5, name: '1:0' },
+      { id: 31, price: 8.0, name: '2:0' },
+      { id: 40, price: 1.5, name: 'Sim' }, // VAR market is denied → unused
+      { id: 50, price: 1.9, name: 'Mais de 8.5' }, // corners not in Principal
+      { id: 51, price: 1.9, name: 'Menos de 8.5' },
+      // no id 9999 → the player market resolves to zero selections
+    ],
+  };
+}
+
+describe('normalizeAltenarEventDetails', () => {
+  it('surfaces the Principal markets, merging lines and dropping noise', () => {
+    const markets = normalizeAltenarEventDetails(detailsSample());
+    // 1X2 + Total (merged) + Resultado Correto. Corners (not Principal), VAR
+    // (denied) and the player market (no live odds) are all excluded.
+    expect(markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 't45']);
+
+    const ou = markets.find((m) => m.key === 'over_under')!;
+    // Both lines merged into one market, each selection keeping its line.
+    expect(ou.selections).toEqual([
+      { label: 'Mais de 1.5', odd: 1.7, line: 1.5 },
+      { label: 'Menos de 1.5', odd: 2.1, line: 1.5 },
+      { label: 'Mais de 2.5', odd: 2.4, line: 2.5 },
+      { label: 'Menos de 2.5', odd: 1.55, line: 2.5 },
+    ]);
+
+    // A scoreline sv ("1:0") is not a numeric line.
+    const cs = markets.find((m) => m.key === 't45')!;
+    expect(cs.selections.every((s) => s.line === null)).toBe(true);
+    expect(markets.find((m) => m.key === '1x2')!.selections).toHaveLength(3);
+  });
+
+  it('drops suspended legs (oddStatus != 0)', () => {
+    const raw = detailsSample();
+    raw.odds!.find((o) => o.id === 20)!.oddStatus = 1; // suspend "Mais de 1.5"
+    const ou = normalizeAltenarEventDetails(raw).find((m) => m.key === 'over_under')!;
+    expect(ou.selections.map((s) => s.label)).toEqual([
+      'Menos de 1.5',
+      'Mais de 2.5',
+      'Menos de 2.5',
+    ]);
+  });
+
+  it('falls back to all markets when there is no Principal group', () => {
+    const raw = detailsSample();
+    raw.marketGroups = [];
+    const keys = normalizeAltenarEventDetails(raw).map((m) => m.key);
+    // Now corners (166) are included; VAR/player still drop (deny / no odds).
+    expect(keys).toContain('t166');
+    expect(keys).not.toContain('t17725');
+  });
+
+  it('returns [] for an empty payload', () => {
+    expect(normalizeAltenarEventDetails({})).toEqual([]);
+  });
+});
+
+describe('normalizeAltenarLive', () => {
+  it('maps a live event with score, minute, status and 1X2 odds', () => {
+    const [ev] = normalizeAltenarLive(liveSample(), link);
+    expect(ev).toEqual({
+      externalId: '16946643',
+      homeTeam: 'Caac Brasil FC RJ',
+      awayTeam: 'Barcelona EC RJ',
+      competition: 'Carioca, Série C',
+      startsAt: new Date('2026-07-03T17:18:00Z'),
+      oddHome: 1.8,
+      oddDraw: 3.2,
+      oddAway: 4.5,
+      markets: [
+        {
+          typeId: 1,
+          key: '1x2',
+          name: 'Vencedor do encontro',
+          selections: [
+            { label: 'Caac Brasil FC RJ', odd: 1.8, line: null },
+            { label: 'Empate', odd: 3.2, line: null },
+            { label: 'Barcelona EC RJ', odd: 4.5, line: null },
+          ],
+        },
+      ],
+      deepLink: 'https://esportiva.bet.br/e/16946643',
+      minute: "25'",
+      homeScore: 1,
+      awayScore: 0,
+      statusText: '1ª parte',
+      countryIso: 'BRA',
+      homeLogo: null,
+      awayLogo: null,
+    });
+  });
+
+  it('treats suspended (price 0) legs as null and defaults missing labels', () => {
+    const raw = liveSample();
+    raw.odds = [
+      { id: 1, price: 0, name: 'Caac Brasil FC RJ', competitorId: 144935 },
+      { id: 2, price: 0, name: 'Empate' },
+      { id: 3, price: 0, name: 'Barcelona EC RJ', competitorId: 115736 },
+    ];
+    raw.events![0].ls = '';
+    raw.events![0].liveTime = undefined;
+    const [ev] = normalizeAltenarLive(raw, link);
+    expect(ev.oddHome).toBeNull();
+    expect(ev.oddDraw).toBeNull();
+    expect(ev.oddAway).toBeNull();
+    expect(ev.statusText).toBe('Ao vivo');
+    expect(ev.minute).toBe('');
+  });
+
+  it('keeps every in-play event regardless of status/start (no prematch filter)', () => {
+    const raw = liveSample();
+    raw.events!.push({ ...raw.events![0], id: 2, score: [2, 2] });
+    expect(normalizeAltenarLive(raw, link)).toHaveLength(2);
+  });
+
+  it('returns [] for an empty payload', () => {
+    expect(normalizeAltenarLive({}, link)).toEqual([]);
+  });
+});

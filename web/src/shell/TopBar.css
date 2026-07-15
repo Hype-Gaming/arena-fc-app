@@ -1,0 +1,147 @@
+/* web/src/shell/TopBar.css — global sticky app bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(10, 20, 32, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.topbar__inner {
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.topbar__back,
+.topbar__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  color: #eef3f8;
+}
+.topbar__back {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+.topbar__back:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.topbar__hex {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  filter: drop-shadow(0 0 6px rgba(140, 230, 10, 0.9))
+    drop-shadow(0 0 14px rgba(140, 230, 10, 0.45));
+}
+
+.topbar__logo-img {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(140, 230, 10, 0.9))
+    drop-shadow(0 0 14px rgba(140, 230, 10, 0.45));
+}
+
+/* ARENA FC wordmark */
+.brandmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.brandmark__arena {
+  color: #8ce60a;
+  text-shadow: 0 0 10px rgba(140, 230, 10, 0.6);
+}
+.brandmark__fc {
+  color: #fff;
+}
+/* hide the wordmark on phones — the badge alone carries the brand there */
+@media (max-width: 480px) {
+  .topbar__wordmark {
+    display: none;
+  }
+}
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.topbar__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(140, 230, 10, 0.12);
+  border: 1px solid rgba(140, 230, 10, 0.5);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.4px;
+  color: #8ce60a;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.topbar__pill svg {
+  flex: none;
+}
+.topbar__pill:hover {
+  transform: scale(1.05);
+}
+/* Free-user CTA: same pill, a touch more filled so it reads as the primary action. */
+.topbar__pill--free {
+  background: rgba(140, 230, 10, 0.2);
+  border-color: rgba(140, 230, 10, 0.72);
+}
+.topbar__back:focus-visible,
+.topbar__logo:focus-visible,
+.topbar__pill:focus-visible {
+  outline: 2px solid rgba(166, 238, 66, 0.7);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar__pill {
+    transition: none;
+  }
+}
+@media (max-width: 430px) {
+  .topbar__hex {
+    width: 38px;
+    height: 38px;
+  }
+  .topbar__logo-img {
+    width: 38px;
+    height: 38px;
+  }
+  .topbar__pill {
+    padding: 6px 11px;
+    font-size: 12px;
+    gap: 5px;
+  }
+}

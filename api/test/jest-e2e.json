@@ -1,0 +1,11 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "maxWorkers": 1,
+  "setupFiles": ["<rootDir>/setup-e2e.ts"],
+  "transform": {
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": { "esModuleInterop": false } }]
+  }
+}

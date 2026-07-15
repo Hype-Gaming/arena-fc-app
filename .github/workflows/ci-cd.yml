@@ -1,0 +1,232 @@
+name: CI/CD
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - feat/**
+
+permissions:
+  contents: read
+  packages: write
+
+# Serialize production revisions from validation through publishing/deploy. A
+# newer feature-branch run may replace an older one, but a production run is
+# never interrupted while migrations or Compose changes may be in progress.
+concurrency:
+  group: ci-cd-${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && 'production' || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master' }}
+
+env:
+  NODE_VERSION: "20"
+  POSTGRES_USER: tips
+  POSTGRES_PASSWORD: tips
+  POSTGRES_DB: tips
+  DATABASE_URL: postgresql://tips:tips@localhost:5432/tips?schema=public
+  JWT_SECRET: ci-jwt-secret
+  LASTLINK_WEBHOOK_SECRET: ci-lastlink-secret
+  PAYT_WEBHOOK_TOKEN: ci-payt-token
+  NODE_ENV: test
+  VITE_API_URL: /api
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tips
+          POSTGRES_PASSWORD: tips
+          POSTGRES_DB: tips
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tips -d tips"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate infrastructure files
+        run: npm run test:infra
+
+      - name: Run API migrations
+        run: npm run prisma:migrate --workspace @tips/api
+
+      - name: Test API
+        run: npm test --workspace @tips/api
+
+      - name: Test API e2e
+        run: npm run test:e2e --workspace @tips/api
+
+      - name: Build API
+        run: npm run build --workspace @tips/api
+
+      - name: Test web
+        run: npm test --workspace @tips/web
+
+      - name: Build web
+        run: npm run build --workspace @tips/web
+
+  docker:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build compose images
+        run: docker compose build
+        env:
+          POSTGRES_USER: tips
+          POSTGRES_PASSWORD: tips
+          POSTGRES_DB: tips
+          DATABASE_URL: postgresql://tips:tips@postgres:5432/tips?schema=public
+          JWT_SECRET: ci-jwt-secret
+          LASTLINK_WEBHOOK_SECRET: ci-lastlink-secret
+          PAYT_WEBHOOK_TOKEN: ci-payt-token
+          NODE_ENV: production
+
+  publish:
+    name: Publish Docker images
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: api/Dockerfile
+          - image: web
+            dockerfile: web/Dockerfile
+          - image: nginx
+            dockerfile: infra/nginx/Dockerfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.image }}" >> "$GITHUB_ENV"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+  deploy:
+    name: Deploy by SSH
+    runs-on: ubuntu-latest
+    # Depends on the build validation (docker), not publish: the VPS rebuilds the
+    # images itself via `up --build`, so a GHCR publish hiccup never blocks deploy.
+    needs: docker
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.ENABLE_SSH_DEPLOY == 'true'
+    environment: production
+
+    steps:
+      - name: Install SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy application
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" << 'EOF'
+            set -eu
+            cd "${{ secrets.DEPLOY_PATH }}"
+
+            readonly EXPECTED_SHA="${{ github.sha }}"
+            readonly DEPLOY_REF="${{ github.ref_name }}"
+
+            if [ -n "$(git status --porcelain --untracked-files=all)" ]; then
+              echo "Deployment checkout is dirty; refusing to mix local changes into the image." >&2
+              git status --short >&2
+              exit 1
+            fi
+
+            git fetch --prune origin \
+              "+refs/heads/$DEPLOY_REF:refs/remotes/origin/$DEPLOY_REF"
+            readonly REMOTE_SHA="$(git rev-parse "refs/remotes/origin/$DEPLOY_REF")"
+
+            # If main advanced while this run was validating, the newer queued
+            # run owns the deploy. Never roll production back to this stale SHA.
+            if [ "$REMOTE_SHA" != "$EXPECTED_SHA" ]; then
+              echo "Skipping stale deploy: validated $EXPECTED_SHA, branch is now $REMOTE_SHA."
+              exit 0
+            fi
+
+            git checkout --detach "$EXPECTED_SHA"
+            test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+            compose() {
+              docker compose \
+                --env-file .env.production \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                "$@"
+            }
+
+            diagnostics() {
+              compose ps --all || true
+              compose logs --no-color --tail=200 api web nginx || true
+            }
+
+            compose config >/dev/null
+
+            # `--wait` observes the API healthcheck, which only turns healthy
+            # after migrations, seed, Nest boot and a successful DB query.
+            if ! compose up -d --build --wait --wait-timeout 300; then
+              diagnostics
+              exit 1
+            fi
+
+            # Verify the same public path used by clients through nginx.
+            if ! health_payload="$(curl --fail --silent --show-error \
+              --retry 10 --retry-delay 3 --retry-connrefused \
+              http://127.0.0.1:8080/api/health)"; then
+              diagnostics
+              exit 1
+            fi
+            if ! printf '%s' "$health_payload" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' || \
+               ! printf '%s' "$health_payload" | grep -Eq '"db"[[:space:]]*:[[:space:]]*"up"'; then
+              printf 'Unexpected health response: %s\n' "$health_payload"
+              diagnostics
+              exit 1
+            fi
+
+            compose ps
+          EOF

@@ -1,0 +1,246 @@
+/* web/src/screens/UltimosGreensScreen.css — "Últimos Greens" history */
+
+.greens {
+  min-height: 100%;
+  color: #e6edf5;
+}
+.greens__inner {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 18px 16px 96px;
+}
+
+.greens__head h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.greens__head p {
+  margin: 6px 0 0;
+  color: #8092a5;
+  font-size: 14px;
+}
+
+/* period filters */
+.greens__filters {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 16px 0 6px;
+  scrollbar-width: none;
+}
+.greens__filters::-webkit-scrollbar {
+  display: none;
+}
+.greens__filter {
+  flex: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 146, 165, 0.28);
+  background: transparent;
+  color: #b8c5d4;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.greens__filter[data-active='true'] {
+  background: rgba(140, 230, 10, 0.16);
+  border-color: rgba(140, 230, 10, 0.6);
+  color: #a6ee42;
+}
+
+/* day groups */
+.greens__group {
+  margin-top: 22px;
+}
+.greens__day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8092a5;
+}
+.greens__day::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #35d08a;
+  box-shadow: 0 0 8px #35d08a;
+}
+.greens__day span {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(53, 208, 138, 0.14);
+  color: #35d08a;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.greens__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.greens__empty {
+  margin-top: 28px;
+  text-align: center;
+  color: #8092a5;
+  font-size: 14px;
+}
+
+/* green card */
+.gcard {
+  border: 1px solid rgba(128, 146, 165, 0.14);
+  border-left: 3px solid #35d08a;
+  border-radius: 12px;
+  background: #0f1c2e;
+  padding: 12px 14px;
+}
+.gcard__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.gcard__tier {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(140, 230, 10, 0.14);
+  color: #a6ee42;
+}
+.gcard__tier[data-tone='pro'] {
+  background: rgba(240, 180, 41, 0.16);
+  color: #f0b429;
+}
+.gcard__tier[data-tone='ultra'] {
+  background: rgba(159, 122, 234, 0.16);
+  color: #b794f4;
+}
+.gcard__comp {
+  flex: 1;
+  min-width: 0;
+  color: #8092a5;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gcard__badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(53, 208, 138, 0.16);
+  color: #35d08a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.gcard__teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.gcard__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.gcard__team:last-child {
+  justify-content: flex-end;
+  text-align: right;
+}
+.gcard__team span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gcard__vs {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a6b7d;
+}
+
+.gcrest {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--crest, #35507a);
+}
+.gcrest--img {
+  background: #fff;
+  overflow: hidden;
+}
+.gcrest--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gcard__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(128, 146, 165, 0.12);
+}
+.gcard__pick {
+  font-size: 13px;
+  color: #c3d0de;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gcard__odd {
+  flex: none;
+  font-size: 15px;
+  font-weight: 800;
+  color: #8ce60a;
+}
+.gcard__odd i {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8092a5;
+  margin-right: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greens__filter {
+    transition: none;
+  }
+}
