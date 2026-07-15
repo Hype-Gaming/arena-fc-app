@@ -6,8 +6,9 @@ import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './HomeScreen.css';
 
-type Accent = 'gold' | 'blue' | 'muted';
+type Accent = 'gold' | 'blue' | 'muted' | 'green';
 type Tone = 'gold' | 'blue' | 'green';
+type Layout = 'hero' | 'telegram' | 'tile';
 
 interface Badge {
   label: string;
@@ -24,10 +25,12 @@ interface HomeCard {
   ctaLabel: string;
   ctaVariant: 'solid' | 'outline';
   to?: string;
+  externalTo?: string;
   featured?: boolean;
   locked?: boolean;
   visual?: 'tipster' | 'ai' | 'locked' | 'greens';
   image?: string;
+  layout?: Layout;
   /** Opens the "how it works" popup (keyed into CATEGORY_EXPLAINERS) instead
    *  of navigating — used by the locked "Desbloquear" cards. */
   explainerKey?: string;
@@ -56,6 +59,7 @@ const SECTIONS: Section[] = [
         to: '/bilhetes',
         visual: 'tipster',
         image: '/entradas-do-dia.png',
+        layout: 'hero',
       },
       {
         key: 'ia-tempo-real',
@@ -72,13 +76,29 @@ const SECTIONS: Section[] = [
         to: '/tipster',
         visual: 'ai',
         image: '/analise-de-ia.png',
+        layout: 'hero',
       },
     ],
   },
   {
-    title: 'Acesso Rapido',
+    title: 'Acesso Rápido',
     icon: 'bolt',
     cards: [
+      {
+        key: 'telegram-vip',
+        title: 'Grupo Telegram VIP',
+        subtitle: 'Sinais liberados, alertas ao vivo e entradas exclusivas',
+        icon: 'bolt',
+        accent: 'green',
+        badges: [
+          { label: 'Liberado', tone: 'green' },
+          { label: 'Ao vivo', tone: 'gold' },
+        ],
+        ctaLabel: 'Entrar',
+        ctaVariant: 'solid',
+        externalTo: (import.meta.env as Record<string, string | undefined>).VITE_TELEGRAM_URL ?? 'https://t.me/+arena_fc',
+        layout: 'telegram',
+      },
       {
         key: 'altas',
         title: 'Odds Altas',
@@ -93,6 +113,7 @@ const SECTIONS: Section[] = [
         explainerKey: 'ultra',
         visual: 'locked',
         image: '/odds-altas.png',
+        layout: 'tile',
       },
       {
         key: 'alavancagem',
@@ -107,7 +128,8 @@ const SECTIONS: Section[] = [
         to: '/planos',
         explainerKey: 'alavancagem',
         visual: 'locked',
-        image: '/alavancagem-2.png',
+        image: '/Alavancagem.png',
+        layout: 'tile',
       },
     ],
   },
@@ -127,6 +149,7 @@ const SECTIONS: Section[] = [
         to: '/ultimos-greens',
         visual: 'greens',
         image: '/ultimos-greens.png',
+        layout: 'hero',
       },
     ],
   },
@@ -142,6 +165,10 @@ export function HomeScreen() {
     // straight to the paywall.
     if (card.explainerKey && CATEGORY_EXPLAINERS[card.explainerKey]) {
       setExplainerKey(card.explainerKey);
+      return;
+    }
+    if (card.externalTo) {
+      window.open(card.externalTo, '_blank', 'noopener,noreferrer');
       return;
     }
     if (card.to) navigate(card.to);
@@ -201,6 +228,7 @@ function Card({ card, onOpen }: { card: HomeCard; onOpen: () => void }) {
       data-locked={card.locked ? 'true' : undefined}
       data-visual={card.visual}
       style={card.image ? ({ '--h-thumb-image': `url(${card.image})` } as CSSProperties) : undefined}
+      data-layout={card.layout ?? 'hero'}
     >
       <div className="hcard__thumb">
         <Icon name={card.icon} />

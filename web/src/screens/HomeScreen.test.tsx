@@ -31,7 +31,7 @@ describe('HomeScreen', () => {
     renderHome();
 
     expect(screen.getByRole('heading', { name: /principais/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /acesso rapido/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /acesso rápido/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /ultimos bilhetes/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /entradas do dia/i })).toBeInTheDocument();
     expect(
