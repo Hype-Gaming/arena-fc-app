@@ -63,7 +63,14 @@ export class AltenarFeedProvider implements SportsFeedProvider {
     });
     try {
       const res = await fetch(`${this.base()}/${path}?${params.toString()}`, {
-        headers: { Referer: 'https://esportiva.bet.br/' },
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+          Origin: 'https://esportiva.bet.br',
+          Referer: 'https://esportiva.bet.br/sports/soccer/sp-66',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36',
+        },
       });
       if (!res.ok) {
         throw new BadGatewayException(`Altenar feed returned ${res.status}`);
