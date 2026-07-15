@@ -1,5 +1,0 @@
-# api/.dockerignore
-node_modules
-dist
-test
-**/*.spec.ts
