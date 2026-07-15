@@ -22,6 +22,46 @@
   margin: 0 auto;
 }
 
+.spt-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 2px 2px 12px;
+}
+
+.spt-ai-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  cursor: pointer;
+  padding: 8px 17px;
+  border-radius: 999px;
+  color: var(--s-gold);
+  background: rgba(0, 239, 130, 0.1);
+  border: 1px solid rgba(0, 239, 130, 0.65);
+  font-family: var(--s-display);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+}
+
+.spt-ai-pill svg {
+  flex: none;
+}
+
+.spt-ai-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  border-color: rgba(0, 239, 130, 0.9);
+}
+
+.spt-ai-pill:active {
+  transform: translateY(0);
+}
+
 /* ---- markets head ---- */
 .spt-markets__head {
   display: flex;
@@ -359,6 +399,7 @@
 }
 
 .spt-chip:focus-visible,
+.spt-ai-pill:focus-visible,
 .spt-card__add:focus-visible {
   outline: 2px solid rgba(166, 238, 66, 0.7);
   outline-offset: 2px;
@@ -366,7 +407,19 @@
 
 @media (prefers-reduced-motion: reduce) {
   .spt-chip,
+  .spt-ai-pill,
   .spt-dot {
     transition: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .spt-actions {
+    justify-content: stretch;
+  }
+
+  .spt-ai-pill {
+    width: 100%;
+    justify-content: center;
   }
 }

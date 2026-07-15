@@ -44,6 +44,14 @@ describe('BilhetesScreen', () => {
     expect(screen.queryByText('Espanha')).not.toBeInTheDocument();
   });
 
+  it('routes the create odds pill to IA Tipster', async () => {
+    const user = userEvent.setup();
+    renderScreen();
+
+    await user.click(screen.getByRole('button', { name: /criar odds/i }));
+    expect(screen.getByText('Tipster route')).toBeInTheDocument();
+  });
+
   it('sends a locked market chip without an explainer straight to the plans screen', async () => {
     const user = userEvent.setup();
     renderScreen();
