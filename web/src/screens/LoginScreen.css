@@ -1,0 +1,585 @@
+/* web/src/screens/LoginScreen.css — tokens measured from the reference /login */
+.pf-login {
+  /* palette (exact values from the reference) */
+  --pf-bg: #0a1420;
+  --pf-card-bg: #112236;
+  --pf-gold: #00ff7f; /* labels, card border */
+  --pf-gold-soft: #00ff7f; /* PRO badge, odds, active dot */
+  --pf-green: #00ff7f; /* IA accents, stats */
+  --pf-blue: #60a5fa; /* BASIC badge */
+  --pf-muted: #94a3b8;
+  --pf-gray: #4a5568; /* footer text */
+  --pf-display: 'Barlow Condensed', sans-serif;
+  --pf-body: 'DM Sans', sans-serif;
+
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background-color: var(--pf-bg);
+  color: #fff;
+  font-family: var(--pf-body);
+}
+
+/* ambient light trails */
+.pf-trails {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.pf-trail {
+  position: absolute;
+  border-radius: 999px;
+}
+.pf-trail--1 {
+  width: 600px;
+  height: 200px;
+  top: -40px;
+  left: -100px;
+  background: radial-gradient(rgba(0, 230, 134, 0.07) 0%, transparent 70%);
+}
+.pf-trail--2 {
+  width: 500px;
+  height: 180px;
+  bottom: 100px;
+  right: -80px;
+  background: radial-gradient(rgba(0, 230, 134, 0.05) 0%, transparent 70%);
+}
+
+.pf-login__inner {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 424px; /* 376px content + 24px side padding */
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+/* ---- brand: "ARENA FC APP" wordmark, mirroring the reference ---- */
+.pf-brand {
+  margin-bottom: 26px;
+  display: flex;
+  justify-content: center;
+}
+.pf-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+}
+.pf-logo__mark {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(140, 230, 10, 0.4));
+}
+.pf-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--pf-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 33px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.pf-word__a {
+  color: #fff;
+}
+.pf-word__fc {
+  color: var(--pf-gold);
+}
+.pf-word__app {
+  font-size: 14px;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.14em;
+  color: #d7dee7;
+  padding: 3px 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  border-radius: 7px;
+}
+
+/* ---- promo carousel ---- */
+.pf-promo {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 32px;
+}
+.pf-viewport {
+  overflow: hidden;
+  border-radius: 12px;
+}
+.pf-track {
+  display: flex;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform;
+}
+.pf-slide {
+  min-width: 100%;
+  flex-shrink: 0;
+}
+.pf-card {
+  position: relative;
+  width: 100%;
+  max-width: 376px;
+  margin: 0 auto;
+  background-color: var(--pf-card-bg);
+  border: 1px solid rgba(0, 255, 127, 0.7);
+  border-radius: 15px;
+  overflow: hidden;
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 255, 127, 0.04),
+    0 0 18px rgba(0, 255, 127, 0.12);
+}
+.pf-card--shine {
+  border-color: rgba(0, 255, 127, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 255, 127, 0.04),
+    0 0 14px rgba(0, 255, 127, 0.1);
+}
+/* rotating gold shine on the featured card */
+@property --copa-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes copa-rotate {
+  to {
+    --copa-angle: 360deg;
+  }
+}
+.pf-card--shine::before {
+  content: none;
+}
+
+.pf-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pf-card__row--top {
+  align-items: flex-start;
+  padding: 16px 15px 0;
+}
+.pf-card__body {
+  padding: 15px 15px 14px;
+}
+.pf-card__title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.pf-card__sub-row {
+  display: flex;
+  min-width: 0;
+}
+
+.pf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--pf-display);
+  font-weight: 900;
+  min-width: 74px;
+  height: 28px;
+  justify-content: center;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  line-height: 1;
+  padding: 0 12px;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+.pf-pill[data-tone='ia'] {
+  background-color: rgba(0, 255, 127, 0.12);
+  border: 1px solid rgba(0, 255, 127, 0.55);
+  color: var(--pf-green);
+}
+.pf-pill[data-tone='pro'] {
+  background-color: rgba(0, 255, 127, 0.18);
+  border: 1px solid var(--pf-green);
+  color: var(--pf-green);
+}
+.pf-pill[data-tone='basic'] {
+  background-color: rgba(33, 79, 126, 0.78);
+  border: 1px solid rgba(100, 171, 255, 0.95);
+  color: #82bdff;
+}
+
+.pf-card__odd {
+  font-family: var(--pf-display);
+  font-weight: 900;
+  font-size: 38px;
+  line-height: 0.9;
+  color: var(--pf-green);
+  letter-spacing: -1px;
+  white-space: nowrap;
+  text-shadow: 0 0 14px rgba(0, 255, 132, 0.22);
+}
+
+.pf-card__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--pf-display);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.15;
+  color: #fff;
+}
+.pf-card__sub {
+  margin: 2px 0 0;
+  font-family: var(--pf-body);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.48);
+}
+.pf-card__meta {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-family: var(--pf-body);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.55);
+  padding-bottom: 8px;
+  text-align: right;
+}
+
+.pf-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 40px;
+  padding: 9px 14px;
+  box-sizing: border-box;
+  font-family: var(--pf-display);
+  font-weight: 900;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  text-align: center;
+}
+.pf-card__foot[data-tone='ia'] {
+  background-color: rgba(0, 255, 127, 0.11);
+  border-top: 1px solid rgba(0, 255, 127, 0.3);
+  color: var(--pf-green);
+}
+.pf-card__foot[data-tone='pro'],
+.pf-card__foot[data-tone='basic'] {
+  background-color: rgba(0, 255, 127, 0.11);
+  border-top: 1px solid rgba(0, 255, 127, 0.3);
+  color: var(--pf-green);
+}
+
+.pf-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 11px;
+}
+.pf-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.pf-dot--active {
+  width: 18px;
+  background-color: var(--pf-green);
+}
+
+/* ---- form ---- */
+.pf-form {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.pf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pf-label {
+  font-family: var(--pf-display);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--pf-gold);
+}
+.pf-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 52px;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-family: var(--pf-body);
+  font-size: 16px;
+  color: #fff;
+  background-color: var(--pf-card-bg);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.pf-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+.pf-input:focus {
+  border-color: var(--pf-green);
+}
+
+.pf-btn {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--pf-display);
+  text-transform: uppercase;
+  border-radius: 10px;
+  transition: opacity 0.2s ease, border-color 0.2s ease;
+}
+.pf-btn:active {
+  transform: scale(0.98);
+}
+.pf-btn--primary {
+  height: 56px;
+  border: 0;
+  font-weight: 800;
+  font-size: 16px;
+  letter-spacing: 0.025em;
+  color: var(--pf-bg);
+  background: linear-gradient(#1aff93 0%, #00c853 100%);
+  box-shadow: 0 6px 20px rgba(0, 200, 83, 0.4);
+}
+.pf-btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pf-btn--ghost {
+  height: 48px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+.pf-btn--ghost:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.pf-cart {
+  color: var(--pf-gold);
+}
+.pf-btn--link {
+  height: auto;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--pf-muted);
+  font-size: 13px;
+  text-transform: none;
+  font-family: var(--pf-body);
+}
+.pf-btn--link b {
+  color: var(--pf-green);
+}
+
+.pf-error {
+  margin: 0;
+  font-size: 13px;
+  color: #f0616d;
+}
+.pf-code-note {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--pf-muted);
+  text-align: center;
+}
+.pf-code-note b {
+  color: #fff;
+}
+
+/* ---- stats ---- */
+.pf-login .pf-stats {
+  width: 100%;
+  max-width: 376px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 30px auto 22px;
+  box-sizing: border-box;
+}
+.pf-login .pf-stat {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(0, 255, 127, 0.5);
+  border-radius: 11px;
+}
+.pf-login .pf-stat svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--pf-green);
+}
+.pf-login .pf-stat span {
+  min-width: 0;
+  max-width: 100%;
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--pf-body);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- footer ---- */
+.pf-foot {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-foot__terms {
+  margin: 0;
+  font-size: 14px;
+  color: var(--pf-gray);
+}
+.pf-foot__terms a {
+  display: inline-block; /* wraps as a unit, like the reference */
+  white-space: nowrap;
+  color: var(--pf-green);
+  text-decoration: none;
+}
+.pf-foot__terms a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pf-foot__sep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.pf-foot__sep a {
+  color: var(--pf-gray);
+  text-decoration: none;
+}
+.pf-foot__sep a:hover {
+  color: var(--pf-green);
+}
+.pf-foot__bar {
+  color: rgba(74, 85, 104, 0.4);
+}
+.pf-foot__age {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pf-gray);
+}
+
+@media (max-width: 420px) {
+  .pf-card {
+    max-width: 100%;
+  }
+  .pf-card__row--top {
+    padding: 15px 14px 0;
+  }
+  .pf-card__body {
+    padding: 15px 14px 13px;
+  }
+  .pf-card__title-row {
+    gap: 8px;
+  }
+  .pf-card__odd {
+    font-size: 31px;
+  }
+  .pf-card__title {
+    font-size: 13px;
+  }
+  .pf-card__sub,
+  .pf-card__meta {
+    font-size: 11px;
+  }
+  .pf-login .pf-stats {
+    max-width: 100%;
+    gap: 7px;
+  }
+  .pf-login .pf-stat {
+    gap: 5px;
+    padding: 10px 7px;
+  }
+  .pf-login .pf-stat svg {
+    width: 13px;
+    height: 13px;
+  }
+  .pf-login .pf-stat span {
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 350px) {
+  .pf-login .pf-stat span {
+    display: -webkit-box;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: clip;
+    text-align: center;
+    line-height: 1.15;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-track,
+  .pf-dot,
+  .pf-btn {
+    transition: none;
+  }
+  .pf-card--shine::before {
+    animation: none;
+  }
+}

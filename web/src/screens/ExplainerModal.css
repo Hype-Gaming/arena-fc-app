@@ -1,0 +1,160 @@
+/* web/src/screens/ExplainerModal.css — "understand this product" popup
+   (Múltiplas, Odds Altas, Alavancagem, …) */
+
+.exp__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 9, 16, 0.74);
+  backdrop-filter: blur(3px);
+}
+
+.exp__card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 30px 24px 24px;
+  border-radius: 20px;
+  background: #13202e;
+  border: 1px solid rgba(128, 146, 165, 0.16);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.exp__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #8092a5;
+  cursor: pointer;
+}
+.exp__close:hover {
+  color: #eaf1f8;
+  background: rgba(128, 146, 165, 0.12);
+}
+
+.exp__title {
+  margin: 0 24px 18px;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #ffffff;
+  text-wrap: balance;
+}
+
+.exp__art {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 18px;
+  border-radius: 14px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  background: #0a1420;
+}
+
+.exp__body {
+  margin: 0 0 22px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #8092a5;
+}
+
+/* Worked-example stepper (Alavancagem): ETAPA cards with arrows between. */
+.exp__steps {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.exp__step {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(9, 20, 32, 0.8);
+  border: 1px solid rgba(140, 230, 10, 0.28);
+}
+
+.exp__step-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6fbf07;
+}
+
+.exp__step-aposta {
+  font-size: 12px;
+  font-weight: 700;
+  color: #eaf1f8;
+}
+
+.exp__step-odd {
+  font-size: 11px;
+  color: #8092a5;
+}
+
+.exp__step-ganha {
+  font-size: 12px;
+  font-weight: 800;
+  color: #8ce60a;
+}
+
+.exp__step-arrow {
+  display: inline-flex;
+  align-items: center;
+  color: #6fbf07;
+  flex: 0 0 auto;
+}
+
+.exp__foot {
+  margin: 0 0 20px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6d7f92;
+}
+
+.exp__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #8ce60a 0%, #6fbf07 100%);
+  color: #0a1420;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(140, 230, 10, 0.26);
+  transition: filter 0.15s, transform 0.05s;
+}
+.exp__cta:hover {
+  filter: brightness(1.05);
+}
+.exp__cta:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exp__cta {
+    transition: none;
+  }
+}
