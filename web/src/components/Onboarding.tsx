@@ -10,7 +10,7 @@ import './Onboarding.css';
 
 const TELEGRAM_URL =
   (import.meta.env.VITE_TELEGRAM_URL as string | undefined) ??
-  'https://t.me/+arena_fc';
+  'https://t.me/+Lnc41ngjDLdjNzcx';
 const TELEGRAM_BOT_ONBOARDING_URL = 'https://t.me/arenaofc_bot?start=onboarding';
 const TOUR_VIDEO_URL = import.meta.env.VITE_ONBOARDING_TOUR_URL as
   | string

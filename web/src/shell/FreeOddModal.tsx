@@ -5,7 +5,7 @@ import './FreeOddModal.css';
 
 const TELEGRAM_URL =
   (import.meta.env.VITE_TELEGRAM_URL as string | undefined) ??
-  'https://t.me/+arena_fc';
+  'https://t.me/+Lnc41ngjDLdjNzcx';
 
 export function FreeOddModal({
   open,
