@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react"
 import { Logo } from "@/components/logo"
+import { TelegramCta } from "@/components/telegram-cta"
 
 export const metadata: Metadata = {
   title: "Compra confirmada · ARENA FC",
@@ -88,16 +89,11 @@ export default function ObrigadoPage() {
         </div>
 
         {/* CTA */}
-        <a
-          href="https://t.me/arenaofc_bot?start=onboarding"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-[#22c55e] to-[#16a34a] px-6 py-5 text-base font-bold tracking-wide text-[#052e16] shadow-[0_10px_30px_-8px_rgba(34,197,94,0.6)] transition-transform hover:-translate-y-0.5"
-        >
+        <TelegramCta className="group mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-b from-[#22c55e] to-[#16a34a] px-6 py-5 text-base font-bold tracking-wide text-[#052e16] shadow-[0_10px_30px_-8px_rgba(34,197,94,0.6)] transition-transform hover:-translate-y-0.5">
           <Send className="size-5" aria-hidden="true" />
           ENTRAR E BAIXAR O APP
           <ArrowRight className="size-5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-        </a>
+        </TelegramCta>
 
         {/* Trust row */}
         <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
