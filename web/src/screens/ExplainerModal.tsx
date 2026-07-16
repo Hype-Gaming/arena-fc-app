@@ -18,6 +18,7 @@ export interface Explainer {
   imageSrc: string;
   imageAlt: string;
   body: string;
+  checkoutUrl?: string;
   /** Optional worked-example stepper shown between the body and the CTA. */
   steps?: ExplainerStep[];
   /** Small caption under the stepper. */

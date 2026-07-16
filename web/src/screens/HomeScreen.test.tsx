@@ -55,7 +55,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
   });
 
-  it('opens the explainer popup from a locked "Desbloquear" card, then funnels to plans', async () => {
+  it('opens the explainer popup from a locked "Desbloquear" card, then opens its checkout', async () => {
     const user = userEvent.setup();
     renderHome();
 
@@ -69,8 +69,10 @@ describe('HomeScreen', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('Planos route')).not.toBeInTheDocument();
 
-    // The CTA funnels to the plans screen.
     await user.click(screen.getByRole('button', { name: /tenho interesse/i }));
-    expect(screen.getByText('Planos route')).toBeInTheDocument();
+    expect(window.open).toHaveBeenCalledWith(
+      'https://checkout.payt.com.br/bb0d17f48cfc7137913002d334cfe7ff',
+      '_blank',
+    );
   });
 });

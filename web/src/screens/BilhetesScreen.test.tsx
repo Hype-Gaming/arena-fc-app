@@ -1,5 +1,5 @@
 // web/src/screens/BilhetesScreen.test.tsx
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -19,6 +19,14 @@ function renderScreen() {
 }
 
 describe('BilhetesScreen', () => {
+  beforeEach(() => {
+    vi.stubGlobal('open', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders the markets header and an empty rail without demo tickets', () => {
     renderScreen();
     expect(
@@ -52,7 +60,7 @@ describe('BilhetesScreen', () => {
     expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
 
-  it('opens the explainer popup for a locked market that has one, then funnels to plans', async () => {
+  it('opens the explainer popup for a locked market that has one, then opens its checkout', async () => {
     const user = userEvent.setup();
     renderScreen();
 
@@ -65,8 +73,10 @@ describe('BilhetesScreen', () => {
     expect(screen.getByText(/etapa 1/i)).toBeInTheDocument();
     expect(screen.queryByText('Planos route')).not.toBeInTheDocument();
 
-    // The CTA funnels to the plans screen.
     await user.click(screen.getByRole('button', { name: /tenho interesse/i }));
-    expect(screen.getByText('Planos route')).toBeInTheDocument();
+    expect(window.open).toHaveBeenCalledWith(
+      'https://checkout.payt.com.br/e508405c78d7aa3b6f7c3ab41a557536',
+      '_blank',
+    );
   });
 });

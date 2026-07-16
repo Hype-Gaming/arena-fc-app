@@ -211,7 +211,14 @@ export function HomeScreen() {
         explainer={explainerKey ? CATEGORY_EXPLAINERS[explainerKey] : null}
         onClose={() => setExplainerKey(null)}
         onInterest={() => {
+          const checkoutUrl = explainerKey
+            ? CATEGORY_EXPLAINERS[explainerKey]?.checkoutUrl
+            : null;
           setExplainerKey(null);
+          if (checkoutUrl) {
+            window.open(checkoutUrl, '_blank');
+            return;
+          }
           navigate('/planos');
         }}
       />

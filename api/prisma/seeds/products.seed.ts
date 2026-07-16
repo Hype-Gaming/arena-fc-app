@@ -61,8 +61,20 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantCategory: 'ultra',
   },
   {
+    provider: 'payt',
+    externalProductId: 'bb0d17f48cfc7137913002d334cfe7ff',
+    grantType: 'category_access',
+    grantCategory: 'ultra',
+  },
+  {
     provider: 'lastlink',
     externalProductId: 'premier-alavancagem-vida',
+    grantType: 'category_access',
+    grantCategory: 'alavancagem',
+  },
+  {
+    provider: 'payt',
+    externalProductId: 'e508405c78d7aa3b6f7c3ab41a557536',
     grantType: 'category_access',
     grantCategory: 'alavancagem',
   },
