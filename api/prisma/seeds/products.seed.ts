@@ -6,18 +6,14 @@ import {
 } from '@prisma/client';
 
 /**
- * Payment products the billing webhook resolves to a grant. The gateway
- * (LastLink) sends `externalProductId`; a matching active row here is what
- * turns a paid checkout into credits (or a plan). Without these rows every
- * real webhook is ignored as "No active product".
+ * Payment products the billing webhook resolves to a grant. The gateway sends
+ * `externalProductId`; a matching active row here is what turns a paid checkout
+ * into credits, plan access, category access, or IA unlimited access.
  *
- * `externalProductId` MUST equal the id LastLink sends for that product — the
- * slugs below are placeholders; set them to the real product ids (or map them
- * in the LastLink adapter) before going live. Display name/price live on the
- * frontend (see web/src/lib/creditPacks.ts); the DB only needs the grant.
- *
- * Credit packs grant a fixed credit amount; the "acesso ilimitado" passes grant
- * an ia_unlimited window of grantPeriodDays (analyses stop consuming credits).
+ * For Payt, `externalProductId` must equal the `product.code` sent in the
+ * postback. The IA hashes below mirror the hosted checkout URLs currently used
+ * by the frontend; if Payt emits a different short product code, update these
+ * values to that code.
  */
 interface ProductSeed {
   provider: string;
@@ -31,26 +27,26 @@ interface ProductSeed {
 
 export const PRODUCT_SEEDS: ProductSeed[] = [
   {
-    provider: 'lastlink',
-    externalProductId: 'premier-6-creditos-ia',
+    provider: 'payt',
+    externalProductId: '923698894ed467828da8395f46da1b67',
     grantType: 'credits',
-    grantCredits: 6,
+    grantCredits: 5,
   },
   {
-    provider: 'lastlink',
-    externalProductId: 'premier-9-creditos-ia',
+    provider: 'payt',
+    externalProductId: 'b9308e657ab39f0059e6207c2fbf6aee',
     grantType: 'credits',
-    grantCredits: 9,
+    grantCredits: 10,
   },
   {
-    provider: 'lastlink',
-    externalProductId: 'premier-ilimitado-1-mes',
+    provider: 'payt',
+    externalProductId: '0c3a47a281c93d17be29146da83fb7c0',
     grantType: 'ia_unlimited',
     grantPeriodDays: 30,
   },
   {
-    provider: 'lastlink',
-    externalProductId: 'premier-ilimitado-3-meses',
+    provider: 'payt',
+    externalProductId: '9b8dcbba1f508de4d63dece33b2b5bde',
     grantType: 'ia_unlimited',
     grantPeriodDays: 90,
   },
@@ -91,10 +87,8 @@ export const PRODUCT_SEEDS: ProductSeed[] = [
     grantCategory: 'ligas',
   },
 
-  // Payt plan products. externalProductId = Payt's `product.code` (the short
-  // code shown per product in the Payt admin, and what the PayT V1 postback
-  // sends at product.code). Both are lifetime ("VIDA") plans, so
-  // grantPeriodDays is null.
+  // Payt plan products. externalProductId = Payt's `product.code` from the V1
+  // postback. Both are lifetime ("VIDA") plans, so grantPeriodDays is null.
   {
     provider: 'payt',
     externalProductId: '4EPO3E', // plano Premium

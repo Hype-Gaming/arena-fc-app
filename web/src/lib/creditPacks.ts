@@ -1,7 +1,6 @@
-// web/src/lib/creditPacks.ts — the "Comprar créditos IA" catalog.
-// Display strings live here; each pack maps to a LastLink checkout. The pack
-// `id` must match the product's externalProductId seeded in the API
-// (api/prisma/seeds/products.seed.ts) so the webhook grants the right thing.
+// web/src/lib/creditPacks.ts - "Comprar creditos IA" catalog.
+// Display strings and hosted checkout URLs live here. The Payt product code
+// that grants the purchase is seeded in api/prisma/seeds/products.seed.ts.
 import { CHECKOUT_URL } from './checkout';
 
 const env = import.meta.env as Record<string, string | undefined>;
@@ -19,43 +18,50 @@ export interface CreditPack {
   kind: 'credits' | 'unlimited';
 }
 
+const PAYT_CHECKOUT_BY_PACK: Record<string, string> = {
+  'payt-5-creditos-ia': 'https://checkout.payt.com.br/923698894ed467828da8395f46da1b67',
+  'payt-10-creditos-ia': 'https://checkout.payt.com.br/b9308e657ab39f0059e6207c2fbf6aee',
+  'payt-ia-ilimitada-30-dias': 'https://checkout.payt.com.br/0c3a47a281c93d17be29146da83fb7c0',
+  'payt-ia-ilimitada-90-dias': 'https://checkout.payt.com.br/9b8dcbba1f508de4d63dece33b2b5bde',
+};
+
 export const CREDIT_PACKS: CreditPack[] = [
   {
-    id: 'premier-6-creditos-ia',
-    name: 'Arena 6 Creditos IA',
-    sub: '6 créditos',
-    priceLabel: 'R$ 29,90',
+    id: 'payt-5-creditos-ia',
+    name: 'Arena 5 Creditos IA',
+    sub: '5 creditos',
+    priceLabel: 'Comprar',
     kind: 'credits',
   },
   {
-    id: 'premier-9-creditos-ia',
-    name: 'Arena 9 Creditos IA',
-    sub: '9 créditos',
-    priceLabel: 'R$ 39,90',
+    id: 'payt-10-creditos-ia',
+    name: 'Arena 10 Creditos IA',
+    sub: '10 creditos',
+    priceLabel: 'Comprar',
     kind: 'credits',
   },
   {
-    id: 'premier-ilimitado-1-mes',
-    name: 'Arena Crédito IA ilimitado por 1 mês',
+    id: 'payt-ia-ilimitada-30-dias',
+    name: 'Arena IA ilimitada por 30 dias',
     sub: '30 dias ilimitados',
-    priceLabel: 'R$ 99,00',
+    priceLabel: 'Comprar',
     kind: 'unlimited',
   },
   {
-    id: 'premier-ilimitado-3-meses',
-    name: 'Arena Crédito IA ilimitado por 3 meses',
+    id: 'payt-ia-ilimitada-90-dias',
+    name: 'Arena IA ilimitada por 90 dias',
     sub: '90 dias ilimitados',
-    priceLabel: 'R$ 149,90',
+    priceLabel: 'Comprar',
     kind: 'unlimited',
   },
 ];
 
 /**
  * Hosted checkout for a pack. Prefers a per-pack env override
- * (VITE_CHECKOUT_URL_PREMIER_6_CREDITOS_IA, …); otherwise falls back to the
- * generic checkout tagged with the product id.
+ * (VITE_CHECKOUT_URL_PAYT_5_CREDITOS_IA, ...); otherwise uses the Payt
+ * checkout configured above and finally falls back to the generic checkout.
  */
 export function checkoutUrlForPack(id: string): string {
   const key = `VITE_CHECKOUT_URL_${id.toUpperCase().replace(/-/g, '_')}`;
-  return nonEmpty(env[key]) ?? `${CHECKOUT_URL}?produto=${id}`;
+  return nonEmpty(env[key]) ?? PAYT_CHECKOUT_BY_PACK[id] ?? `${CHECKOUT_URL}?produto=${id}`;
 }
