@@ -41,27 +41,38 @@ describe('TopBar', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('routes the logo home and shows Criar Odds/Planos for paid users', async () => {
+  it('routes the logo home and shows Planos for paid users outside the sport page', async () => {
     const user = userEvent.setup();
     renderAt('/perfil', 'premium');
 
-    await user.click(screen.getByRole('button', { name: /início/i }));
+    await user.click(screen.getByRole('button', { name: /in/i }));
     expect(screen.getByText('Home route')).toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: /criar odds/i }));
-    expect(screen.getByText('Tipster route')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /criar odds/i })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^planos$/i }));
     expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
 
-  it('shows only "Resgatar Odd Grátis" for free users, and it opens the Telegram popup', async () => {
+  it('shows Criar Odds only on the sport page after Ver entradas', async () => {
+    const user = userEvent.setup();
+    renderAt('/bilhetes', 'free');
+
+    expect(
+      await screen.findByRole('button', { name: /resgatar odd gr/i }),
+    ).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('button', { name: /criar odds/i }));
+    expect(screen.getByText('Tipster route')).toBeInTheDocument();
+  });
+
+  it('shows only Resgatar Odd Gratis for free users outside the sport page, and opens the Telegram popup', async () => {
     const user = userEvent.setup();
     const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
     renderAt('/perfil', 'free');
 
     const resgatar = await screen.findByRole('button', {
-      name: /resgatar odd grátis/i,
+      name: /resgatar odd gr/i,
     });
     expect(resgatar).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /criar odds/i })).not.toBeInTheDocument();
@@ -72,7 +83,7 @@ describe('TopBar', () => {
     expect(within(dialog).getByText(/grupo do telegram/i)).toBeInTheDocument();
 
     await user.click(
-      within(dialog).getByRole('button', { name: /resgatar odd grátis/i }),
+      within(dialog).getByRole('button', { name: /resgatar odd gr/i }),
     );
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy.mock.calls[0][1]).toBe('_blank');

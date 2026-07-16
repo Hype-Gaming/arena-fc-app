@@ -75,22 +75,22 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
             </button>
           )}
           {isPaid && (
-            <>
-              <button
-                type="button"
-                className="topbar__pill"
-                onClick={() => requireUnlock(() => navigate('/tipster'))}
-              >
-                <Sparkles /> Criar Odds
-              </button>
-              <button
-                type="button"
-                className="topbar__pill"
-                onClick={() => navigate('/planos')}
-              >
-                <Sparkles /> Planos
-              </button>
-            </>
+            <button
+              type="button"
+              className="topbar__pill"
+              onClick={() => navigate('/planos')}
+            >
+              <Sparkles /> Planos
+            </button>
+          )}
+          {onSport && (
+            <button
+              type="button"
+              className="topbar__pill"
+              onClick={() => requireUnlock(() => navigate('/tipster'))}
+            >
+              <Sparkles /> Criar Odds
+            </button>
           )}
         </div>
       </div>
