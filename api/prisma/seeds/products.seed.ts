@@ -11,9 +11,7 @@ import {
  * into credits, plan access, category access, or IA unlimited access.
  *
  * For Payt, `externalProductId` must equal the `product.code` sent in the
- * postback. The IA hashes below mirror the hosted checkout URLs currently used
- * by the frontend; if Payt emits a different short product code, update these
- * values to that code.
+ * postback.
  */
 interface ProductSeed {
   provider: string;
@@ -28,25 +26,25 @@ interface ProductSeed {
 export const PRODUCT_SEEDS: ProductSeed[] = [
   {
     provider: 'payt',
-    externalProductId: '923698894ed467828da8395f46da1b67',
+    externalProductId: 'RK3OXZ',
     grantType: 'credits',
     grantCredits: 5,
   },
   {
     provider: 'payt',
-    externalProductId: 'b9308e657ab39f0059e6207c2fbf6aee',
+    externalProductId: 'LPG2YX',
     grantType: 'credits',
     grantCredits: 10,
   },
   {
     provider: 'payt',
-    externalProductId: '0c3a47a281c93d17be29146da83fb7c0',
+    externalProductId: 'L9QZVZ',
     grantType: 'ia_unlimited',
     grantPeriodDays: 30,
   },
   {
     provider: 'payt',
-    externalProductId: '9b8dcbba1f508de4d63dece33b2b5bde',
+    externalProductId: '4O26Q9',
     grantType: 'ia_unlimited',
     grantPeriodDays: 90,
   },
