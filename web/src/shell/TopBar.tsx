@@ -65,7 +65,16 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
           </button>
         </div>
         <div className="topbar__right">
-          {isFree && (
+          {onSport && (
+            <button
+              type="button"
+              className="topbar__pill"
+              onClick={() => requireUnlock(() => navigate('/tipster'))}
+            >
+              <Sparkles /> Criar Odds
+            </button>
+          )}
+          {(isFree || onSport) && (
             <button
               type="button"
               className="topbar__pill topbar__pill--free"
@@ -74,22 +83,13 @@ export function TopBar({ api = defaultApi }: { api?: Pick<ApiClient, 'get'> }) {
               <PaperPlane /> Resgatar Odd Grátis
             </button>
           )}
-          {isPaid && (
+          {isPaid && !onSport && (
             <button
               type="button"
               className="topbar__pill"
               onClick={() => navigate('/planos')}
             >
               <Sparkles /> Planos
-            </button>
-          )}
-          {onSport && (
-            <button
-              type="button"
-              className="topbar__pill"
-              onClick={() => requireUnlock(() => navigate('/tipster'))}
-            >
-              <Sparkles /> Criar Odds
             </button>
           )}
         </div>

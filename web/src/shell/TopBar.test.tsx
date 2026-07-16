@@ -54,15 +54,18 @@ describe('TopBar', () => {
     expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
 
-  it('shows Criar Odds only on the sport page after Ver entradas', async () => {
+  it('shows Criar Odds beside Resgatar Odd Gratis only on the sport page after Ver entradas', async () => {
     const user = userEvent.setup();
     renderAt('/bilhetes', 'free');
 
-    expect(
-      await screen.findByRole('button', { name: /resgatar odd gr/i }),
-    ).toBeInTheDocument();
+    const criarOdds = await screen.findByRole('button', { name: /criar odds/i });
+    const resgatar = await screen.findByRole('button', { name: /resgatar odd gr/i });
+    expect(criarOdds.compareDocumentPosition(resgatar)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.queryByRole('button', { name: /^planos$/i })).not.toBeInTheDocument();
 
-    await user.click(await screen.findByRole('button', { name: /criar odds/i }));
+    await user.click(criarOdds);
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
   });
 
