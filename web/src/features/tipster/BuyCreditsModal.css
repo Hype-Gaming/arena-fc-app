@@ -2,7 +2,7 @@
 .bcm-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,6 +53,11 @@
 }
 .bcm__close:hover {
   background: rgba(140, 230, 10, 0.18);
+}
+
+.bcm[data-view='checkout'] {
+  max-width: 920px;
+  overflow: hidden;
 }
 
 .bcm__title {
@@ -144,6 +149,81 @@
   white-space: nowrap;
 }
 
+.bcm-checkout__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 44px 14px 0;
+  padding: 7px 10px 7px 7px;
+  border-radius: 9px;
+  border: 1px solid rgba(166, 238, 66, 0.25);
+  background: rgba(166, 238, 66, 0.06);
+  color: var(--bcm-gold-soft);
+  font: 700 12px var(--bcm-body);
+  cursor: pointer;
+}
+.bcm-checkout__back:hover {
+  background: rgba(166, 238, 66, 0.12);
+}
+.bcm-checkout__subtitle {
+  margin-bottom: 14px;
+}
+.bcm-checkout__frame-wrap {
+  position: relative;
+  width: 100%;
+  height: min(680px, calc(100dvh - 190px));
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--bcm-line);
+  border-radius: 12px;
+  background: #fff;
+}
+.bcm-checkout__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #44505c;
+  background: #fff;
+  font-size: 13px;
+}
+.bcm-checkout__loading span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(73, 92, 110, 0.22);
+  border-top-color: #70bc08;
+  border-radius: 50%;
+  animation: bcm-spin 0.7s linear infinite;
+}
+.bcm-checkout__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.bcm-checkout__frame-wrap[data-loaded='true'] .bcm-checkout__frame {
+  opacity: 1;
+}
+.bcm-checkout__external {
+  display: block;
+  margin-top: 10px;
+  color: var(--bcm-muted);
+  font-size: 12px;
+  text-align: center;
+  text-underline-offset: 3px;
+}
+
+@keyframes bcm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes bcm-fade {
   from {
     opacity: 0;
@@ -162,5 +242,25 @@
   }
   .bcm-row {
     transition: none;
+  }
+  .bcm-checkout__loading span {
+    animation: none;
+  }
+  .bcm-checkout__frame {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .bcm-backdrop {
+    padding: 10px;
+  }
+  .bcm {
+    max-height: calc(100dvh - 20px);
+    padding: 18px;
+  }
+  .bcm-checkout__frame-wrap {
+    height: calc(100dvh - 180px);
+    min-height: 0;
   }
 }

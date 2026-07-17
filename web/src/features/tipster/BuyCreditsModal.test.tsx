@@ -1,17 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BuyCreditsModal } from './BuyCreditsModal';
 import { CREDIT_PACKS, checkoutUrlForPack } from '../../lib/creditPacks';
 
 describe('BuyCreditsModal', () => {
-  beforeEach(() => {
-    vi.stubGlobal('open', vi.fn());
-  });
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it('renders nothing when closed', () => {
     const { container } = render(
       <BuyCreditsModal open={false} onClose={vi.fn()} />,
@@ -36,17 +29,32 @@ describe('BuyCreditsModal', () => {
     expect(screen.getByText('90 dias ilimitados')).toBeInTheDocument();
   });
 
-  it('opens the checkout for the clicked pack', async () => {
+  it('embeds the checkout for the clicked pack without leaving the app', async () => {
     const user = userEvent.setup();
     render(<BuyCreditsModal open onClose={vi.fn()} />);
 
     await user.click(screen.getByText('Arena 5 Creditos IA'));
 
-    expect(window.open).toHaveBeenCalledTimes(1);
-    const [url, target] = (window.open as ReturnType<typeof vi.fn>).mock
-      .calls[0];
-    expect(url).toBe('https://checkout.payt.com.br/923698894ed467828da8395f46da1b67');
-    expect(target).toBe('_blank');
+    expect(screen.getByRole('heading', { name: /finalizar compra/i })).toBeInTheDocument();
+    expect(screen.getByTitle(/checkout arena 5 creditos ia/i)).toHaveAttribute(
+      'src',
+      'https://checkout.payt.com.br/923698894ed467828da8395f46da1b67',
+    );
+    expect(screen.getByRole('link', { name: /abrir em nova aba/i })).toHaveAttribute(
+      'href',
+      'https://checkout.payt.com.br/923698894ed467828da8395f46da1b67',
+    );
+  });
+
+  it('returns from the embedded checkout to the package list', async () => {
+    const user = userEvent.setup();
+    render(<BuyCreditsModal open onClose={vi.fn()} />);
+
+    await user.click(screen.getByText('Arena 10 Creditos IA'));
+    await user.click(screen.getByRole('button', { name: /voltar aos pacotes/i }));
+
+    expect(screen.getByText('Arena 5 Creditos IA')).toBeInTheDocument();
+    expect(screen.queryByTitle(/checkout/i)).not.toBeInTheDocument();
   });
 
   it('maps every IA package to its Payt checkout', () => {
