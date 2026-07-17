@@ -3,9 +3,7 @@
 import { createPortal } from 'react-dom';
 import './FreeOddModal.css';
 
-const TELEGRAM_URL =
-  (import.meta.env.VITE_TELEGRAM_URL as string | undefined) ??
-  'https://t.me/+arena_fc';
+const FREE_ODD_TELEGRAM_URL = 'https://t.me/+Lnc41ngjDLdjNzcx';
 
 export function FreeOddModal({
   open,
@@ -46,7 +44,9 @@ export function FreeOddModal({
         <button
           type="button"
           className="free-odd__cta"
-          onClick={() => window.open(TELEGRAM_URL, '_blank')}
+          onClick={() =>
+            window.open(FREE_ODD_TELEGRAM_URL, '_blank', 'noopener,noreferrer')
+          }
         >
           <PaperPlane /> Resgatar Odd Grátis
         </button>
