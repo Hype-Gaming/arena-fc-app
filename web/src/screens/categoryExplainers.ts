@@ -12,14 +12,14 @@ export const CATEGORY_EXPLAINERS: Record<string, Explainer> = {
   },
   ultra: {
     title: 'Entenda como funciona as Odds Altas',
-    imageSrc: '/odds-multiplas.png',
+    imageSrc: '/alavancagem-2%20%281%29.png',
     imageAlt: 'Odds Altas - Arena FC',
     body: 'Entradas selecionadas pela IA com odds elevadas e alto potencial de retorno. Mais ousadia, mais multiplicacao - para quem busca lucros maiores no dia.',
     checkoutUrl: 'https://checkout.payt.com.br/bb0d17f48cfc7137913002d334cfe7ff',
   },
   alavancagem: {
     title: 'Entenda como funciona a Alavancagem',
-    imageSrc: '/Alavancagem.png',
+    imageSrc: '/alavancagem-2%20%282%29.png',
     imageAlt: 'Alavancagem - Arena FC',
     body: 'Sequencia de 3 odds de baixo risco no mesmo dia. A cada acerto, o ganho e reinvestido no proximo, multiplicando o retorno final.',
     checkoutUrl: 'https://checkout.payt.com.br/e508405c78d7aa3b6f7c3ab41a557536',

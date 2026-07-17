@@ -36,4 +36,36 @@ describe('ExplainerModal', () => {
     await user.click(screen.getByRole('button', { name: /fechar/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders a configured checkout as a secure external link', async () => {
+    const user = userEvent.setup();
+    const onInterest = vi.fn();
+    const onClose = vi.fn();
+    render(
+      <ExplainerModal
+        explainer={{ ...explainer, checkoutUrl: 'https://checkout.example/odds-altas' }}
+        onClose={onClose}
+        onInterest={onInterest}
+      />,
+    );
+
+    const checkout = screen.getByRole('link', { name: /tenho interesse/i });
+    expect(checkout).toHaveAttribute('href', 'https://checkout.example/odds-altas');
+    expect(checkout).toHaveAttribute('target', '_blank');
+    expect(checkout).toHaveAttribute('rel', 'noopener noreferrer');
+
+    await user.click(checkout);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onInterest).not.toHaveBeenCalled();
+  });
+
+  it('focuses the close button and closes with Escape', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<ExplainerModal explainer={explainer} onClose={onClose} onInterest={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: /fechar/i })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

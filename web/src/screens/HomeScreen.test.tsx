@@ -1,5 +1,5 @@
 // web/src/screens/HomeScreen.test.tsx
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -19,14 +19,6 @@ function renderHome() {
 }
 
 describe('HomeScreen', () => {
-  beforeEach(() => {
-    vi.stubGlobal('open', vi.fn());
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it('renders the section headers and main cards', () => {
     renderHome();
 
@@ -55,7 +47,7 @@ describe('HomeScreen', () => {
     expect(screen.getByText('Tipster route')).toBeInTheDocument();
   });
 
-  it('opens the explainer popup from a locked "Desbloquear" card, then opens its checkout', async () => {
+  it('opens the explainer popup from a locked "Desbloquear" card with its checkout link', async () => {
     const user = userEvent.setup();
     renderHome();
 
@@ -67,12 +59,15 @@ describe('HomeScreen', () => {
     expect(
       screen.getByRole('heading', { name: /como funciona as odds altas/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /odds altas/i })).toHaveAttribute(
+      'src',
+      '/alavancagem-2%20%281%29.png',
+    );
     expect(screen.queryByText('Planos route')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /tenho interesse/i }));
-    expect(window.open).toHaveBeenCalledWith(
+    expect(screen.getByRole('link', { name: /tenho interesse/i })).toHaveAttribute(
+      'href',
       'https://checkout.payt.com.br/bb0d17f48cfc7137913002d334cfe7ff',
-      '_blank',
     );
   });
 });

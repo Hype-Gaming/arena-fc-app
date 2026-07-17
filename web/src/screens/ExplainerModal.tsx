@@ -2,7 +2,7 @@
 // (Múltiplas, Odds Altas, Alavancagem, …). Opened from a category chip; the CTA
 // leads to plans. Some products (Alavancagem) show a worked example as a row of
 // steps under the body.
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import './ExplainerModal.css';
 
 /** One stage of a worked example (e.g. an Alavancagem reinvestment step). */
@@ -35,6 +35,51 @@ export function ExplainerModal({
   onClose: () => void;
   onInterest: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!explainer) return;
+
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(
+        cardRef.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [],
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [explainer]);
+
   if (!explainer) return null;
 
   return (
@@ -45,8 +90,9 @@ export function ExplainerModal({
       aria-labelledby="exp-title"
       onClick={onClose}
     >
-      <div className="exp__card" onClick={(e) => e.stopPropagation()}>
+      <div ref={cardRef} className="exp__card" onClick={(e) => e.stopPropagation()}>
         <button
+          ref={closeRef}
           type="button"
           className="exp__close"
           aria-label="Fechar"
@@ -89,9 +135,21 @@ export function ExplainerModal({
 
         {explainer.footnote && <p className="exp__foot">{explainer.footnote}</p>}
 
-        <button type="button" className="exp__cta" onClick={onInterest}>
-          Entendi, tenho interesse <Arrow />
-        </button>
+        {explainer.checkoutUrl ? (
+          <a
+            className="exp__cta"
+            href={explainer.checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+          >
+            Entendi, tenho interesse <Arrow />
+          </a>
+        ) : (
+          <button type="button" className="exp__cta" onClick={onInterest}>
+            Entendi, tenho interesse <Arrow />
+          </button>
+        )}
       </div>
     </div>
   );

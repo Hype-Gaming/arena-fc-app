@@ -15,8 +15,13 @@
 
 .exp__card {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
   max-width: 420px;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 30px 24px 24px;
   border-radius: 20px;
   background: #13202e;
@@ -130,6 +135,7 @@
 }
 
 .exp__cta {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -142,6 +148,7 @@
   color: #0a1420;
   font-size: 16px;
   font-weight: 800;
+  text-decoration: none;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(140, 230, 10, 0.26);
   transition: filter 0.15s, transform 0.05s;

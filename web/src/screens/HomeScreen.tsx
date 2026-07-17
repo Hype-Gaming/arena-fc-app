@@ -112,7 +112,7 @@ const SECTIONS: Section[] = [
         to: '/planos',
         explainerKey: 'ultra',
         visual: 'locked',
-        image: '/odds-altas.png',
+        image: '/alavancagem-2%20%281%29.png',
         layout: 'tile',
       },
       {
@@ -128,7 +128,7 @@ const SECTIONS: Section[] = [
         to: '/planos',
         explainerKey: 'alavancagem',
         visual: 'locked',
-        image: '/Alavancagem.png',
+        image: '/alavancagem-2%20%282%29.png',
         layout: 'tile',
       },
     ],
@@ -211,14 +211,7 @@ export function HomeScreen() {
         explainer={explainerKey ? CATEGORY_EXPLAINERS[explainerKey] : null}
         onClose={() => setExplainerKey(null)}
         onInterest={() => {
-          const checkoutUrl = explainerKey
-            ? CATEGORY_EXPLAINERS[explainerKey]?.checkoutUrl
-            : null;
           setExplainerKey(null);
-          if (checkoutUrl) {
-            window.open(checkoutUrl, '_blank');
-            return;
-          }
           navigate('/planos');
         }}
       />

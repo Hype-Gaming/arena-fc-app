@@ -1,5 +1,5 @@
 // web/src/screens/BilhetesScreen.test.tsx
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -19,14 +19,6 @@ function renderScreen() {
 }
 
 describe('BilhetesScreen', () => {
-  beforeEach(() => {
-    vi.stubGlobal('open', vi.fn());
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it('renders the markets header and an empty rail without demo tickets', () => {
     renderScreen();
     expect(
@@ -60,7 +52,7 @@ describe('BilhetesScreen', () => {
     expect(screen.getByText('Planos route')).toBeInTheDocument();
   });
 
-  it('opens the explainer popup for a locked market that has one, then opens its checkout', async () => {
+  it('opens the explainer popup for a locked market with its checkout link', async () => {
     const user = userEvent.setup();
     renderScreen();
 
@@ -70,13 +62,16 @@ describe('BilhetesScreen', () => {
     expect(
       screen.getByRole('heading', { name: /como funciona a alavancagem/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /alavancagem/i })).toHaveAttribute(
+      'src',
+      '/alavancagem-2%20%282%29.png',
+    );
     expect(screen.getByText(/etapa 1/i)).toBeInTheDocument();
     expect(screen.queryByText('Planos route')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /tenho interesse/i }));
-    expect(window.open).toHaveBeenCalledWith(
+    expect(screen.getByRole('link', { name: /tenho interesse/i })).toHaveAttribute(
+      'href',
       'https://checkout.payt.com.br/e508405c78d7aa3b6f7c3ab41a557536',
-      '_blank',
     );
   });
 });
