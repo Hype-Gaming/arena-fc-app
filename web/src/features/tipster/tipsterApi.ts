@@ -92,12 +92,18 @@ export async function upcomingMatches(limit = 5): Promise<TipsterMatch[]> {
     .slice(0, limit);
 }
 
-export async function searchMatches(q: string): Promise<TipsterMatch[]> {
+/**
+ * Search UPCOMING fixtures from the real feed by team name. Returns every match
+ * of that team so the chat can list them for the user to pick (then analyze the
+ * chosen one via analyzeUpcoming). Replaces the old admin-Match-table search
+ * that only found games an admin had curated ("não acha o jogo").
+ */
+export async function searchMatches(q: string): Promise<UpcomingFeedMatch[]> {
   const res = await fetch(`/api/tipster/match-search?q=${encodeURIComponent(q)}`, {
     method: 'GET',
     headers: { ...authHeaders() },
   });
-  const body = await unwrap<{ matches: TipsterMatch[] }>(res);
+  const body = await unwrap<{ matches: UpcomingFeedMatch[] }>(res);
   return body.matches;
 }
 

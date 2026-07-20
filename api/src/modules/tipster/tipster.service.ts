@@ -52,13 +52,29 @@ export class TipsterService {
     private readonly ai: AiAnalysisProvider,
   ) {}
 
-  async searchMatches(q: string) {
-    const candidates = await this.prisma.match.findMany({
-      where: { status: { in: ['scheduled', 'live'] } },
-      orderBy: { startsAt: 'asc' },
-      take: TipsterService.SCAN_LIMIT,
-    });
-    return rankMatches(q, candidates, TipsterService.SEARCH_LIMIT);
+  /**
+   * Find upcoming games by team name from the REAL sportsbook feed (not the
+   * admin-curated Match table, which only holds the handful of games an admin
+   * built a bilhete for — hence the old "não acha o jogo"). Returns every match
+   * of that team so the chat can list them for the user to pick, then analyze
+   * the chosen one via analyzeUpcoming (feed-based, works for any fixture).
+   */
+  async searchMatches(q: string): Promise<UpcomingMatch[]> {
+    const upcoming = await this.upcomingMatches(TipsterService.SCAN_LIMIT);
+    // rankMatches keys on `id` + team names; wrap each feed match so we can rank
+    // by the fuzzy score and then hand back the original feed object untouched.
+    const ranked = rankMatches(
+      q,
+      upcoming.map((m) => ({
+        id: m.externalId,
+        homeTeam: m.homeTeam,
+        awayTeam: m.awayTeam,
+        competition: m.competition ?? '',
+        match: m,
+      })),
+      TipsterService.SEARCH_LIMIT,
+    );
+    return ranked.map((r) => r.match);
   }
 
   /** How many in-play matches the "Ao Vivo" tab shows (feed can return dozens). */

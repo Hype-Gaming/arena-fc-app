@@ -304,6 +304,23 @@
   cursor: not-allowed;
 }
 
+/* "Não é esse time" — dismiss the candidate list and search again */
+.tst-candidates__dismiss {
+  margin-top: 10px;
+  width: 100%;
+  padding: 9px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--tst-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.tst-candidates__dismiss:hover {
+  color: #e6eef7;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
 /* credits banner + error */
 .tst-banner {
   display: flex;

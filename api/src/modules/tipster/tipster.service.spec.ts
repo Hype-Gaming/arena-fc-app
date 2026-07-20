@@ -48,26 +48,44 @@ describe('TipsterService.searchMatches', () => {
     service = moduleRef.get(TipsterService);
   });
 
-  it('queries only searchable (scheduled/live) matches and returns fuzzy-ranked results', async () => {
-    prismaMock.match.findMany.mockResolvedValue([
-      { id: 'm1', homeTeam: 'São Paulo', awayTeam: 'Palmeiras', competition: 'Brasileirão', startsAt: new Date(), status: 'scheduled' },
-      { id: 'm2', homeTeam: 'Flamengo', awayTeam: 'Vasco', competition: 'Carioca', startsAt: new Date(), status: 'scheduled' },
+  const feedEvent = (
+    externalId: string,
+    homeTeam: string,
+    awayTeam: string,
+    competition: string,
+  ) => ({
+    externalId,
+    homeTeam,
+    awayTeam,
+    competition,
+    startsAt: new Date(),
+    oddHome: null,
+    oddDraw: null,
+    oddAway: null,
+    deepLink: `https://x/${externalId}`,
+  });
+
+  it('searches the real feed by team and returns fuzzy-ranked matches', async () => {
+    sportsFeedMock.upcomingCached.mockResolvedValue([
+      feedEvent('e1', 'São Paulo', 'Palmeiras', 'Brasileirão'),
+      feedEvent('e2', 'Flamengo', 'Vasco', 'Carioca'),
     ]);
+    sportsFeedMock.teamLogoIndex.mockResolvedValue(buildTeamLogoIndex([]));
 
     const result = await service.searchMatches('sao palmeiras');
 
-    expect(prismaMock.match.findMany).toHaveBeenCalledWith({
-      where: { status: { in: ['scheduled', 'live'] } },
-      orderBy: { startsAt: 'asc' },
-      take: 200,
-    });
-    expect(result.map((m) => m.id)).toEqual(['m1']);
+    // The feed (not the admin Match table) is the source now.
+    expect(sportsFeedMock.upcomingCached).toHaveBeenCalledWith(200);
+    expect(prismaMock.match.findMany).not.toHaveBeenCalled();
+    expect(result.map((m) => m.externalId)).toEqual(['e1']);
   });
 
   it('returns an empty array when nothing matches the query', async () => {
-    prismaMock.match.findMany.mockResolvedValue([
-      { id: 'm2', homeTeam: 'Flamengo', awayTeam: 'Vasco', competition: 'Carioca', startsAt: new Date(), status: 'scheduled' },
+    sportsFeedMock.upcomingCached.mockResolvedValue([
+      feedEvent('e2', 'Flamengo', 'Vasco', 'Carioca'),
     ]);
+    sportsFeedMock.teamLogoIndex.mockResolvedValue(buildTeamLogoIndex([]));
+
     const result = await service.searchMatches('chelsea arsenal');
     expect(result).toEqual([]);
   });

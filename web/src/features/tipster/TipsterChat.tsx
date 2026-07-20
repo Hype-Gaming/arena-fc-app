@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { useGate } from '../../components/TelegramGate';
 import {
   searchMatches,
-  analyzeMatch,
-  upcomingMatches,
-  type TipsterMatch,
+  analyzeUpcoming,
+  upcomingFeedMatches,
+  type UpcomingFeedMatch,
 } from './tipsterApi';
 import './TipsterScreen.css';
 
@@ -19,7 +19,7 @@ interface TipsterChatProps {
   /** Called with the new credit balance after a paid analysis. */
   onBalance?: (balance: number) => void;
   /** Preset empty-state suggestions (used by previews/tests); skips fetching. */
-  suggestions?: TipsterMatch[];
+  suggestions?: UpcomingFeedMatch[];
 }
 
 function formatKickoff(iso: string): string | null {
@@ -39,18 +39,22 @@ export function TipsterChat({
   suggestions,
 }: TipsterChatProps = {}) {
   const [query, setQuery] = useState('');
-  const [found, setFound] = useState<TipsterMatch | null>(null);
+  // The team the user searched for (drives the "Próximos jogos de X" heading).
+  const [searchedTeam, setSearchedTeam] = useState('');
+  // Candidate games returned by a search — the user picks the right one.
+  const [candidates, setCandidates] = useState<UpcomingFeedMatch[]>([]);
+  const [found, setFound] = useState<UpcomingFeedMatch | null>(null);
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [needCredits, setNeedCredits] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [upcoming, setUpcoming] = useState<TipsterMatch[]>(suggestions ?? []);
+  const [upcoming, setUpcoming] = useState<UpcomingFeedMatch[]>(suggestions ?? []);
   const { requireUnlock } = useGate();
 
   useEffect(() => {
     if (suggestions) return;
     let alive = true;
-    upcomingMatches()
+    upcomingFeedMatches()
       .then((m) => {
         if (alive) setUpcoming(m);
       })
@@ -66,14 +70,17 @@ export function TipsterChat({
     e.preventDefault();
     setError(null);
     setFound(null);
-    if (!query.trim()) return;
+    setCandidates([]);
+    const q = query.trim();
+    if (!q) return;
     setBusy(true);
     try {
-      const matches = await searchMatches(query.trim());
+      const matches = await searchMatches(q);
       if (matches.length === 0) {
-        setError('Não achei esse jogo. Tente outro nome.');
+        setError(`Não achei jogos de "${q}" nos próximos dias. Tente o nome de um time.`);
       } else {
-        setFound(matches[0]);
+        setSearchedTeam(q);
+        setCandidates(matches);
       }
     } catch (err) {
       setError((err as Error).message);
@@ -87,12 +94,13 @@ export function TipsterChat({
     setError(null);
     setNeedCredits(false);
     setBusy(true);
+    setCandidates([]);
     setLines((prev) => [
       ...prev,
-      { role: 'user', content: `${found.homeTeam} x ${found.awayTeam}` },
+      { role: 'user', content: `Sim, é esse: ${found.homeTeam} x ${found.awayTeam}` },
     ]);
     try {
-      const res = await analyzeMatch(found.id);
+      const res = await analyzeUpcoming(found.externalId);
       setLines((prev) => [...prev, { role: 'assistant', content: res.message }]);
       onBalance?.(res.balanceAfter);
       setFound(null);
@@ -101,7 +109,7 @@ export function TipsterChat({
       const message = (err as Error).message;
       if (
         onBuyCredits &&
-        (status === 402 || /insufficient credits|sem cr[eé]ditos/i.test(message))
+        (status === 402 || /insufficient credits|sem cr[eé]ditos|cr[eé]dito/i.test(message))
       ) {
         setNeedCredits(true);
       } else {
@@ -112,7 +120,7 @@ export function TipsterChat({
     }
   }
 
-  const empty = lines.length === 0 && !found;
+  const empty = lines.length === 0 && !found && candidates.length === 0;
 
   return (
     <div className="tst-chat">
@@ -136,7 +144,7 @@ export function TipsterChat({
                 {upcoming.map((m) => {
                   const when = formatKickoff(m.startsAt);
                   return (
-                    <li key={m.id}>
+                    <li key={m.externalId}>
                       <button
                         type="button"
                         className="tst-suggest__item"
@@ -149,9 +157,11 @@ export function TipsterChat({
                           {m.homeTeam} <i>x</i> {m.awayTeam}
                         </span>
                         <span className="tst-suggest__meta">
-                          <span className="tst-suggest__tag">
-                            <Trophy /> {m.competition}
-                          </span>
+                          {m.competition && (
+                            <span className="tst-suggest__tag">
+                              <Trophy /> {m.competition}
+                            </span>
+                          )}
                           {when && (
                             <span className="tst-suggest__tag">
                               <CalendarIcon /> {when}
@@ -176,20 +186,71 @@ export function TipsterChat({
         </div>
       )}
 
+      {candidates.length > 0 && !found && (
+        <div className="tst-suggest tst-candidates">
+          <p className="tst-suggest__label">
+            Próximos jogos de “{searchedTeam}” — qual quer analisar?
+          </p>
+          <ul className="tst-suggest__list">
+            {candidates.map((m) => {
+              const when = formatKickoff(m.startsAt);
+              return (
+                <li key={m.externalId}>
+                  <button
+                    type="button"
+                    className="tst-suggest__item"
+                    onClick={() => {
+                      setError(null);
+                      setFound(m);
+                    }}
+                  >
+                    <span className="tst-suggest__teams">
+                      {m.homeTeam} <i>x</i> {m.awayTeam}
+                    </span>
+                    <span className="tst-suggest__meta">
+                      {m.competition && (
+                        <span className="tst-suggest__tag">
+                          <Trophy /> {m.competition}
+                        </span>
+                      )}
+                      {when && (
+                        <span className="tst-suggest__tag">
+                          <CalendarIcon /> {when}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button
+            type="button"
+            className="tst-candidates__dismiss"
+            onClick={() => {
+              setCandidates([]);
+              setError(null);
+            }}
+          >
+            Não é esse time
+          </button>
+        </div>
+      )}
+
       {found && (
         <div className="tst-confirm">
           <p className="tst-confirm__match">
-            {found.homeTeam} x {found.awayTeam}{' '}
-            <span>({found.competition})</span>
+            {found.homeTeam} x {found.awayTeam}
+            {found.competition && <span> ({found.competition})</span>}
           </p>
-          <p className="tst-confirm__ask">Achei esse jogo. Confirma?</p>
+          <p className="tst-confirm__ask">É esse jogo? Confirma para analisar.</p>
           <button
             type="button"
             className="tst-confirm__btn"
             onClick={() => requireUnlock(onConfirm)}
             disabled={busy}
           >
-            Confirmar
+            {busy ? 'Analisando…' : 'Analisar'}
           </button>
         </div>
       )}
