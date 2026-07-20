@@ -1,15 +1,15 @@
 // web/src/screens/HomeScreen.test.tsx
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { HomeScreen } from './HomeScreen';
 
-function renderHome() {
+function renderHome(api?: { get: ReturnType<typeof vi.fn> }) {
   return render(
     <MemoryRouter initialEntries={['/']}>
       <Routes>
-        <Route path="/" element={<HomeScreen />} />
+        <Route path="/" element={<HomeScreen api={api as never} />} />
         <Route path="/bilhetes" element={<div>Bilhetes route</div>} />
         <Route path="/tipster" element={<div>Tipster route</div>} />
         <Route path="/planos" element={<div>Planos route</div>} />
@@ -68,6 +68,33 @@ describe('HomeScreen', () => {
     expect(screen.getByRole('link', { name: /tenho interesse/i })).toHaveAttribute(
       'href',
       'https://checkout.payt.com.br/bb0d17f48cfc7137913002d334cfe7ff',
+    );
+  });
+
+  it('unlocks the plan-gated cards for a Diamante plan', async () => {
+    const user = userEvent.setup();
+    const api = { get: vi.fn().mockResolvedValue({ planKey: 'diamante' }) };
+    renderHome(api);
+
+    // Once /me resolves, both teasers drop their lock: no "Desbloquear" remains.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /desbloquear/i })).not.toBeInTheDocument(),
+    );
+
+    // Alavancagem now links to the real content instead of the paywall funnel.
+    const acessar = screen.getAllByRole('button', { name: /^acessar$/i });
+    await user.click(acessar[acessar.length - 1]);
+    expect(screen.getByText('Bilhetes route')).toBeInTheDocument();
+  });
+
+  it('keeps Alavancagem locked for a Premium plan (rank below Diamante)', async () => {
+    const api = { get: vi.fn().mockResolvedValue({ planKey: 'premium' }) };
+    renderHome(api);
+
+    // Premium unlocks Odds Altas (rank 1) but not Alavancagem (rank 2), so
+    // exactly one "Desbloquear" survives.
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: /desbloquear/i })).toHaveLength(1),
     );
   });
 });

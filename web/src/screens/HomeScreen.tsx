@@ -1,10 +1,14 @@
 // web/src/screens/HomeScreen.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CSSProperties } from 'react';
+import type { ApiClient } from '../lib/apiClient';
 import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './HomeScreen.css';
+
+/** Plan → access rank, mirroring the backend (free=0, premium=1, diamante=2). */
+const PLAN_RANK: Record<string, number> = { free: 0, premium: 1, diamante: 2 };
 
 type Accent = 'gold' | 'blue' | 'muted' | 'green';
 type Tone = 'gold' | 'blue' | 'green';
@@ -34,6 +38,12 @@ interface HomeCard {
   /** Opens the "how it works" popup (keyed into CATEGORY_EXPLAINERS) instead
    *  of navigating — used by the locked "Desbloquear" cards. */
   explainerKey?: string;
+  /** Minimum plan rank that unlocks this card (see PLAN_RANK). When the viewer's
+   *  plan meets it, the card drops the lock and links to `unlockedTo` instead of
+   *  funnelling to the paywall. */
+  minRank?: number;
+  /** Where an unlocked card navigates (defaults to /bilhetes). */
+  unlockedTo?: string;
 }
 
 interface Section {
@@ -114,6 +124,9 @@ const SECTIONS: Section[] = [
         visual: 'locked',
         image: '/alavancagem-2%20%281%29.png',
         layout: 'tile',
+        // Odds Ultra = plan rank 1 (Premium+). See bilhetes.constants.ts.
+        minRank: 1,
+        unlockedTo: '/bilhetes',
       },
       {
         key: 'alavancagem',
@@ -130,6 +143,9 @@ const SECTIONS: Section[] = [
         visual: 'locked',
         image: '/alavancagem-2%20%282%29.png',
         layout: 'tile',
+        // Alavancagem = plan rank 2 (Diamante). See bilhetes.constants.ts.
+        minRank: 2,
+        unlockedTo: '/bilhetes',
       },
     ],
   },
@@ -155,9 +171,49 @@ const SECTIONS: Section[] = [
   },
 ];
 
-export function HomeScreen() {
+interface Props {
+  /** When provided, the Home reads the viewer's plan (GET /me) to unlock the
+   *  plan-gated quick-access cards. Omitted in isolated tests → cards stay as
+   *  their static "Desbloquear" teasers. */
+  api?: Pick<ApiClient, 'get'>;
+}
+
+export function HomeScreen({ api }: Props = {}) {
   const navigate = useNavigate();
   const [explainerKey, setExplainerKey] = useState<string | null>(null);
+  const [planRank, setPlanRank] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!api) return;
+    let alive = true;
+    api
+      .get<{ planKey: string }>('/me')
+      .then((me) => {
+        if (alive) setPlanRank(PLAN_RANK[me.planKey] ?? 0);
+      })
+      .catch(() => {
+        if (alive) setPlanRank(0);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [api]);
+
+  /** Apply the viewer's plan to a card: a plan-gated card the plan covers loses
+   *  its lock and links to the real content instead of the paywall funnel. */
+  function resolveCard(card: HomeCard): HomeCard {
+    if (card.minRank == null || (planRank ?? 0) < card.minRank) return card;
+    return {
+      ...card,
+      locked: false,
+      visual: undefined,
+      subtitle: 'Liberado no seu plano',
+      ctaLabel: 'Acessar',
+      ctaVariant: 'solid',
+      to: card.unlockedTo ?? '/bilhetes',
+      explainerKey: undefined,
+    };
+  }
 
   function openCard(card: HomeCard) {
     // Locked cards with an explainer ("Desbloquear" on Odds Altas / Alavancagem)
@@ -184,9 +240,10 @@ export function HomeScreen() {
               {section.title}
             </h2>
             <div className="home-section__cards">
-              {section.cards.map((card) => (
-                <Card key={card.key} card={card} onOpen={() => openCard(card)} />
-              ))}
+              {section.cards.map((card) => {
+                const c = resolveCard(card);
+                return <Card key={c.key} card={c} onOpen={() => openCard(c)} />;
+              })}
             </div>
           </section>
         ))}

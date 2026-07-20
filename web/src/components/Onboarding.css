@@ -336,9 +336,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6fbf07;
-  background: #fff;
+  overflow: hidden;
+  background: transparent;
   box-shadow: 0 0 0 2px rgba(140, 230, 10, 0.5), 0 6px 14px rgba(140, 230, 10, 0.35);
+}
+/* The real home-screen icon, so the preview matches what the user installs. */
+.onb__app--brand img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
 }
 .onb__dock {
   display: flex;

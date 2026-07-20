@@ -48,7 +48,7 @@ function Gate({ api }: { api: ApiClient }) {
                 </TelegramGateProvider>
               }
             >
-              <Route index element={<HomePage />} />
+              <Route index element={<HomePage api={api} />} />
               <Route path="bilhetes" element={<BilhetesPage api={api} />} />
               <Route path="tips" element={<TipsPage api={api} />} />
               <Route path="tipster" element={<TipsterPage api={api} />} />

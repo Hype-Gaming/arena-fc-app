@@ -9,7 +9,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: false,
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: [
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/apple-touch-icon.png',
+      ],
     }),
   ],
   // Dev-only: proxy /api to the local API so `npm run dev` works standalone

@@ -138,7 +138,9 @@ export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = 
                     <span key={i} className="onb__app" />
                   ))}
                   <span className="onb__app-wrap">
-                    <span className="onb__app onb__app--brand"><Hex /></span>
+                    <span className="onb__app onb__app--brand">
+                      <img src="/icons/apple-touch-icon.png" alt="" />
+                    </span>
                     <b>ARENA FC</b>
                   </span>
                 </div>
@@ -274,5 +276,4 @@ function Send() { return svg(<path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />, 
 function Download() { return svg(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></>, 17); }
 function Play() { return svg(<><circle cx="12" cy="12" r="10" /><path d="m10 8 6 4-6 4V8z" fill="currentColor" /></>, 34); }
 function Check() { return svg(<path d="M20 6 9 17l-5-5" />, 16); }
-function Hex() { return svg(<path d="M12 2 21 7v10l-9 5-9-5V7l9-5z" />, 20); }
 function Dot() { return <span className="onb__livedot" />; }
