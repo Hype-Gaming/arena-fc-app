@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -21,6 +22,12 @@ import { TelegramGateModule } from './modules/telegram-gate/telegram-gate.module
     ConfigModule.forRoot({ isGlobal: true }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
+    // Per-IP rate limiting, applied where it matters (see AuthController).
+    // Disabled under test so e2e suites aren't throttled between cases.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 60 }],
+      skipIf: () => process.env.NODE_ENV === 'test',
+    }),
     PrismaModule,
     HealthModule,
     AuthModule,

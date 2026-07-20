@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -22,7 +23,12 @@ describe('AuthController', () => {
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
         { provide: ConfigService, useValue: { get: jest.fn() } },
       ],
-    }).compile();
+    })
+      // Rate limiting is wired at the app level (ThrottlerModule); here we
+      // exercise the controller in isolation, so stub the guard out.
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = moduleRef.get(AuthController);
   });
@@ -50,12 +56,16 @@ describe('AuthController', () => {
       expiresInSeconds: 1800,
     });
 
-    const res = await controller.adminSession({
-      userId: 'u1',
-      email: 'boss@arena.com',
-    });
+    const res = await controller.adminSession(
+      { userId: 'u1', email: 'boss@arena.com' },
+      { password: 's3cret-panel' },
+    );
 
-    expect(service.issueAdminSession).toHaveBeenCalledWith('u1', 'boss@arena.com');
+    expect(service.issueAdminSession).toHaveBeenCalledWith(
+      'u1',
+      'boss@arena.com',
+      's3cret-panel',
+    );
     expect(res).toEqual({ adminAccessToken: 'admin', expiresInSeconds: 1800 });
   });
 });
