@@ -32,6 +32,7 @@ describe('Tipster (e2e)', () => {
     await prisma.entrada.deleteMany();
     await prisma.match.deleteMany();
     await prisma.category.deleteMany();
+    await prisma.sportEvent.deleteMany();
     await prisma.creditTransaction.deleteMany();
     await prisma.user.deleteMany();
 
@@ -76,6 +77,20 @@ describe('Tipster (e2e)', () => {
       },
     });
 
+    // The chat search now reads the real sportsbook feed (SportEvent), not the
+    // admin Match table — seed a future fixture the search should find by team.
+    await prisma.sportEvent.create({
+      data: {
+        provider: 'esportiva',
+        externalId: 'evt-sao-pal',
+        homeTeam: 'São Paulo',
+        awayTeam: 'Palmeiras',
+        competition: 'Brasileirão',
+        startsAt: new Date(Date.now() + 86_400_000),
+        deepLink: 'https://esportiva.example/evt-sao-pal',
+      },
+    });
+
     // give the user starting credits via the ledger (only legal way to add credits)
     await credits.applyTransaction({
       userId,
@@ -94,13 +109,13 @@ describe('Tipster (e2e)', () => {
     await request(app.getHttpServer()).get('/tipster/match-search?q=sao').expect(401);
   });
 
-  it('GET /tipster/match-search returns the fuzzy-matched registered match', async () => {
+  it('GET /tipster/match-search returns the fuzzy-matched fixture from the feed', async () => {
     const res = await request(app.getHttpServer())
       .get('/tipster/match-search?q=sao%20palmeiras')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
     expect(res.body.matches).toHaveLength(1);
-    expect(res.body.matches[0].id).toBe(matchId);
+    expect(res.body.matches[0].externalId).toBe('evt-sao-pal');
   });
 
   it('GET /tipster/match-search?q= (empty) is a 400', async () => {
