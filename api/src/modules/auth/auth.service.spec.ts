@@ -207,4 +207,72 @@ describe('AuthService.issueAdminSession', () => {
       service.issueAdminSession('u1', 'user@arena.com'),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('issues without a password when ADMIN_PANEL_PASSWORD is unset (gate off)', async () => {
+    // The default config above has no ADMIN_PANEL_PASSWORD.
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'boss@arena.com',
+      role: 'admin',
+    });
+
+    const result = await service.issueAdminSession('u1', 'boss@arena.com');
+
+    expect(result).toEqual({ adminAccessToken: 'admin.jwt', expiresInSeconds: 1800 });
+  });
+});
+
+describe('AuthService.issueAdminSession with ADMIN_PANEL_PASSWORD', () => {
+  let service: AuthService;
+  let prisma: any;
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'u1',
+          email: 'boss@arena.com',
+          role: 'admin',
+        }),
+        update: jest.fn().mockResolvedValue({}),
+      },
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: { signAsync: jest.fn().mockResolvedValue('admin.jwt') } },
+        {
+          provide: ConfigService,
+          useValue: configWith({
+            JWT_SECRET: 'test-secret',
+            ADMIN_EMAILS: 'boss@arena.com',
+            ADMIN_PANEL_PASSWORD: 's3cret-panel',
+          }),
+        },
+      ],
+    }).compile();
+    service = moduleRef.get(AuthService);
+  });
+
+  it('issues a token when the password matches', async () => {
+    const result = await service.issueAdminSession(
+      'u1',
+      'boss@arena.com',
+      's3cret-panel',
+    );
+    expect(result).toEqual({ adminAccessToken: 'admin.jwt', expiresInSeconds: 1800 });
+  });
+
+  it('rejects a wrong password with 401', async () => {
+    await expect(
+      service.issueAdminSession('u1', 'boss@arena.com', 'wrong'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects a missing password with 401', async () => {
+    await expect(
+      service.issueAdminSession('u1', 'boss@arena.com'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

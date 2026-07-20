@@ -15,6 +15,12 @@ async function refreshTokens(): Promise<boolean> {
   return true;
 }
 
+// The backoffice password, kept in memory only (never persisted) so admin
+// sessions can be silently recreated while the tab is open, without ever
+// writing the password to storage. Lost on reload — the admin re-enters it if
+// their (30-min) admin token has also expired.
+let adminPassword: string | null = null;
+
 function clearAdminSession(): void {
   localStorage.removeItem('adminAccessToken');
 }
@@ -29,6 +35,7 @@ async function createAdminSession(retry = true): Promise<boolean> {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
+    body: JSON.stringify(adminPassword != null ? { password: adminPassword } : {}),
   });
   if (res.status === 401 && retry && (await refreshTokens())) {
     return createAdminSession(false);
@@ -44,25 +51,35 @@ async function createAdminSession(retry = true): Promise<boolean> {
 }
 
 async function req<T>(path: string, init?: RequestInit, retry = true): Promise<T> {
-  const token = localStorage.getItem('accessToken');
-  const adminToken = localStorage.getItem('adminAccessToken');
-  const res = await fetch(`/api${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(adminToken ? { 'X-Admin-Session': `Bearer ${adminToken}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  // Access tokens are short-lived — silently refresh once and retry so a long
-  // admin session doesn't 401 on every action.
+  const doFetch = (): Promise<Response> =>
+    fetch(`/api${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localStorage.getItem('accessToken')
+          ? { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
+          : {}),
+        ...(localStorage.getItem('adminAccessToken')
+          ? { 'X-Admin-Session': `Bearer ${localStorage.getItem('adminAccessToken')}` }
+          : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+
+  let res = await doFetch();
+
   if (res.status === 401 && retry) {
-    clearAdminSession();
-    await refreshTokens();
-    await createAdminSession(false);
-    return req<T>(path, init, false);
+    // Most 401s are just an expired access token: refresh and retry first,
+    // leaving the independent (longer-lived) admin session token untouched.
+    if (await refreshTokens()) res = await doFetch();
+    // Still 401 → the admin session itself is stale. Recreate it (using the
+    // in-memory panel password) and retry once more.
+    if (res.status === 401) {
+      clearAdminSession();
+      if (await createAdminSession(false)) res = await doFetch();
+    }
   }
+
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
   // Some endpoints (e.g. DELETE) reply 204/200 with an empty body — calling
   // res.json() on that throws "Unexpected end of JSON input", which used to make
@@ -211,10 +228,15 @@ export interface NationalTeamSyncSummary {
 }
 
 export const adminApi = {
-  ensureAdminSession: () =>
-    localStorage.getItem('adminAccessToken')
+  // Pass the panel password on the first (interactive) call; later calls reuse
+  // the cached admin token or the in-memory password. A still-valid admin token
+  // in storage lets a reload skip the prompt.
+  ensureAdminSession: (password?: string) => {
+    if (password !== undefined) adminPassword = password;
+    return localStorage.getItem('adminAccessToken')
       ? Promise.resolve(true)
-      : createAdminSession(),
+      : createAdminSession();
+  },
   clearAdminSession,
   listCategories: () => req<Category[]>('/admin/categories'),
   createCategory: (data: { name: string; slug: string; icon: string }) =>

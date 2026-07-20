@@ -1,5 +1,10 @@
-import { randomBytes, createHash } from 'crypto';
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { randomBytes, createHash, timingSafeEqual } from 'crypto';
+import {
+  ForbiddenException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -20,6 +25,8 @@ const ADMIN_SESSION_TTL_SECONDS = 30 * 60; // 30 minutes
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -69,7 +76,11 @@ export class AuthService {
     return this.issueTokens(user.id, user.email);
   }
 
-  async issueAdminSession(userId: string, email: string): Promise<AdminSession> {
+  async issueAdminSession(
+    userId: string,
+    email: string,
+    password?: string,
+  ): Promise<AdminSession> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, role: true },
@@ -90,6 +101,10 @@ export class AuthService {
       throw new ForbiddenException('Admin role required');
     }
 
+    // Second factor beyond "your email is an admin email": the backoffice
+    // password. Enforced only when configured (see assertAdminPassword).
+    this.assertAdminPassword(password);
+
     const adminAccessToken = await this.jwt.signAsync(
       { sub: user.id, email: user.email, purpose: 'admin' },
       {
@@ -99,6 +114,33 @@ export class AuthService {
     );
 
     return { adminAccessToken, expiresInSeconds: ADMIN_SESSION_TTL_SECONDS };
+  }
+
+  /**
+   * Gate the admin step-up behind a backoffice password (ADMIN_PANEL_PASSWORD).
+   * Without it, being an admin *email* is the only barrier — and admin emails
+   * are easy to guess. When the env var is unset the gate is disabled (so the
+   * upgrade doesn't lock anyone out on deploy); a warning is logged so an
+   * operator running unprotected notices. Comparison is constant-time on SHA-256
+   * digests, which also hides the password length.
+   */
+  private assertAdminPassword(password?: string): void {
+    const expected = this.config.get<string>('ADMIN_PANEL_PASSWORD');
+    if (!expected) {
+      this.logger.warn(
+        'ADMIN_PANEL_PASSWORD is not set — the admin panel has no password gate.',
+      );
+      return;
+    }
+    if (!password || !this.constantTimeEquals(password, expected)) {
+      throw new UnauthorizedException('Invalid admin password');
+    }
+  }
+
+  private constantTimeEquals(a: string, b: string): boolean {
+    const ha = createHash('sha256').update(a).digest();
+    const hb = createHash('sha256').update(b).digest();
+    return timingSafeEqual(ha, hb);
   }
 
   private isAdminEmail(email: string): boolean {
