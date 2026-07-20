@@ -32,6 +32,9 @@ services:
       TELEGRAM_UNLOCK_WAIT_SECONDS: ${TELEGRAM_UNLOCK_WAIT_SECONDS:-}
       ALLOW_DEV_LOGIN: ${ALLOW_DEV_LOGIN:-false}
       NODE_ENV: ${NODE_ENV}
+      # Team crests are cached on disk here; the volume below keeps them across
+      # deploys/restarts, and nginx serves the files directly from the same path.
+      TEAM_LOGO_CACHE_DIR: ${TEAM_LOGO_CACHE_DIR:-/var/cache/team-logos}
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,6 +42,8 @@ services:
       - "3000"
     ports:
       - "3000:3000"
+    volumes:
+      - team-logos:/var/cache/team-logos
     healthcheck:
       test:
         [
@@ -72,6 +77,11 @@ services:
         condition: service_healthy
       web:
         condition: service_started
+    volumes:
+      # Read-only view of the API's crest cache so nginx serves logo PNGs
+      # straight from disk, hitting the API only on a cache miss.
+      - team-logos:/var/cache/team-logos:ro
 
 volumes:
   pgdata:
+  team-logos:

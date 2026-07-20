@@ -246,6 +246,7 @@ export class AdminTeamsService {
     }
 
     let upserted = 0;
+    const toWarm: Array<{ id: number; logo: string }> = [];
     for (const row of body.response ?? []) {
       const t = row.team;
       if (!t?.id || !t.name || !t.logo) continue;
@@ -268,6 +269,16 @@ export class AdminTeamsService {
         },
       });
       upserted += 1;
+      toWarm.push({ id: t.id, logo: t.logo });
+    }
+
+    // Pre-download the crests into the disk cache now (bounded concurrency), so
+    // no end user eats a first-hit download when the feed renders. Best-effort:
+    // warm() swallows its own errors, and skips crests already on disk.
+    const WARM_CHUNK = 25;
+    for (let i = 0; i < toWarm.length; i += WARM_CHUNK) {
+      const slice = toWarm.slice(i, i + WARM_CHUNK);
+      await Promise.all(slice.map((t) => this.logoCache.warm(t.id, t.logo)));
     }
 
     return {
