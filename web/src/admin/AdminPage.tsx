@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { adminApi } from './adminApi';
 import { AdminEntradas } from './AdminEntradas';
 import { AdminBilhetes } from './AdminBilhetes';
@@ -22,36 +22,68 @@ interface AdminUser {
   balance?: number;
 }
 
+const NOT_ADMIN_MSG =
+  'Sua conta não tem permissão de admin. Adicione seu e-mail em ADMIN_EMAILS e entre novamente.';
+
 export function AdminPage() {
   const [tab, setTab] = useState<TabKey>('bilhetes');
   const [matches, setMatches] = useState<any[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [adminSession, setAdminSession] = useState<'checking' | 'ready' | 'denied'>(
-    'checking',
-  );
+  const [adminSession, setAdminSession] = useState<
+    'checking' | 'need-password' | 'ready' | 'denied'
+  >('checking');
+  const [password, setPassword] = useState('');
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let alive = true;
     adminApi
       .ensureAdminSession()
-      .then(() => {
-        if (alive) setAdminSession('ready');
+      .then((ok) => {
+        if (alive) setAdminSession(ok ? 'ready' : 'need-password');
       })
       .catch((err: Error) => {
         if (!alive) return;
-        setAdminSession('denied');
-        setLoadError(
-          /403/.test(err.message)
-            ? 'Sua conta não tem permissão de admin. Adicione seu e-mail em ADMIN_EMAILS e entre novamente.'
-            : 'Não foi possível abrir uma sessão admin. Entre novamente e tente de novo.',
-        );
+        if (/403/.test(err.message)) {
+          setAdminSession('denied');
+          setLoadError(NOT_ADMIN_MSG);
+        } else {
+          // 401 (password required/wrong) or a transient error → ask for it.
+          setAdminSession('need-password');
+        }
       });
     return () => {
       alive = false;
     };
   }, []);
+
+  function handleSubmitPassword(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPwError(null);
+    setSubmitting(true);
+    adminApi
+      .ensureAdminSession(password)
+      .then((ok) => {
+        if (ok) {
+          setAdminSession('ready');
+          setPassword('');
+        } else {
+          setPwError('Não foi possível abrir a sessão. Entre no app novamente.');
+        }
+      })
+      .catch((err: Error) => {
+        if (/403/.test(err.message)) {
+          setAdminSession('denied');
+          setLoadError(NOT_ADMIN_MSG);
+        } else {
+          setPwError('Senha inválida.');
+        }
+      })
+      .finally(() => setSubmitting(false));
+  }
 
   useEffect(() => {
     if (adminSession !== 'ready') return;
@@ -86,6 +118,28 @@ export function AdminPage() {
           <p className="admin-alert" role="status">
             Abrindo sessão admin...
           </p>
+        )}
+
+        {adminSession === 'need-password' && (
+          <form className="admin-gate" onSubmit={handleSubmitPassword}>
+            <label htmlFor="admin-password">Senha do backoffice</label>
+            <input
+              id="admin-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoFocus
+            />
+            {pwError && (
+              <p className="admin-alert" role="alert">
+                {pwError}
+              </p>
+            )}
+            <button type="submit" disabled={submitting || password.length === 0}>
+              {submitting ? 'Entrando...' : 'Entrar'}
+            </button>
+          </form>
         )}
 
         {adminSession === 'ready' && (
