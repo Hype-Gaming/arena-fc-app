@@ -1,6 +1,6 @@
 // web/src/screens/BilhetesScreen.tsx — mercados + carrossel de bilhetes
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { ApiClient } from '../lib/apiClient';
 import { useRevalidateOnFocus } from '../lib/useRevalidateOnFocus';
 import { useGate } from '../components/TelegramGate';
@@ -159,6 +159,10 @@ interface Props {
 
 export function BilhetesScreen({ api }: Props = {}) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Deep-link target from the Home cards (e.g. /bilhetes?cat=ultra) — opens that
+  // category's carousel directly instead of the default first-unlocked one.
+  const requestedCat = searchParams.get('cat');
   const { requireUnlock } = useGate();
   const [cats, setCats] = useState<CatView[]>(DEFAULT_CATS);
   const [all, setAll] = useState<RailCard[]>([]);
@@ -185,8 +189,14 @@ export function BilhetesScreen({ api }: Props = {}) {
         setCats(feed.categorias);
         setAll(feed.bilhetes.map(toRailCard));
         if (!initialized.current) {
+          // Prefer the deep-linked category (if it exists and is unlocked),
+          // otherwise fall back to the first unlocked category with tickets.
+          const requested = requestedCat
+            ? feed.categorias.find((c) => c.key === requestedCat && !c.locked)
+            : undefined;
           const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
-          if (firstOpen) setCat(firstOpen.key);
+          const target = requested ?? firstOpen;
+          if (target) setCat(target.key);
           initialized.current = true;
         }
       })
@@ -195,7 +205,7 @@ export function BilhetesScreen({ api }: Props = {}) {
         // revalidation failure keeps whatever is already on screen.
         if (!initialized.current) setAll([]);
       });
-  }, [api]);
+  }, [api, requestedCat]);
 
   useEffect(loadFeed, [loadFeed]);
   // After returning from the checkout tab, a just-activated plan unlocks new

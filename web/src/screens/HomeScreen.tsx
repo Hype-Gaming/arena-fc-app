@@ -44,6 +44,8 @@ interface HomeCard {
   minRank?: number;
   /** Where an unlocked card navigates (defaults to /bilhetes). */
   unlockedTo?: string;
+  /** Subtitle shown once the card is unlocked (replaces the "Desbloqueie…" tease). */
+  unlockedSubtitle?: string;
 }
 
 interface Section {
@@ -106,7 +108,7 @@ const SECTIONS: Section[] = [
         ],
         ctaLabel: 'Entrar',
         ctaVariant: 'solid',
-        externalTo: (import.meta.env as Record<string, string | undefined>).VITE_TELEGRAM_URL ?? 'https://t.me/+arena_fc',
+        externalTo: (import.meta.env as Record<string, string | undefined>).VITE_TELEGRAM_GROUP_URL ?? 'https://t.me/+Lnc41ngjDLdjNzcx',
         layout: 'telegram',
       },
       {
@@ -126,7 +128,8 @@ const SECTIONS: Section[] = [
         layout: 'tile',
         // Odds Ultra = plan rank 1 (Premium+). See bilhetes.constants.ts.
         minRank: 1,
-        unlockedTo: '/bilhetes',
+        unlockedTo: '/bilhetes?cat=ultra',
+        unlockedSubtitle: 'Todas as odds em um carrossel',
       },
       {
         key: 'alavancagem',
@@ -145,7 +148,8 @@ const SECTIONS: Section[] = [
         layout: 'tile',
         // Alavancagem = plan rank 2 (Diamante). See bilhetes.constants.ts.
         minRank: 2,
-        unlockedTo: '/bilhetes',
+        unlockedTo: '/bilhetes?cat=alavancagem',
+        unlockedSubtitle: 'Bilhetes de alavancagem',
       },
     ],
   },
@@ -199,15 +203,15 @@ export function HomeScreen({ api }: Props = {}) {
     };
   }, [api]);
 
-  /** Apply the viewer's plan to a card: a plan-gated card the plan covers loses
-   *  its lock and links to the real content instead of the paywall funnel. */
+  /** Apply the viewer's plan to a card: a plan-gated card the plan covers just
+   *  drops its lock (no padlock, no paywall funnel) and links to the content. */
   function resolveCard(card: HomeCard): HomeCard {
     if (card.minRank == null || (planRank ?? 0) < card.minRank) return card;
     return {
       ...card,
       locked: false,
       visual: undefined,
-      subtitle: 'Liberado no seu plano',
+      subtitle: card.unlockedSubtitle ?? card.subtitle,
       ctaLabel: 'Acessar',
       ctaVariant: 'solid',
       to: card.unlockedTo ?? '/bilhetes',
