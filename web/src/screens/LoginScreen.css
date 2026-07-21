@@ -1,7 +1,7 @@
 /* web/src/screens/LoginScreen.css — tokens measured from the reference /login */
 .pf-login {
   /* palette (exact values from the reference) */
-  --pf-bg: #0a1420;
+  --pf-bg: #030c1d;
   --pf-card-bg: #112236;
   --pf-gold: #00ff7f; /* labels, card border */
   --pf-gold-soft: #00ff7f; /* PRO badge, odds, active dot */
@@ -138,8 +138,11 @@
   position: relative;
   width: 100%;
   max-width: 568px;
+  min-height: 225px;
   margin: 0 auto;
   padding: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--pf-card-bg);
   border: 2px solid rgba(0, 211, 122, 0.55);
   border-radius: 18px;
@@ -290,9 +293,15 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: center;
-  background-color: rgba(0, 191, 128, 0.12);
-  border-top: 2px solid rgba(0, 211, 122, 0.28);
+  margin-top: auto;
+  background-color: #0c3b3c;
+  border-top: 2px solid rgba(0, 211, 122, 0.32);
   color: var(--pf-green);
+}
+.pf-card__foot svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 .pf-card__foot[data-tone='ia'] {
   background-color: rgba(0, 255, 127, 0.12);
@@ -529,6 +538,7 @@
 @media (max-width: 420px) {
   .pf-login .pf-card {
     max-width: 100%;
+    min-height: 0;
   }
   .pf-card__row--top {
     padding: 16px 16px 12px;
@@ -557,6 +567,10 @@
     min-height: 44px;
     padding: 12px 16px;
     font-size: 14px;
+  }
+  .pf-card__foot svg {
+    width: 16px;
+    height: 16px;
   }
   .pf-login .pf-stats {
     max-width: 100%;
