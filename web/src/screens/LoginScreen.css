@@ -112,13 +112,15 @@
 
 /* ---- promo carousel ---- */
 .pf-promo {
-  width: 100%;
+  /* The promo is deliberately wider than the form on large screens, matching
+     the landscape card in the supplied reference. */
+  width: min(568px, calc(100vw - 32px));
   box-sizing: border-box;
   margin-bottom: 32px;
 }
 .pf-viewport {
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: 18px;
 }
 .pf-track {
   display: flex;
@@ -132,14 +134,14 @@
 .pf-card {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 568px;
   margin: 0 auto;
   background-color: var(--pf-card-bg);
-  border: 1.5px solid rgba(0, 255, 127, 0.4);
-  border-radius: 12px;
+  border: 2px solid rgba(0, 211, 122, 0.55);
+  border-radius: 18px;
   overflow: hidden;
   box-sizing: border-box;
-  box-shadow: 0 0 20px rgba(0, 255, 127, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 .pf-card--shine {
   border-color: rgba(0, 255, 127, 0.75);
@@ -167,7 +169,7 @@
 }
 .pf-card__row--top {
   align-items: center;
-  padding: 14px 16px 10px;
+  padding: 24px 22px 19px;
   gap: 10px;
 }
 .pf-card__body {
@@ -175,7 +177,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 0 16px 14px;
+  padding: 0 22px 23px;
 }
 .pf-card__info {
   min-width: 0;
@@ -187,12 +189,15 @@
   gap: 5px;
   font-family: var(--pf-display);
   font-weight: 900;
-  font-size: 14px;
+  font-size: 20px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.4px;
   line-height: 1;
-  padding: 6px 12px;
-  border-radius: 6px;
+  min-width: 104px;
+  min-height: 43px;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 8px;
   box-sizing: border-box;
   white-space: nowrap;
 }
@@ -207,9 +212,9 @@
   color: var(--pf-green);
 }
 .pf-pill[data-tone='ultra'] {
-  background-color: rgba(124, 58, 237, 0.25);
-  border: 1.5px solid #7c3aed;
-  color: #b794f6;
+  background-color: rgba(124, 58, 237, 0.2);
+  border: 2px solid #7c3aed;
+  color: #9257ed;
 }
 .pf-pill[data-tone='alavancagem'] {
   background-color: rgba(240, 180, 41, 0.22);
@@ -225,8 +230,8 @@
 .pf-card__odd {
   font-family: var(--pf-display);
   font-weight: 900;
-  font-size: clamp(30px, 9vw, 36px);
-  line-height: 0.9;
+  font-size: 50px;
+  line-height: 0.86;
   color: var(--pf-green);
   letter-spacing: -0.5px;
   white-space: nowrap;
@@ -237,7 +242,7 @@
   margin: 0;
   font-family: var(--pf-display);
   font-weight: 800;
-  font-size: clamp(15px, 4.4vw, 18px);
+  font-size: 24px;
   line-height: 1.2;
   color: #fff;
   /* Wrap long fixtures (up to 2 lines) instead of truncating on mobile. */
@@ -248,10 +253,10 @@
   overflow: hidden;
 }
 .pf-card__sub {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   font-family: var(--pf-body);
   font-weight: 400;
-  font-size: 13px;
+  font-size: 18px;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.45);
 }
@@ -260,7 +265,7 @@
   white-space: nowrap;
   font-family: var(--pf-body);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 18px;
   line-height: 1.2;
   color: #94a3b8;
   text-align: right;
@@ -270,18 +275,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 10px 16px;
+  gap: 7px;
+  min-height: 58px;
+  padding: 16px 22px;
   box-sizing: border-box;
   font-family: var(--pf-display);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 17px;
   line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   text-align: center;
-  background-color: rgba(0, 255, 127, 0.1);
-  border-top: 1px solid rgba(0, 255, 127, 0.22);
+  background-color: rgba(0, 191, 128, 0.12);
+  border-top: 2px solid rgba(0, 211, 122, 0.28);
   color: var(--pf-green);
 }
 .pf-card__foot[data-tone='ia'] {
@@ -293,21 +299,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  margin-top: 11px;
+  gap: 9px;
+  margin-top: 17px;
 }
 .pf-dot {
-  width: 5px;
-  height: 5px;
+  width: 9px;
+  height: 9px;
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(148, 163, 184, 0.42);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 .pf-dot--active {
-  width: 18px;
+  width: 27px;
   background-color: var(--pf-green);
 }
 
@@ -521,14 +527,32 @@
     max-width: 100%;
   }
   .pf-card__row--top {
-    padding: 13px 13px 8px;
+    padding: 16px 16px 12px;
   }
   .pf-card__body {
-    padding: 0 13px 12px;
+    padding: 0 16px 16px;
     gap: 10px;
   }
+  .pf-pill {
+    min-width: 82px;
+    min-height: 34px;
+    padding: 7px 13px;
+    font-size: 16px;
+  }
+  .pf-card__odd {
+    font-size: 38px;
+  }
+  .pf-card__title {
+    font-size: 19px;
+  }
+  .pf-card__sub,
   .pf-card__meta {
-    font-size: 12px;
+    font-size: 14px;
+  }
+  .pf-card__foot {
+    min-height: 44px;
+    padding: 12px 16px;
+    font-size: 14px;
   }
   .pf-login .pf-stats {
     max-width: 100%;

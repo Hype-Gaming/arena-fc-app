@@ -40,10 +40,10 @@ const SLIDES: Slide[] = [
   {
     tone: 'ultra',
     pill: 'ULTRA',
-    odd: '2.22',
-    title: 'Maxline Rogachev x U Craiova',
-    sub: 'Bilhete Especial',
-    meta: 'R$ 100 -> R$ 222',
+    odd: '1.50',
+    title: 'Kalmar FF x Malmo FF',
+    sub: 'Casa ou Fora (12)',
+    meta: 'R$ 100 → R$ 150',
     foot: 'Entrada de ontem bateu',
   },
   {
@@ -84,7 +84,7 @@ const SLIDES: Slide[] = [
   },
 ];
 
-const INITIAL_SLIDE = 4;
+const INITIAL_SLIDE = 1;
 
 function Sparkles() {
   return (
