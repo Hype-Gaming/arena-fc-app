@@ -57,3 +57,58 @@ export function composeAnalysisMessage(
 
   return lines.join('\n');
 }
+
+/**
+ * Structured analysis in the 4-section format the frontend parses into cards:
+ * ENTRADA PRINCIPAL, ALTERNATIVAS, RESUMO, CONTEXTO. Deterministic — used by the
+ * mock provider (dev/tests). The DeepSeek prompt asks the model for the same
+ * shape, so both render identically. Headers must stay EXACTLY as below; the
+ * frontend parser keys off them.
+ */
+export function composeStructuredAnalysis(
+  match: ComposerMatch,
+  entradas: ComposerEntrada[],
+): string {
+  if (entradas.length === 0) {
+    throw new Error('No entradas available for this match');
+  }
+
+  const [principal, ...rest] = entradas;
+  const lines: string[] = [];
+
+  lines.push('🎯 ENTRADA PRINCIPAL');
+  lines.push(`${principal.selection}`);
+  lines.push(
+    `${principal.market} @ ${fmtOdd(principal.odd)}. ${principal.justification}`,
+  );
+  lines.push('');
+
+  lines.push('⚡ ALTERNATIVAS');
+  if (rest.length > 0) {
+    for (const e of rest) {
+      lines.push(
+        `${e.selection} — ${e.market} @ ${fmtOdd(e.odd)}: ${e.justification}`,
+      );
+    }
+  } else {
+    lines.push(
+      'Sem alternativa clara neste jogo — a entrada principal concentra o melhor valor.',
+    );
+  }
+  lines.push('');
+
+  lines.push('📋 RESUMO');
+  lines.push(
+    `${match.homeTeam} x ${match.awayTeam} (${match.competition}): a leitura aponta ${principal.selection} como o caminho mais provável, na odd ${fmtOdd(principal.odd)}.`,
+  );
+  lines.push('');
+
+  lines.push('🔍 CONTEXTO');
+  lines.push(`- ${principal.justification}`);
+  for (const e of rest) {
+    lines.push(`- ${e.market}: ${e.justification}`);
+  }
+  lines.push('- Nenhuma análise é garantia de resultado.');
+
+  return lines.join('\n');
+}
