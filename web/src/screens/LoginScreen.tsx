@@ -14,7 +14,7 @@ const SUPPORT_URL =
   (import.meta.env.VITE_SUPPORT_URL as string | undefined) ??
   'https://wa.me/5500000000000';
 
-type Tone = 'ia' | 'pro' | 'basic';
+type Tone = 'ia' | 'ultra' | 'alavancagem' | 'pro' | 'basic';
 
 interface Slide {
   tone: Tone;
@@ -38,21 +38,21 @@ const SLIDES: Slide[] = [
     foot: 'Disponivel dentro do app',
   },
   {
-    tone: 'pro',
-    pill: 'PRO',
-    odd: '1.67',
+    tone: 'ultra',
+    pill: 'ULTRA',
+    odd: '2.22',
     title: 'Maxline Rogachev x U Craiova',
-    sub: 'Menos de 9.5 escanteios',
-    meta: 'R$ 100 -> R$ 167',
+    sub: 'Bilhete Especial',
+    meta: 'R$ 100 -> R$ 222',
     foot: 'Entrada de ontem bateu',
   },
   {
-    tone: 'pro',
-    pill: 'PRO',
-    odd: '1.65',
+    tone: 'alavancagem',
+    pill: 'ALAVANCAGEM',
+    odd: '1.95',
     title: 'Ponte Preta x Criciuma',
-    sub: 'Bilhete Especial',
-    meta: 'R$ 100 -> R$ 165',
+    sub: 'Alavancagem do Dia',
+    meta: 'R$ 100 -> R$ 195',
     foot: 'Entrada de ontem bateu',
   },
   {
@@ -211,13 +211,11 @@ export function LoginScreen({ api, onLogin }: Props) {
                           </span>
                         </div>
                         <div className="pf-card__body">
-                          <div className="pf-card__title-row">
+                          <div className="pf-card__info">
                             <p className="pf-card__title">{s.title}</p>
-                            <span className="pf-card__meta">{s.meta}</span>
-                          </div>
-                          <div className="pf-card__sub-row">
                             <p className="pf-card__sub">{s.sub}</p>
                           </div>
+                          <span className="pf-card__meta">{s.meta}</span>
                         </div>
                         <div className="pf-card__foot" data-tone={s.tone}>
                           {s.tone === 'ia' ? <Sparkles /> : <CheckIcon />}
