@@ -9,6 +9,7 @@ import {
   type LiveMatch,
   type UpcomingFeedMatch,
 } from './tipsterApi';
+import { AnalysisCards } from './AnalysisCards';
 import './TipsterScreen.css';
 
 interface Props {
@@ -142,19 +143,11 @@ export function TipsterLive({ onBuyCredits, onBalance, matches }: Props = {}) {
               {result.away} <Crest name={result.away} logo={result.awayLogo} />
             </span>
           </div>
-          <p className="tst-line tst-line--assistant tst-live__analysis">
-            {result.message}
-          </p>
-          {result.deepLink && (
-            <a
-              className="tst-live__esportiva"
-              href={result.deepLink}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Abrir na Esportiva Bet
-            </a>
-          )}
+          <AnalysisCards
+            message={result.message}
+            deepLink={result.deepLink}
+            onAskAnother={() => setResult(null)}
+          />
           <button
             type="button"
             className="tst-live__back"

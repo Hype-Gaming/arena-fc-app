@@ -7,11 +7,14 @@ import {
   upcomingFeedMatches,
   type UpcomingFeedMatch,
 } from './tipsterApi';
+import { AnalysisCards } from './AnalysisCards';
 import './TipsterScreen.css';
 
 interface ChatLine {
   role: 'user' | 'assistant';
   content: string;
+  /** Assistant lines carry the picked game's deep link (for "Pegue o bilhete"). */
+  deepLink?: string;
 }
 
 interface TipsterChatProps {
@@ -89,19 +92,32 @@ export function TipsterChat({
     }
   }
 
+  function resetChat() {
+    setLines([]);
+    setCandidates([]);
+    setFound(null);
+    setError(null);
+    setNeedCredits(false);
+    setQuery('');
+  }
+
   async function onConfirm() {
     if (!found) return;
+    const picked = found;
     setError(null);
     setNeedCredits(false);
     setBusy(true);
     setCandidates([]);
     setLines((prev) => [
       ...prev,
-      { role: 'user', content: `Sim, é esse: ${found.homeTeam} x ${found.awayTeam}` },
+      { role: 'user', content: `Sim, é esse: ${picked.homeTeam} x ${picked.awayTeam}` },
     ]);
     try {
-      const res = await analyzeUpcoming(found.externalId);
-      setLines((prev) => [...prev, { role: 'assistant', content: res.message }]);
+      const res = await analyzeUpcoming(picked.externalId);
+      setLines((prev) => [
+        ...prev,
+        { role: 'assistant', content: res.message, deepLink: picked.deepLink },
+      ]);
       onBalance?.(res.balanceAfter);
       setFound(null);
     } catch (err) {
@@ -178,11 +194,20 @@ export function TipsterChat({
         </div>
       ) : (
         <div className="tst-log">
-          {lines.map((l, i) => (
-            <p key={i} className={`tst-line tst-line--${l.role}`}>
-              {l.content}
-            </p>
-          ))}
+          {lines.map((l, i) =>
+            l.role === 'assistant' ? (
+              <AnalysisCards
+                key={i}
+                message={l.content}
+                deepLink={l.deepLink}
+                onAskAnother={i === lines.length - 1 ? resetChat : undefined}
+              />
+            ) : (
+              <p key={i} className="tst-line tst-line--user">
+                {l.content}
+              </p>
+            ),
+          )}
         </div>
       )}
 
