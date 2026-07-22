@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Arena FC">
+  <polygon points="26,8 74,8 98,50 74,92 26,92 2,50" fill="#ffffff" stroke="#ffffff" stroke-width="5" stroke-linejoin="round"/>
+  <g transform="skewX(-8) translate(6 0)" fill="none" stroke="#18232f" stroke-width="11" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M50 26 L33 74 M50 26 L67 74"/>
+    <path d="M40 58 L60 58"/>
+  </g>
+</svg>

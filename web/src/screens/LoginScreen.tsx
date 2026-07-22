@@ -2,7 +2,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import type { ApiClient } from '../shared/lib/apiClient';
 import type { Tokens } from '../shared/lib/tokenStorage';
-import { CHECKOUT_URL } from '../shared/lib/checkout';
+import { checkoutUrlFor } from '../shared/lib/checkout';
 import './LoginScreen.css';
 
 interface Props {
@@ -275,7 +275,7 @@ export function LoginScreen({ api, onLogin }: Props) {
             <button
               type="button"
               className="pf-btn pf-btn--ghost"
-              onClick={() => window.open(CHECKOUT_URL, '_blank')}
+              onClick={() => window.open(checkoutUrlFor('premium'), '_blank')}
             >
               <svg
                 width="16"
@@ -293,7 +293,7 @@ export function LoginScreen({ api, onLogin }: Props) {
                 <circle cx="19" cy="21" r="1" />
                 <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
               </svg>
-              Adquirir acesso
+              Assinar plano Premium
             </button>
 
             <div className="pf-stats">
