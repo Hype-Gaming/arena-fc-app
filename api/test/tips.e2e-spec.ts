@@ -3,8 +3,8 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { CreditsService } from '../src/modules/credits/credits.service';
-import { JwtAuthGuard } from '../src/modules/auth/jwt-auth.guard';
+import { CreditsService } from '../src/contexts/credits/credits.service';
+import { JwtAuthGuard } from '../src/contexts/auth/jwt-auth.guard';
 import { InsufficientCreditsFilter } from '../src/common/filters/insufficient-credits.filter';
 
 describe('Tips (e2e)', () => {

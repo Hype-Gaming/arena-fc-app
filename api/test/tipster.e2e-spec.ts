@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { CreditsService } from '../src/modules/credits/credits.service';
+import { CreditsService } from '../src/contexts/credits/credits.service';
 import { InsufficientCreditsFilter } from '../src/common/filters/insufficient-credits.filter';
 
 describe('Tipster (e2e)', () => {

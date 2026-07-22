@@ -1,9 +1,9 @@
 // api/test/credits.e2e-spec.ts
 import { Test } from '@nestjs/testing';
-import { CreditsModule } from '../src/modules/credits/credits.module';
-import { CreditsService } from '../src/modules/credits/credits.service';
+import { CreditsModule } from '../src/contexts/credits/credits.module';
+import { CreditsService } from '../src/contexts/credits/credits.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { InsufficientCreditsError } from '../src/modules/credits/errors';
+import { InsufficientCreditsError } from '../src/contexts/credits/errors';
 
 describe('Credits ledger (e2e)', () => {
   let prisma: PrismaService;

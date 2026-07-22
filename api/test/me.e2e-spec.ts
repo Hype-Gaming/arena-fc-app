@@ -3,7 +3,7 @@ import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { CreditsService } from '../src/modules/credits/credits.service';
+import { CreditsService } from '../src/contexts/credits/credits.service';
 import { seedPlans } from '../prisma/seeds/plans.seed';
 import { signTestAccess } from './utils/auth';
 
