@@ -5,7 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { InsufficientCreditsError } from '../../modules/credits/errors';
+import { InsufficientCreditsError } from '../../contexts/credits/errors';
 
 /**
  * Maps the domain error `InsufficientCreditsError` (a plain Error thrown deep

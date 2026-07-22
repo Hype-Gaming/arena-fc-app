@@ -1,6 +1,6 @@
 // web/src/features/tipster/TipsterLive.tsx — "Ao Vivo" tab: in-play matches + AI
 import { useEffect, useState } from 'react';
-import { useGate } from '../../components/TelegramGate';
+import { useGate } from '../../shared/components/TelegramGate';
 import {
   liveMatches,
   analyzeLive,

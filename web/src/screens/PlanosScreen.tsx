@@ -1,7 +1,7 @@
 // web/src/screens/PlanosScreen.tsx
 import { useEffect, useState } from 'react';
-import type { ApiClient } from '../lib/apiClient';
-import { checkoutUrlFor } from '../lib/checkout';
+import type { ApiClient } from '../shared/lib/apiClient';
+import { checkoutUrlFor } from '../shared/lib/checkout';
 import './PlanosScreen.css';
 
 interface MeProfile {

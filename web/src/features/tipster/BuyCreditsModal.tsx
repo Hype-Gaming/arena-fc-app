@@ -4,7 +4,7 @@ import {
   CREDIT_PACKS,
   checkoutUrlForPack,
   type CreditPack,
-} from '../../lib/creditPacks';
+} from '../../shared/lib/creditPacks';
 import './BuyCreditsModal.css';
 
 interface Props {

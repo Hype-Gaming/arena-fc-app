@@ -1,7 +1,7 @@
 // web/src/screens/PerfilScreen.tsx
 import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
-import type { ApiClient } from '../lib/apiClient';
-import { CHECKOUT_URL } from '../lib/checkout';
+import type { ApiClient } from '../shared/lib/apiClient';
+import { CHECKOUT_URL } from '../shared/lib/checkout';
 import './PerfilScreen.css';
 
 interface MeProfile {

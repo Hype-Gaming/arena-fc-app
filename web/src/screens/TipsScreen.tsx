@@ -1,6 +1,6 @@
 // web/src/screens/TipsScreen.tsx
 import { useEffect, useState } from 'react';
-import type { ApiClient } from '../lib/apiClient';
+import type { ApiClient } from '../shared/lib/apiClient';
 
 export interface FeedEntrada {
   id: string;

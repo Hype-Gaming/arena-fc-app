@@ -1,6 +1,6 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { InsufficientCreditsFilter } from './insufficient-credits.filter';
-import { InsufficientCreditsError } from '../../modules/credits/errors';
+import { InsufficientCreditsError } from '../../contexts/credits/errors';
 
 describe('InsufficientCreditsFilter', () => {
   const filter = new InsufficientCreditsFilter();

@@ -1,7 +1,7 @@
 // web/src/screens/UltimosGreensScreen.tsx — "Últimos Greens": the public track
 // record of tickets that already hit, grouped by date with period filters.
 import { useEffect, useMemo, useState } from 'react';
-import type { ApiClient } from '../lib/apiClient';
+import type { ApiClient } from '../shared/lib/apiClient';
 import './UltimosGreensScreen.css';
 
 interface GreenBilhete {

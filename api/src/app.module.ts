@@ -5,17 +5,17 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
-import { HealthModule } from './modules/health/health.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { TipsModule } from './modules/tips/tips.module';
-import { TipsterModule } from './modules/tipster/tipster.module';
-import { BillingModule } from './modules/billing/billing.module';
-import { GamificationModule } from './modules/gamification/gamification.module';
-import { AdminModule } from './modules/admin/admin.module';
-import { TutorialModule } from './modules/tutorial/tutorial.module';
-import { MeModule } from './modules/me/me.module';
-import { BilhetesModule } from './modules/bilhetes/bilhetes.module';
-import { TelegramGateModule } from './modules/telegram-gate/telegram-gate.module';
+import { HealthModule } from './contexts/health/health.module';
+import { AuthModule } from './contexts/auth/auth.module';
+import { TipsModule } from './contexts/tips/tips.module';
+import { TipsterModule } from './contexts/tipster/tipster.module';
+import { BillingModule } from './contexts/billing/billing.module';
+import { GamificationModule } from './contexts/gamification/gamification.module';
+import { AdminModule } from './contexts/admin/admin.module';
+import { TutorialModule } from './contexts/tutorial/tutorial.module';
+import { MeModule } from './contexts/me/me.module';
+import { BilhetesModule } from './contexts/bilhetes/bilhetes.module';
+import { TelegramGateModule } from './contexts/telegram-gate/telegram-gate.module';
 
 @Module({
   imports: [

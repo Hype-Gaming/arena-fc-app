@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BuyCreditsModal } from './BuyCreditsModal';
-import { CREDIT_PACKS, checkoutUrlForPack } from '../../lib/creditPacks';
+import { CREDIT_PACKS, checkoutUrlForPack } from '../../shared/lib/creditPacks';
 
 describe('BuyCreditsModal', () => {
   it('renders nothing when closed', () => {

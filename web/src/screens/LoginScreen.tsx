@@ -1,8 +1,8 @@
 // web/src/screens/LoginScreen.tsx — replica of the reference /login
 import { useEffect, useState, type FormEvent } from 'react';
-import type { ApiClient } from '../lib/apiClient';
-import type { Tokens } from '../lib/tokenStorage';
-import { CHECKOUT_URL } from '../lib/checkout';
+import type { ApiClient } from '../shared/lib/apiClient';
+import type { Tokens } from '../shared/lib/tokenStorage';
+import { CHECKOUT_URL } from '../shared/lib/checkout';
 import './LoginScreen.css';
 
 interface Props {

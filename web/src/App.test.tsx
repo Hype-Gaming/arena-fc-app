@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from './App';
-import { tokenStorage } from './lib/tokenStorage';
+import { tokenStorage } from './shared/lib/tokenStorage';
 
 function makeApi() {
   return {

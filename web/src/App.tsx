@@ -1,11 +1,11 @@
 // web/src/App.tsx
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider, useAuth } from './lib/AuthContext';
-import { api as defaultApi, type ApiClient } from './lib/apiClient';
-import { Onboarding } from './components/Onboarding';
-import { TelegramGateProvider } from './components/TelegramGate';
+import { AuthProvider, useAuth } from './shared/lib/AuthContext';
+import { api as defaultApi, type ApiClient } from './shared/lib/apiClient';
+import { Onboarding } from './shared/components/Onboarding';
+import { TelegramGateProvider } from './shared/components/TelegramGate';
 import { LoginScreen } from './screens/LoginScreen';
-import { AppShell } from './shell/AppShell';
+import { AppShell } from './shared/layout/AppShell';
 import { HomePage } from './pages/HomePage';
 import { TipsPage } from './pages/TipsPage';
 import { BilhetesPage } from './pages/BilhetesPage';
@@ -13,7 +13,7 @@ import { TipsterPage } from './pages/TipsterPage';
 import { PerfilPage } from './pages/PerfilPage';
 import { PlanosPage } from './pages/PlanosPage';
 import { UltimosGreensPage } from './pages/UltimosGreensPage';
-import { AdminPage } from './admin/AdminPage';
+import { AdminPage } from './features/admin/AdminPage';
 
 interface Props {
   api?: ApiClient;

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CSSProperties } from 'react';
-import type { ApiClient } from '../lib/apiClient';
+import type { ApiClient } from '../shared/lib/apiClient';
 import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './HomeScreen.css';

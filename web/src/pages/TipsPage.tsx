@@ -1,5 +1,5 @@
 // web/src/pages/TipsPage.tsx
-import type { ApiClient } from '../lib/apiClient';
+import type { ApiClient } from '../shared/lib/apiClient';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 
 // POC: the Tips tab now embeds the Esportiva sportsbook. The credit-gated tips

@@ -1,6 +1,6 @@
 // web/src/features/tipster/TipsterChat.tsx — chat tab of the IA Tipster screen
 import { useEffect, useState } from 'react';
-import { useGate } from '../../components/TelegramGate';
+import { useGate } from '../../shared/components/TelegramGate';
 import {
   searchMatches,
   analyzeUpcoming,

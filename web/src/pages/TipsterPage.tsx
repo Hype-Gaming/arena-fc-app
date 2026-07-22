@@ -1,6 +1,6 @@
 // web/src/pages/TipsterPage.tsx — IA Tipster screen: header, tabs, chat
 import { useEffect, useState, type ReactNode } from 'react';
-import type { ApiClient } from '../lib/apiClient';
+import type { ApiClient } from '../shared/lib/apiClient';
 import { TipsterChat } from '../features/tipster/TipsterChat';
 import { TipsterLive } from '../features/tipster/TipsterLive';
 import { BuyCreditsModal } from '../features/tipster/BuyCreditsModal';

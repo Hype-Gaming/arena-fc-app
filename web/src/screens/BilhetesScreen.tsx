@@ -1,9 +1,9 @@
 // web/src/screens/BilhetesScreen.tsx — mercados + carrossel de bilhetes
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { ApiClient } from '../lib/apiClient';
-import { useRevalidateOnFocus } from '../lib/useRevalidateOnFocus';
-import { useGate } from '../components/TelegramGate';
+import type { ApiClient } from '../shared/lib/apiClient';
+import { useRevalidateOnFocus } from '../shared/lib/useRevalidateOnFocus';
+import { useGate } from '../shared/components/TelegramGate';
 import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
