@@ -385,6 +385,26 @@
   height: 720px;
   border-radius: 0;
 }
+.spt-book__fallback {
+  display: block;
+  padding: 11px 14px;
+  background: rgba(0, 240, 131, 0.12);
+  border-top: 1px solid var(--s-line);
+  color: #00f083;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+.spt-book__notice {
+  margin: 0;
+  padding: 11px 14px;
+  border-top: 1px solid var(--s-line);
+  color: #f5c451;
+  background: rgba(245, 196, 81, 0.08);
+  font-size: 13px;
+  text-align: center;
+}
 
 .spt-chip:focus-visible,
 .spt-card__add:focus-visible {

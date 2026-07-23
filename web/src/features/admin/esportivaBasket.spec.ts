@@ -33,6 +33,11 @@ describe('toggleBasketLeg', () => {
     expect(next[0].oddId).toBe(999);
   });
 
+  it('keeps selections from distinct markets of the same event', () => {
+    const result = toggleBasketLeg([leg()], leg({ mercado: 'btts', selecao: 'Sim', oddId: 999 }));
+    expect(result).toHaveLength(2);
+  });
+
   it('keeps legs from different events side by side', () => {
     const a = leg();
     const b = leg({ eventExternalId: '16998999', oddId: 4219529561, odd: 1.75 });

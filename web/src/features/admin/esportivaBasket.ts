@@ -19,6 +19,8 @@ export interface BasketLeg {
  * Toggle a leg in the basket:
  *  - clicking the exact same selection (event + oddId) removes it;
  *  - a different selection for the same (event + market) replaces that pick;
+ *    selections from distinct markets of the same fixture may coexist for
+ *    Bet Builder / Same Game Multi where the bookmaker supports it;
  *  - otherwise the leg is appended.
  */
 export function toggleBasketLeg(basket: BasketLeg[], leg: BasketLeg): BasketLeg[] {

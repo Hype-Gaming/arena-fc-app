@@ -1,5 +1,5 @@
 // web/src/screens/BilhetesScreen.test.tsx
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -19,9 +19,10 @@ function renderScreen() {
 }
 
 describe('BilhetesScreen', () => {
-  it('expands a multiple and opens its Esportiva share URL', async () => {
+  beforeEach(() => window.localStorage.clear());
+
+  it('expands a multiple and loads its Esportiva share URL in the existing iframe', async () => {
     const user = userEvent.setup();
-    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
     const api = {
       get: vi.fn().mockResolvedValue({
         plan: { key: 'diamante', rank: 2 },
@@ -51,12 +52,14 @@ describe('BilhetesScreen', () => {
     expect(screen.getByText('Santos x Corinthians')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /adicionar/i }));
-    expect(open).toHaveBeenCalledWith(
+    expect(screen.getByTitle('Esportiva')).toHaveAttribute(
+      'src',
       'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
-      '_blank',
-      'noopener,noreferrer',
     );
-    open.mockRestore();
+    expect(screen.getByRole('link', { name: /abrir cupom em nova aba/i })).toHaveAttribute(
+      'href',
+      'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
+    );
   });
 
   it('renders the markets header and an empty rail without demo tickets', () => {
@@ -112,6 +115,36 @@ describe('BilhetesScreen', () => {
     expect(screen.getByRole('link', { name: /tenho interesse/i })).toHaveAttribute(
       'href',
       'https://checkout.payt.com.br/e508405c78d7aa3b6f7c3ab41a557536',
+    );
+  });
+
+  it('does not replace the iframe for a ticket without shareCode or selections', async () => {
+    const user = userEvent.setup();
+    const api = {
+      get: vi.fn().mockResolvedValue({
+        plan: { key: 'diamante', rank: 2 },
+        categorias: [{ key: 'safes', label: 'Odds Safes', count: 1, locked: false }],
+        bilhetes: [{
+          id: 'plain-1', categoria: 'safes', tierLabel: 'Básico', titulo: 'Sem cupom',
+          mercado: null, selecao: null, linha: null, homeTeam: 'Bahia', awayTeam: 'Santos',
+          homeColor: null, awayColor: null, homeLogo: null, awayLogo: null, competition: null,
+          startsAt: '2026-08-01T16:00:00.000Z', validUntil: '2026-08-01T16:00:00.000Z',
+          odd: 1.5, resultado: 'pending', deepLink: 'https://esportiva.bet.br/sports/event/1',
+          esportivaShareUrl: null, legs: [],
+        }],
+      }),
+    };
+    render(
+      <MemoryRouter initialEntries={['/bilhetes']}>
+        <Routes><Route path="/bilhetes" element={<BilhetesScreen api={api} />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /adicionar/i }));
+    expect(screen.getByRole('status')).toHaveTextContent(/ainda não possui um cupom/i);
+    expect(screen.getByTitle('Esportiva')).toHaveAttribute(
+      'src',
+      'https://esportiva.bet.br/sports/soccer/sp-66',
     );
   });
 });

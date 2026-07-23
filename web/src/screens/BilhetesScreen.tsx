@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { ApiClient } from '../shared/lib/apiClient';
 import { useRevalidateOnFocus } from '../shared/lib/useRevalidateOnFocus';
 import { useGate } from '../shared/components/TelegramGate';
-import { SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
+import { DEFAULT_SPORTSBOOK_URL, SportsbookFrame } from '../features/sportsbook/SportsbookFrame';
 import { ExplainerModal } from './ExplainerModal';
 import { CATEGORY_EXPLAINERS } from './categoryExplainers';
 import './BilhetesScreen.css';
@@ -119,6 +119,22 @@ const MARKET_LABELS: Record<string, string> = {
   dnb: 'Empate Anula',
 };
 
+const LAST_COUPON_STORAGE_KEY = 'tips-app:last-esportiva-coupon';
+
+/** Only pre-filled coupons belong in the persistent sportsbook iframe. */
+function prefilledCouponUrl(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:') return null;
+    return url.searchParams.has('shareCode') || url.searchParams.has('selections')
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
   const line = b.linha == null ? '' : ` (${Number(b.linha).toFixed(2)})`;
   const market = b.mercado ? MARKET_LABELS[b.mercado] ?? b.mercado : '';
@@ -185,6 +201,15 @@ export function BilhetesScreen({ api }: Props = {}) {
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
   const [explainerKey, setExplainerKey] = useState<string | null>(null);
+  const [sportsbookUrl, setSportsbookUrl] = useState(() => {
+    try {
+      return prefilledCouponUrl(window.localStorage.getItem(LAST_COUPON_STORAGE_KEY))
+        ?? DEFAULT_SPORTSBOOK_URL;
+    } catch {
+      return DEFAULT_SPORTSBOOK_URL;
+    }
+  });
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const railRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<HTMLDivElement>(null);
@@ -228,6 +253,18 @@ export function BilhetesScreen({ api }: Props = {}) {
   // categories — revalidate so premium content appears without a manual reload.
   useRevalidateOnFocus(loadFeed);
 
+  useEffect(() => {
+    try {
+      if (sportsbookUrl === DEFAULT_SPORTSBOOK_URL) {
+        window.localStorage.removeItem(LAST_COUPON_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(LAST_COUPON_STORAGE_KEY, sportsbookUrl);
+      }
+    } catch {
+      // Storage is optional; private browsing must not block the coupon.
+    }
+  }, [sportsbookUrl]);
+
   const cards = all.filter((c) => c.cat === cat);
 
   function onRailScroll() {
@@ -265,6 +302,13 @@ export function BilhetesScreen({ api }: Props = {}) {
       e.preventDefault();
       e.stopPropagation();
       drag.current.moved = false;
+    }
+  }
+
+  function scrollToSportsbook() {
+    const book = bookRef.current;
+    if (book && typeof book.scrollIntoView === 'function') {
+      book.scrollIntoView({ behavior: 'smooth' });
     }
   }
 
@@ -400,11 +444,19 @@ export function BilhetesScreen({ api }: Props = {}) {
                     onClick={() =>
                       // Placing a bet is gated until the Telegram wait passes.
                       requireUnlock(() => {
-                        // Send the user straight to the fixture on the sportsbook
-                        // to place the bet; fall back to the embedded book.
-                        const destination = c.esportivaShareUrl ?? c.deepLink;
-                        if (destination) window.open(destination, '_blank', 'noopener,noreferrer');
-                        else bookRef.current?.scrollIntoView({ behavior: 'smooth' });
+                        // Reuse the sportsbook iframe already on this page and
+                        // load the pre-filled coupon into it.
+                        const destination = prefilledCouponUrl(c.esportivaShareUrl ?? c.deepLink);
+                        if (destination) {
+                          setCouponMessage(null);
+                          setSportsbookUrl(destination);
+                          window.setTimeout(
+                            scrollToSportsbook,
+                            0,
+                          );
+                        } else {
+                          setCouponMessage('Este bilhete ainda não possui um cupom pré-preenchido disponível.');
+                        }
                       })
                     }
                   >
@@ -430,7 +482,13 @@ export function BilhetesScreen({ api }: Props = {}) {
 
         {/* embedded sportsbook */}
         <div className="spt-book" ref={bookRef}>
-          <SportsbookFrame />
+          <SportsbookFrame src={sportsbookUrl} />
+          {sportsbookUrl !== DEFAULT_SPORTSBOOK_URL && (
+            <a className="spt-book__fallback" href={sportsbookUrl} target="_blank" rel="noopener noreferrer">
+              Abrir cupom em nova aba
+            </a>
+          )}
+          {couponMessage && <p className="spt-book__notice" role="status">{couponMessage}</p>}
         </div>
       </div>
 
