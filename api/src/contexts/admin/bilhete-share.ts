@@ -1,5 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
-import { buildEsportivaSelectionsUrl } from '../sports-feed/esportiva-link';
+import {
+  buildEsportivaSelectionsUrl,
+  esportivaSelectionsBaseUrl,
+} from '../sports-feed/esportiva-link';
 import { CreateBilheteDto } from './dto/bilhete.dto';
 
 /**
@@ -19,9 +22,18 @@ export function validateEsportivaShareUrl(raw: string): string {
   }
   const isShare =
     url.hostname === 'esportiva.bet.br' && !!url.searchParams.get('shareCode');
-  const isSelections =
-    url.hostname === 'go.aff.esportiva.bet' &&
-    !!url.searchParams.get('selections');
+  let isSelections = false;
+  try {
+    const affiliate = new URL(esportivaSelectionsBaseUrl());
+    isSelections =
+      url.origin === affiliate.origin &&
+      url.pathname === affiliate.pathname &&
+      !!url.searchParams.get('selections');
+  } catch {
+    // An invalid environment variable must not turn arbitrary user input into
+    // an accepted destination; generated links will surface the configuration
+    // error operationally instead.
+  }
   if (!isShare && !isSelections) {
     throw new BadRequestException(
       'Esportiva URL must include shareCode or selections',

@@ -5,6 +5,7 @@ const leg = (over: Partial<BasketLeg> = {}): BasketLeg => ({
   eventExternalId: '16027574',
   homeTeam: 'Corinthians',
   awayTeam: 'Grêmio',
+  startsAt: '2026-07-25T20:00:00.000Z',
   mercado: '1x2',
   mercadoLabel: 'Resultado Final',
   selecao: 'Corinthians',

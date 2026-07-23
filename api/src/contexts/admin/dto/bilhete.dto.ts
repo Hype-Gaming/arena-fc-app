@@ -3,15 +3,15 @@ import {
   IsBoolean,
   IsArray,
   IsIn,
-  IsInt,
   IsISO8601,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { BilheteCategoria } from '@prisma/client';
 
 const CATEGORIA_KEYS = Object.values(BilheteCategoria);
@@ -24,7 +24,7 @@ export class BilheteLegDto {
   @IsOptional() @IsNumber() @IsPositive() linha?: number;
   @IsNumber() @IsPositive() odd!: number;
   @IsOptional() @IsString() eventExternalId?: string;
-  @IsOptional() @IsInt() @IsPositive() oddId?: number;
+  @IsOptional() @Transform(({ value }) => value == null ? value : String(value)) @IsString() @Matches(/^[1-9]\d*$/) oddId?: string;
 }
 
 export class CreateBilheteDto {
@@ -43,7 +43,7 @@ export class CreateBilheteDto {
   @IsISO8601() startsAt!: string;
   @IsOptional() @IsISO8601() validUntil?: string;
   @IsNumber() @IsPositive() odd!: number;
-  @IsOptional() @IsInt() @IsPositive() oddId?: number;
+  @IsOptional() @Transform(({ value }) => value == null ? value : String(value)) @IsString() @Matches(/^[1-9]\d*$/) oddId?: string;
   @IsOptional() @IsString() eventDeepLink?: string;
   @IsOptional() @IsString() eventExternalId?: string;
   /** Esportiva's shared coupon URL, validated by the service. */

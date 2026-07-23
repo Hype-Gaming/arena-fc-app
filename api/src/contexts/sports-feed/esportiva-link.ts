@@ -25,6 +25,11 @@ export function parseEsportivaEventId(
 /** Default affiliate base for the pre-filled bet-slip link (env-overridable). */
 const SELECTIONS_BASE_DEFAULT = 'https://go.aff.esportiva.bet/nwxez5q1';
 
+/** Affiliate base used for generated Esportiva selection links. */
+export function esportivaSelectionsBaseUrl(): string {
+  return process.env.ESPORTIVA_SELECTIONS_BASE_URL?.trim() || SELECTIONS_BASE_DEFAULT;
+}
+
 /**
  * Build the Esportiva `?selections=` deep-link that opens the bet slip
  * pre-filled. Each pair is `{eventId}-{oddId}`; multiple pairs are comma-joined
@@ -32,14 +37,13 @@ const SELECTIONS_BASE_DEFAULT = 'https://go.aff.esportiva.bet/nwxez5q1';
  * no valid pair. The affiliate lives in `ESPORTIVA_SELECTIONS_BASE_URL`.
  */
 export function buildEsportivaSelectionsUrl(
-  pairs: { eventId: string; oddId: number }[],
+  pairs: { eventId: string; oddId: string | number }[],
 ): string | null {
   const valid = pairs.filter(
-    (p) => !!p.eventId && Number.isFinite(p.oddId) && p.oddId > 0,
+    (p) => !!p.eventId && /^[1-9]\d*$/.test(String(p.oddId)),
   );
   if (valid.length === 0) return null;
-  const base =
-    process.env.ESPORTIVA_SELECTIONS_BASE_URL?.trim() || SELECTIONS_BASE_DEFAULT;
+  const base = esportivaSelectionsBaseUrl();
   const sel = valid.map((p) => `${p.eventId}-${p.oddId}`).join(',');
   const sep = base.includes('?') ? '&' : '?';
   return `${base}${sep}selections=${sel}`;
