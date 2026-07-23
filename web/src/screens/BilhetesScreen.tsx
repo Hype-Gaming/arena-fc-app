@@ -37,6 +37,17 @@ interface RailCard {
   resultado: 'pending' | 'green' | 'red';
   /** opens the fixture on the sportsbook; null → fall back to the iframe */
   deepLink: string | null;
+  esportivaShareUrl: string | null;
+  legs: BilheteLeg[];
+}
+
+interface BilheteLeg {
+  homeTeam: string;
+  awayTeam: string;
+  mercado: string;
+  selecao: string;
+  linha: number | null;
+  odd: number;
 }
 
 /** Server shape of GET /bilhetes. */
@@ -63,6 +74,8 @@ interface FeedResponse {
     odd: number;
     resultado: 'pending' | 'green' | 'red';
     deepLink: string | null;
+    esportivaShareUrl: string | null;
+    legs: BilheteLeg[];
   }[];
 }
 
@@ -128,6 +141,8 @@ function toRailCard(b: FeedResponse['bilhetes'][number]): RailCard {
     odd: b.odd,
     resultado: b.resultado,
     deepLink: b.deepLink,
+    esportivaShareUrl: b.esportivaShareUrl,
+    legs: b.legs,
   };
 }
 
@@ -170,6 +185,7 @@ export function BilhetesScreen({ api }: Props = {}) {
   const [now, setNow] = useState(() => Date.now());
   const [dot, setDot] = useState(0);
   const [explainerKey, setExplainerKey] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(() => new Set());
   const railRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<HTMLDivElement>(null);
   // Auto-pick a category only on the first load; a focus revalidation must not
@@ -349,6 +365,34 @@ export function BilhetesScreen({ api }: Props = {}) {
                   </span>
                 </div>
 
+                {c.legs.length > 0 && (
+                  <div className="spt-card__multiple">
+                    <button
+                      type="button"
+                      className="spt-card__legs-toggle"
+                      aria-expanded={expandedCards.has(c.id)}
+                      onClick={() => setExpandedCards((ids) => {
+                        const next = new Set(ids);
+                        if (next.has(c.id)) next.delete(c.id);
+                        else next.add(c.id);
+                        return next;
+                      })}
+                    >
+                      {expandedCards.has(c.id) ? 'Ocultar seleções' : `Ver seleções (${c.legs.length})`}
+                    </button>
+                    {expandedCards.has(c.id) && (
+                      <ol className="spt-card__legs">
+                        {c.legs.map((leg, index) => (
+                          <li key={`${c.id}-${index}`}>
+                            <strong>{leg.homeTeam} x {leg.awayTeam}</strong>
+                            <span>{leg.mercado}: {leg.selecao}{leg.linha == null ? '' : ` (${leg.linha})`} · {leg.odd.toFixed(2)}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                )}
+
                 <div className="spt-card__actions">
                   <button
                     type="button"
@@ -358,7 +402,8 @@ export function BilhetesScreen({ api }: Props = {}) {
                       requireUnlock(() => {
                         // Send the user straight to the fixture on the sportsbook
                         // to place the bet; fall back to the embedded book.
-                        if (c.deepLink) window.open(c.deepLink, '_blank');
+                        const destination = c.esportivaShareUrl ?? c.deepLink;
+                        if (destination) window.open(destination, '_blank', 'noopener,noreferrer');
                         else bookRef.current?.scrollIntoView({ behavior: 'smooth' });
                       })
                     }

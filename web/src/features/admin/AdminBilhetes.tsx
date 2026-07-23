@@ -34,7 +34,21 @@ const EMPTY = {
   odd: '',
   eventDeepLink: '',
   eventExternalId: '',
+  esportivaShareUrl: '',
 };
+
+type LegDraft = {
+  homeTeam: string;
+  awayTeam: string;
+  mercado: string;
+  selecao: string;
+  linha: string;
+  odd: string;
+};
+
+const EMPTY_LEG = (): LegDraft => ({
+  homeTeam: '', awayTeam: '', mercado: '', selecao: '', linha: '', odd: '',
+});
 
 const MARKET_ORDER = ['1x2', 'over_under', 'btts', 'double_chance', 'dnb'];
 const MARKET_LABELS: Record<string, string> = {
@@ -142,6 +156,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
   const [teams, setTeams] = useState<Team[]>([]);
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [form, setForm] = useState(EMPTY);
+  const [multipleLegs, setMultipleLegs] = useState<LegDraft[]>([]);
   const [selectedEventId, setSelectedEventId] = useState('');
   const [previewRef, setPreviewRef] = useState('');
   const [preview, setPreview] = useState<EventPreview | null>(null);
@@ -180,6 +195,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
     startsAt: '',
     validUntil: '',
     odd: '',
+    esportivaShareUrl: '',
   });
 
   function refresh() {
@@ -505,6 +521,10 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (form.categoria === 'multiplas' && multipleLegs.length < 2) {
+      setError('Uma múltipla precisa de pelo menos duas seleções.');
+      return;
+    }
     setBusy(true);
     try {
       await adminApi.createBilhete({
@@ -524,8 +544,20 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
         odd: Number(form.odd),
         eventDeepLink: form.eventDeepLink || undefined,
         eventExternalId: form.eventExternalId || undefined,
+        esportivaShareUrl: form.esportivaShareUrl.trim() || undefined,
+        legs: form.categoria === 'multiplas'
+          ? multipleLegs.map((leg) => ({
+              homeTeam: leg.homeTeam.trim(),
+              awayTeam: leg.awayTeam.trim(),
+              mercado: leg.mercado.trim(),
+              selecao: leg.selecao.trim(),
+              linha: leg.linha === '' ? undefined : Number(leg.linha),
+              odd: Number(leg.odd),
+            }))
+          : undefined,
       });
       setForm(EMPTY);
+      setMultipleLegs([]);
       setSelectedEventId('');
       setPreview(null);
       setPreviewRef('');
@@ -568,6 +600,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
       startsAt: toLocalInput(b.startsAt),
       validUntil: b.validUntil ? toLocalInput(b.validUntil) : '',
       odd: String(Number(b.odd)),
+      esportivaShareUrl: b.esportivaShareUrl ?? '',
     });
   }
 
@@ -588,6 +621,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
           ? new Date(editForm.validUntil).toISOString()
           : undefined,
         odd: editForm.odd === '' ? undefined : Number(editForm.odd),
+        esportivaShareUrl: editForm.esportivaShareUrl.trim(),
       });
       setEditingId(null);
       refresh();
@@ -1116,6 +1150,34 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
             required
           />
         </label>
+        <label className="ab-share-url">
+          Link compartilhável da Esportiva{' '}
+          <input
+            type="url"
+            value={form.esportivaShareUrl}
+            onChange={(e) => setForm({ ...form, esportivaShareUrl: e.target.value })}
+            placeholder="https://esportiva.bet.br/sports?shareCode=..."
+          />
+          <small>Abra a múltipla já preenchida ao clicar em “Adicionar”.</small>
+        </label>
+        {form.categoria === 'multiplas' && (
+          <fieldset className="ab-multiple-legs">
+            <legend>Seleções da múltipla</legend>
+            <p className="ab-hint">Informe as mesmas pernas que estão no cupom compartilhado.</p>
+            {multipleLegs.map((leg, index) => (
+              <div className="ab-multiple-leg" key={index}>
+                <input aria-label={`Casa da seleção ${index + 1}`} value={leg.homeTeam} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, homeTeam: e.target.value } : item))} placeholder="Casa" required />
+                <input aria-label={`Visitante da seleção ${index + 1}`} value={leg.awayTeam} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, awayTeam: e.target.value } : item))} placeholder="Visitante" required />
+                <input aria-label={`Mercado da seleção ${index + 1}`} value={leg.mercado} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, mercado: e.target.value } : item))} placeholder="Mercado" required />
+                <input aria-label={`Seleção ${index + 1}`} value={leg.selecao} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, selecao: e.target.value } : item))} placeholder="Seleção" required />
+                <input aria-label={`Linha da seleção ${index + 1}`} type="number" step="0.01" value={leg.linha} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, linha: e.target.value } : item))} placeholder="Linha" />
+                <input aria-label={`Odd da seleção ${index + 1}`} type="number" min="1.01" step="0.01" value={leg.odd} onChange={(e) => setMultipleLegs((all) => all.map((item, i) => i === index ? { ...item, odd: e.target.value } : item))} placeholder="Odd" required />
+                <button type="button" onClick={() => setMultipleLegs((all) => all.filter((_, i) => i !== index))}>Remover</button>
+              </div>
+            ))}
+            <button type="button" onClick={() => setMultipleLegs((all) => [...all, EMPTY_LEG()])}>Adicionar seleção</button>
+          </fieldset>
+        )}
         <button type="submit" disabled={busy}>
           Criar bilhete
         </button>
@@ -1395,6 +1457,15 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
                         min="1.01"
                         value={editForm.odd}
                         onChange={(e) => setEditForm({ ...editForm, odd: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      Link compartilhável da Esportiva
+                      <input
+                        type="url"
+                        value={editForm.esportivaShareUrl}
+                        onChange={(e) => setEditForm({ ...editForm, esportivaShareUrl: e.target.value })}
+                        placeholder="https://esportiva.bet.br/sports?shareCode=..."
                       />
                     </label>
                     <div className="ab-edit__actions">

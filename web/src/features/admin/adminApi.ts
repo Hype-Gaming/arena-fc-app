@@ -128,6 +128,17 @@ export interface AdminBilhete {
   resultado: 'pending' | 'green' | 'red';
   publishedAt: string | null;
   createdAt: string;
+  esportivaShareUrl: string | null;
+  legs: BilheteLeg[];
+}
+
+export interface BilheteLeg {
+  homeTeam: string;
+  awayTeam: string;
+  mercado: string;
+  selecao: string;
+  linha: string | number | null;
+  odd: string | number;
 }
 
 export interface CreateBilheteInput {
@@ -148,6 +159,15 @@ export interface CreateBilheteInput {
   odd: number;
   eventDeepLink?: string;
   eventExternalId?: string;
+  esportivaShareUrl?: string;
+  legs?: {
+    homeTeam: string;
+    awayTeam: string;
+    mercado: string;
+    selecao: string;
+    linha?: number;
+    odd: number;
+  }[];
   publish?: boolean;
 }
 

@@ -26,6 +26,28 @@ const STEPS = [
 // Screen order: hub(0) → tour(1) → shortcut(2) → telegram(3) → ready(4).
 const TOTAL = 5;
 
+// Decorative filler icons for the home-screen mockup, so the phone looks like a
+// real device (generic apps) with the Arena FC icon standing out among them.
+const g = (children: ReactNode) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>
+);
+interface GenericApp { bg: string; glyph: ReactNode }
+const GRID_APPS: GenericApp[] = [
+  { bg: 'linear-gradient(145deg,#34d399,#059669)', glyph: g(<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />) }, // messages
+  { bg: 'linear-gradient(145deg,#60a5fa,#2563eb)', glyph: g(<><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></>) }, // camera
+  { bg: 'linear-gradient(145deg,#f472b6,#db2777)', glyph: g(<><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></>) }, // music
+  { bg: 'linear-gradient(145deg,#fb923c,#ea580c)', glyph: g(<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>) }, // calendar
+  { bg: 'linear-gradient(145deg,#22d3ee,#0891b2)', glyph: g(<><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>) }, // maps
+  { bg: 'linear-gradient(145deg,#a78bfa,#7c3aed)', glyph: g(<><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></>) }, // photos
+  { bg: 'linear-gradient(145deg,#f87171,#dc2626)', glyph: g(<><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>) }, // clock
+  { bg: 'linear-gradient(145deg,#94a3b8,#475569)', glyph: g(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V22a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 6 20.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H2a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3.7 6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H8a1.7 1.7 0 0 0 1-1.5V2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V8a1.7 1.7 0 0 0 1.5 1H22a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></>) }, // settings
+];
+const DOCK_APPS: GenericApp[] = [
+  { bg: 'linear-gradient(145deg,#4ade80,#16a34a)', glyph: g(<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />) }, // phone
+  { bg: 'linear-gradient(145deg,#38bdf8,#0284c7)', glyph: g(<><path d="M4 4h16v16H4z" /><path d="m22 6-10 7L2 6" /></>) }, // mail
+  { bg: 'linear-gradient(145deg,#818cf8,#4f46e5)', glyph: g(<><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z" /></>) }, // browser
+];
+
 export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = {}) {
   const { state, click } = useTelegramGate(api);
   const install = useInstallPrompt();
@@ -134,17 +156,29 @@ export function Onboarding({ api }: { api?: Pick<ApiClient, 'get' | 'post'> } = 
                 </div>
                 <span className="onb__phone-label">SUA TELA INICIAL</span>
                 <div className="onb__grid">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <span key={i} className="onb__app" />
+                  {GRID_APPS.map((app, i) => (
+                    <span
+                      key={i}
+                      className="onb__app onb__app--generic"
+                      style={{ background: app.bg }}
+                    >
+                      {app.glyph}
+                    </span>
                   ))}
                   <span className="onb__app-wrap">
                     <span className="onb__app onb__app--brand">
-                      <img src="/icons/apple-touch-icon.png" alt="" />
+                      <img src="/logo-simplificada.png" alt="" />
                     </span>
                     <b>ARENA FC</b>
                   </span>
                 </div>
-                <div className="onb__dock"><i /><i /><i /></div>
+                <div className="onb__dock">
+                  {DOCK_APPS.map((app, i) => (
+                    <i key={i} style={{ background: app.bg }}>
+                      {app.glyph}
+                    </i>
+                  ))}
+                </div>
               </div>
               <span className="onb__phone-callout"><Check /> Acesso em 1 toque</span>
             </div>

@@ -342,9 +342,30 @@ model Bilhete {
   // the event so they place the bet on their own account.
   eventDeepLink   String?
   eventExternalId String?
+  // A shareable Esportiva betslip URL. Unlike an event deep link, this can
+  // restore one or more already-selected odds in the bookmaker's coupon.
+  esportivaShareUrl String?
+  legs              BilheteLeg[]
 
   @@index([categoria, startsAt])
   @@index([validUntil])
+}
+
+model BilheteLeg {
+  id        String   @id @default(cuid())
+  bilheteId String
+  position  Int
+  homeTeam  String
+  awayTeam  String
+  mercado   String
+  selecao   String
+  linha     Decimal? @db.Decimal(6, 2)
+  odd       Decimal  @db.Decimal(6, 2)
+
+  bilhete Bilhete @relation(fields: [bilheteId], references: [id], onDelete: Cascade)
+
+  @@unique([bilheteId, position])
+  @@index([bilheteId])
 }
 
 model UserCategoryAccess {

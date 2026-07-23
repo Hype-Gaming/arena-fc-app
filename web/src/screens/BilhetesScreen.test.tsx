@@ -1,5 +1,5 @@
 // web/src/screens/BilhetesScreen.test.tsx
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -19,6 +19,46 @@ function renderScreen() {
 }
 
 describe('BilhetesScreen', () => {
+  it('expands a multiple and opens its Esportiva share URL', async () => {
+    const user = userEvent.setup();
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    const api = {
+      get: vi.fn().mockResolvedValue({
+        plan: { key: 'diamante', rank: 2 },
+        categorias: [{ key: 'multiplas', label: 'Múltiplas', count: 1, locked: false }],
+        bilhetes: [{
+          id: 'multi-1', categoria: 'multiplas', tierLabel: 'Ultra', titulo: 'Múltipla do dia',
+          mercado: null, selecao: null, linha: null, homeTeam: 'Bahia', awayTeam: 'Santos',
+          homeColor: null, awayColor: null, homeLogo: null, awayLogo: null, competition: null,
+          startsAt: '2026-08-01T16:00:00.000Z', validUntil: '2026-08-01T16:00:00.000Z',
+          odd: 3.2, resultado: 'pending', deepLink: 'https://esportiva.bet.br/sports?bt-path=event',
+          esportivaShareUrl: 'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
+          legs: [
+            { homeTeam: 'Bahia', awayTeam: 'Vitoria', mercado: '1x2', selecao: 'Bahia', linha: null, odd: 1.6 },
+            { homeTeam: 'Santos', awayTeam: 'Corinthians', mercado: 'btts', selecao: 'Sim', linha: null, odd: 2 },
+          ],
+        }],
+      }),
+    };
+    render(
+      <MemoryRouter initialEntries={['/bilhetes']}>
+        <Routes><Route path="/bilhetes" element={<BilhetesScreen api={api} />} /></Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole('button', { name: /ver seleções \(2\)/i }));
+    expect(screen.getByText('Bahia x Vitoria')).toBeInTheDocument();
+    expect(screen.getByText('Santos x Corinthians')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /adicionar/i }));
+    expect(open).toHaveBeenCalledWith(
+      'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    open.mockRestore();
+  });
+
   it('renders the markets header and an empty rail without demo tickets', () => {
     renderScreen();
     expect(

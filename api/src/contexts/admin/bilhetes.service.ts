@@ -1,11 +1,12 @@
 // api/src/modules/admin/bilhetes.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { BilheteCategoria } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateBilheteDto,
   FromEventsDto,
   UpdateBilheteDto,
+  BilheteLegDto,
 } from './dto/bilhete.dto';
 import { parseBetslip } from './betslip.parse';
 import {
@@ -16,6 +17,29 @@ import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { AdminTeamsService } from './teams.service';
 
 const LOGO_FALLBACK_CAP = 40;
+
+function validateEsportivaShareUrl(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new BadRequestException('Invalid Esportiva share URL');
+  }
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== 'esportiva.bet.br' ||
+    !url.searchParams.get('shareCode')
+  ) {
+    throw new BadRequestException(
+      'Esportiva share URL must be HTTPS and include shareCode',
+    );
+  }
+  return url.toString();
+}
+
+function legsCreate(legs: BilheteLegDto[]) {
+  return legs.map((leg, position) => ({ ...leg, position }));
+}
 
 function defaultHomeSelection(ev: {
   homeTeam: string;
@@ -220,14 +244,21 @@ export class AdminBilhetesService {
   }
 
   list() {
-    return this.prisma.bilhete.findMany({ orderBy: { startsAt: 'asc' } });
+    return this.prisma.bilhete.findMany({
+      orderBy: { startsAt: 'asc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
+    });
   }
 
   create(dto: CreateBilheteDto) {
-    const { publish, startsAt, validUntil, ...data } = dto;
+    const { publish, startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
     return this.prisma.bilhete.create({
       data: {
         ...data,
+        ...(esportivaShareUrl
+          ? { esportivaShareUrl: validateEsportivaShareUrl(esportivaShareUrl) }
+          : {}),
+        ...(legs ? { legs: { create: legsCreate(legs) } } : {}),
         startsAt: new Date(startsAt),
         validUntil: validUntil ? new Date(validUntil) : new Date(startsAt),
         // Live by default: the admin creates a ticket to sell it now.
@@ -244,11 +275,21 @@ export class AdminBilhetesService {
 
   async update(id: string, dto: UpdateBilheteDto) {
     await this.getOrThrow(id);
-    const { startsAt, validUntil, ...data } = dto;
+    const { startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
     return this.prisma.bilhete.update({
       where: { id },
       data: {
         ...data,
+        ...(esportivaShareUrl !== undefined
+          ? {
+              esportivaShareUrl: esportivaShareUrl
+                ? validateEsportivaShareUrl(esportivaShareUrl)
+                : null,
+            }
+          : {}),
+        ...(legs !== undefined
+          ? { legs: { deleteMany: {}, create: legsCreate(legs) } }
+          : {}),
         ...(startsAt ? { startsAt: new Date(startsAt) } : {}),
         ...(validUntil ? { validUntil: new Date(validUntil) } : {}),
       },

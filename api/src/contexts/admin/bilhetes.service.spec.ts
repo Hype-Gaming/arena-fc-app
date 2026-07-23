@@ -1,5 +1,5 @@
 // api/src/modules/admin/bilhetes.service.spec.ts
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AdminBilhetesService } from './bilhetes.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AdminTeamsService } from './teams.service';
@@ -153,6 +153,40 @@ describe('AdminBilhetesService', () => {
     const svc = new AdminBilhetesService(makePrisma(), teams);
     const created = await svc.create({ ...CREATE, publish: false });
     expect(created.publishedAt).toBeNull();
+  });
+
+  it('stores a valid Esportiva share URL and its multiple legs', async () => {
+    const prisma = makePrisma();
+    const svc = new AdminBilhetesService(prisma, teams);
+    await svc.create({
+      ...CREATE,
+      categoria: 'multiplas',
+      esportivaShareUrl: 'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
+      legs: [
+        { homeTeam: 'Bahia', awayTeam: 'Vitoria', mercado: '1x2', selecao: 'Bahia', odd: 1.6 },
+        { homeTeam: 'Santos', awayTeam: 'Corinthians', mercado: 'btts', selecao: 'Sim', odd: 1.8 },
+      ],
+    });
+
+    expect((prisma.bilhete.create as jest.Mock).mock.calls[0][0].data).toMatchObject({
+      esportivaShareUrl: 'https://esportiva.bet.br/sports?shareCode=JB671YVFQJF',
+      legs: { create: [{ position: 0, homeTeam: 'Bahia' }, { position: 1, homeTeam: 'Santos' }] },
+    });
+  });
+
+  it.each([
+    'http://esportiva.bet.br/sports?shareCode=ABC',
+    'https://example.test/sports?shareCode=ABC',
+    'https://esportiva.bet.br/sports',
+  ])('rejects an invalid Esportiva share URL: %s', async (esportivaShareUrl) => {
+    const svc = new AdminBilhetesService(makePrisma(), teams);
+    expect(() => svc.create({ ...CREATE, esportivaShareUrl })).toThrow(BadRequestException);
+  });
+
+  it('validates a changed Esportiva share URL during edit', async () => {
+    const svc = new AdminBilhetesService(makePrisma({ id: 'b1' }), teams);
+    await expect(svc.update('b1', { esportivaShareUrl: 'https://invalid.test/?shareCode=X' }))
+      .rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('setPublished(false) unpublishes; re-publishing keeps the original stamp', async () => {

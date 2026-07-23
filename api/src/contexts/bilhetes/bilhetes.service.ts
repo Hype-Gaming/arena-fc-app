@@ -1,6 +1,6 @@
 // api/src/modules/bilhetes/bilhetes.service.ts
 import { Injectable } from '@nestjs/common';
-import { Bilhete } from '@prisma/client';
+import { Bilhete, BilheteLeg } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CATEGORIAS, categoriaDef } from './bilhetes.constants';
 
@@ -24,6 +24,15 @@ export interface BilheteCardDto {
   odd: number;
   resultado: string;
   deepLink: string | null;
+  esportivaShareUrl: string | null;
+  legs: {
+    homeTeam: string;
+    awayTeam: string;
+    mercado: string;
+    selecao: string;
+    linha: number | null;
+    odd: number;
+  }[];
 }
 
 export interface BilhetesFeedDto {
@@ -90,6 +99,7 @@ export class BilhetesService {
         ],
       },
       orderBy: { startsAt: 'asc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
     });
 
     const countBy = new Map<string, number>();
@@ -124,11 +134,12 @@ export class BilhetesService {
     const greens = await this.prisma.bilhete.findMany({
       where: { publishedAt: { not: null }, resultado: 'green' },
       orderBy: { startsAt: 'desc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
     });
     return greens.map((b) => this.toCard(b));
   }
 
-  private toCard(b: Bilhete): BilheteCardDto {
+  private toCard(b: Bilhete & { legs: BilheteLeg[] }): BilheteCardDto {
     return {
       id: b.id,
       categoria: b.categoria,
@@ -149,6 +160,15 @@ export class BilhetesService {
         odd: Number(b.odd),
       resultado: b.resultado,
       deepLink: b.eventDeepLink,
+      esportivaShareUrl: b.esportivaShareUrl,
+      legs: b.legs.map((leg) => ({
+        homeTeam: leg.homeTeam,
+        awayTeam: leg.awayTeam,
+        mercado: leg.mercado,
+        selecao: leg.selecao,
+        linha: leg.linha == null ? null : Number(leg.linha),
+        odd: Number(leg.odd),
+      })),
     };
   }
 }

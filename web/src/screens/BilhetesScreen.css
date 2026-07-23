@@ -280,6 +280,34 @@
   margin-right: 4px;
 }
 
+.spt-card__multiple { margin: 4px 0 10px; }
+.spt-card__legs-toggle {
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--s-blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+.spt-card__legs {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.spt-card__legs li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-left: 2px solid var(--s-blue);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+}
+.spt-card__legs span { color: var(--s-muted); }
+
 /* actions */
 .spt-card__actions {
   display: flex;
