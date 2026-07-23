@@ -75,9 +75,9 @@ describe('normalizeAltenar', () => {
           key: '1x2',
           name: 'Vencedor do encontro',
           selections: [
-            { label: 'Botafogo', odd: 1.9091, line: null },
-            { label: 'Empate', odd: 3.4, line: null },
-            { label: 'Santos', odd: 4.1, line: null },
+            { label: 'Botafogo', odd: 1.9091, line: null, oddId: 4049572921 },
+            { label: 'Empate', odd: 3.4, line: null, oddId: 4049572922 },
+            { label: 'Santos', odd: 4.1, line: null, oddId: 4049572923 },
           ],
         },
         {
@@ -85,8 +85,8 @@ describe('normalizeAltenar', () => {
           key: 'over_under',
           name: 'Total de gols',
           selections: [
-            { label: 'Mais de 2.5', odd: 1.72, line: 2.5 },
-            { label: 'Menos de 2.5', odd: 2.05, line: 2.5 },
+            { label: 'Mais de 2.5', odd: 1.72, line: 2.5, oddId: 50 },
+            { label: 'Menos de 2.5', odd: 2.05, line: 2.5, oddId: 51 },
           ],
         },
         {
@@ -94,8 +94,8 @@ describe('normalizeAltenar', () => {
           key: 'btts',
           name: 'Ambas marcam',
           selections: [
-            { label: 'Sim', odd: 1.8, line: null },
-            { label: 'Não', odd: 1.95, line: null },
+            { label: 'Sim', odd: 1.8, line: null, oddId: 60 },
+            { label: 'Não', odd: 1.95, line: null, oddId: 61 },
           ],
         },
       ],
@@ -110,7 +110,7 @@ describe('normalizeAltenar', () => {
     const [ev] = normalizeAltenar(raw, link, NOW);
     expect(ev.markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 'btts']);
     const ou = ev.markets.find((m) => m.key === 'over_under')!;
-    expect(ou.selections).toEqual([{ label: 'Menos de 2.5', odd: 2.05, line: 2.5 }]);
+    expect(ou.selections).toEqual([{ label: 'Menos de 2.5', odd: 2.05, line: 2.5, oddId: 51 }]);
     // typeId 7 (Handicap) is never surfaced.
     expect(ev.markets.some((m) => m.typeId === 7)).toBe(false);
   });
@@ -170,6 +170,16 @@ describe('normalizeAltenar', () => {
 
   it('returns [] for an empty payload', () => {
     expect(normalizeAltenar({}, link, NOW)).toEqual([]);
+  });
+
+  it('carries the Altenar oddId onto each selection', () => {
+    const [ev] = normalizeAltenar(sample(), link, NOW);
+    const winner = ev.markets.find((m) => m.key === '1x2')!;
+    expect(winner.selections.map((s) => s.oddId)).toEqual([
+      4049572921, 4049572922, 4049572923,
+    ]);
+    const ou = ev.markets.find((m) => m.key === 'over_under')!;
+    expect(ou.selections.map((s) => s.oddId)).toEqual([50, 51]);
   });
 });
 
@@ -258,10 +268,10 @@ describe('normalizeAltenarEventDetails', () => {
     const ou = markets.find((m) => m.key === 'over_under')!;
     // Both lines merged into one market, each selection keeping its line.
     expect(ou.selections).toEqual([
-      { label: 'Mais de 1.5', odd: 1.7, line: 1.5 },
-      { label: 'Menos de 1.5', odd: 2.1, line: 1.5 },
-      { label: 'Mais de 2.5', odd: 2.4, line: 2.5 },
-      { label: 'Menos de 2.5', odd: 1.55, line: 2.5 },
+      { label: 'Mais de 1.5', odd: 1.7, line: 1.5, oddId: 20 },
+      { label: 'Menos de 1.5', odd: 2.1, line: 1.5, oddId: 21 },
+      { label: 'Mais de 2.5', odd: 2.4, line: 2.5, oddId: 22 },
+      { label: 'Menos de 2.5', odd: 1.55, line: 2.5, oddId: 23 },
     ]);
 
     // A scoreline sv ("1:0") is not a numeric line.
@@ -293,6 +303,13 @@ describe('normalizeAltenarEventDetails', () => {
   it('returns [] for an empty payload', () => {
     expect(normalizeAltenarEventDetails({})).toEqual([]);
   });
+
+  it('carries the oddId from GetEventDetails onto each selection', () => {
+    const ou = normalizeAltenarEventDetails(detailsSample()).find(
+      (m) => m.key === 'over_under',
+    )!;
+    expect(ou.selections.map((s) => s.oddId)).toEqual([20, 21, 22, 23]);
+  });
 });
 
 describe('normalizeAltenarLive', () => {
@@ -313,9 +330,9 @@ describe('normalizeAltenarLive', () => {
           key: '1x2',
           name: 'Vencedor do encontro',
           selections: [
-            { label: 'Caac Brasil FC RJ', odd: 1.8, line: null },
-            { label: 'Empate', odd: 3.2, line: null },
-            { label: 'Barcelona EC RJ', odd: 4.5, line: null },
+            { label: 'Caac Brasil FC RJ', odd: 1.8, line: null, oddId: 1 },
+            { label: 'Empate', odd: 3.2, line: null, oddId: 2 },
+            { label: 'Barcelona EC RJ', odd: 4.5, line: null, oddId: 3 },
           ],
         },
       ],

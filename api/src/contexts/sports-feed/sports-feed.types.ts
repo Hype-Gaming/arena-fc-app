@@ -8,6 +8,8 @@ export interface NormalizedSelection {
   odd: number;
   /** Goal/handicap line when the market carries one (Over/Under), else null. */
   line: number | null;
+  /** Altenar odd id — the `{oddId}` half of the `?selections=` deep-link pair. */
+  oddId: number;
 }
 
 /**

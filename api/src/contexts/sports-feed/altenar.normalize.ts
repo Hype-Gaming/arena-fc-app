@@ -85,6 +85,7 @@ function extractMarkets(
         label: o.name?.trim() || '—',
         odd: o.price,
         line: key === 'over_under' ? parseLine(o.name ?? '') : null,
+        oddId: o.id,
       }));
     if (selections.length > 0) {
       markets.push({ typeId: market.typeId, key, name: market.name, selections });
@@ -281,7 +282,7 @@ export function normalizeAltenarEventDetails(
           o.price > 0 &&
           (o.oddStatus === undefined || o.oddStatus === 0),
       )
-      .map((o) => ({ label: o.name?.trim() || '—', odd: o.price, line }));
+      .map((o) => ({ label: o.name?.trim() || '—', odd: o.price, line, oddId: o.id }));
     if (selections.length === 0) continue;
 
     const existing = byType.get(market.typeId);
