@@ -234,12 +234,13 @@ export class AdminBilhetesService {
 
   create(dto: CreateBilheteDto) {
     const { publish, startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
-    // Prefer a link generated from the picked selections (source of truth);
-    // fall back to a pasted URL, validated.
+    // An official Esportiva shareCode represents the exact coupon assembled
+    // by the bookmaker, so it wins over our generic selections deep-link.
+    // The generated link remains the fallback for admin-created tickets.
     const generated = buildBilheteShareUrl(dto);
-    const shareUrl =
-      generated ??
-      (esportivaShareUrl ? validateEsportivaShareUrl(esportivaShareUrl) : undefined);
+    const shareUrl = esportivaShareUrl
+      ? validateEsportivaShareUrl(esportivaShareUrl)
+      : generated ?? undefined;
     return this.prisma.bilhete.create({
       data: {
         ...data,

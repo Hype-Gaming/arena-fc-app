@@ -174,6 +174,20 @@ describe('AdminBilhetesService', () => {
     });
   });
 
+  it('prefers the official shareCode over a generated selections link', async () => {
+    const prisma = makePrisma();
+    const svc = new AdminBilhetesService(prisma, teams);
+    await svc.create({
+      ...CREATE,
+      eventExternalId: '16998999',
+      oddId: '4219528412',
+      esportivaShareUrl: 'https://esportiva.bet.br/sports?shareCode=EXACT-COUPON',
+    });
+
+    expect((prisma.bilhete.create as jest.Mock).mock.calls[0][0].data.esportivaShareUrl)
+      .toBe('https://esportiva.bet.br/sports?shareCode=EXACT-COUPON');
+  });
+
   it.each([
     'http://esportiva.bet.br/sports?shareCode=ABC',
     'https://example.test/sports?shareCode=ABC',
