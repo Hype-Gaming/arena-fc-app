@@ -3,6 +3,7 @@ import {
   IsBoolean,
   IsArray,
   IsIn,
+  IsInt,
   IsISO8601,
   IsNumber,
   IsOptional,
@@ -22,6 +23,8 @@ export class BilheteLegDto {
   @IsString() selecao!: string;
   @IsOptional() @IsNumber() @IsPositive() linha?: number;
   @IsNumber() @IsPositive() odd!: number;
+  @IsOptional() @IsString() eventExternalId?: string;
+  @IsOptional() @IsInt() @IsPositive() oddId?: number;
 }
 
 export class CreateBilheteDto {
@@ -40,6 +43,7 @@ export class CreateBilheteDto {
   @IsISO8601() startsAt!: string;
   @IsOptional() @IsISO8601() validUntil?: string;
   @IsNumber() @IsPositive() odd!: number;
+  @IsOptional() @IsInt() @IsPositive() oddId?: number;
   @IsOptional() @IsString() eventDeepLink?: string;
   @IsOptional() @IsString() eventExternalId?: string;
   /** Esportiva's shared coupon URL, validated by the service. */

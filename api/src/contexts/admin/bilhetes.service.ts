@@ -1,5 +1,5 @@
 // api/src/modules/admin/bilhetes.service.ts
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { BilheteCategoria } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
@@ -15,27 +15,9 @@ import {
 } from '../sports-feed/team-logo.match';
 import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { AdminTeamsService } from './teams.service';
+import { validateEsportivaShareUrl, buildBilheteShareUrl } from './bilhete-share';
 
 const LOGO_FALLBACK_CAP = 40;
-
-function validateEsportivaShareUrl(raw: string): string {
-  let url: URL;
-  try {
-    url = new URL(raw);
-  } catch {
-    throw new BadRequestException('Invalid Esportiva share URL');
-  }
-  if (
-    url.protocol !== 'https:' ||
-    url.hostname !== 'esportiva.bet.br' ||
-    !url.searchParams.get('shareCode')
-  ) {
-    throw new BadRequestException(
-      'Esportiva share URL must be HTTPS and include shareCode',
-    );
-  }
-  return url.toString();
-}
 
 function legsCreate(legs: BilheteLegDto[]) {
   return legs.map((leg, position) => ({ ...leg, position }));
@@ -252,12 +234,16 @@ export class AdminBilhetesService {
 
   create(dto: CreateBilheteDto) {
     const { publish, startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
+    // Prefer a link generated from the picked selections (source of truth);
+    // fall back to a pasted URL, validated.
+    const generated = buildBilheteShareUrl(dto);
+    const shareUrl =
+      generated ??
+      (esportivaShareUrl ? validateEsportivaShareUrl(esportivaShareUrl) : undefined);
     return this.prisma.bilhete.create({
       data: {
         ...data,
-        ...(esportivaShareUrl
-          ? { esportivaShareUrl: validateEsportivaShareUrl(esportivaShareUrl) }
-          : {}),
+        ...(shareUrl ? { esportivaShareUrl: shareUrl } : {}),
         ...(legs ? { legs: { create: legsCreate(legs) } } : {}),
         startsAt: new Date(startsAt),
         validUntil: validUntil ? new Date(validUntil) : new Date(startsAt),
