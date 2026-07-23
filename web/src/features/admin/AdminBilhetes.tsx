@@ -10,6 +10,12 @@ import {
   type SportSelection,
   type Team,
 } from './adminApi';
+import {
+  toggleBasketLeg,
+  combinedOdd,
+  isLegInBasket,
+  type BasketLeg,
+} from './esportivaBasket';
 
 const CATEGORIAS: { key: BilheteCategoria; label: string }[] = [
   { key: 'safes', label: 'Odds Safes (Básico)' },
@@ -34,6 +40,7 @@ const EMPTY = {
   odd: '',
   eventDeepLink: '',
   eventExternalId: '',
+  oddId: undefined as number | undefined,
   esportivaShareUrl: '',
 };
 
@@ -157,6 +164,8 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [form, setForm] = useState(EMPTY);
   const [multipleLegs, setMultipleLegs] = useState<LegDraft[]>([]);
+  const [basket, setBasket] = useState<BasketLeg[]>([]);
+  const [basketCat, setBasketCat] = useState<BilheteCategoria>('multiplas');
   const [selectedEventId, setSelectedEventId] = useState('');
   const [previewRef, setPreviewRef] = useState('');
   const [preview, setPreview] = useState<EventPreview | null>(null);
@@ -413,6 +422,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
             : f.odd,
       eventDeepLink: ev.deepLink,
       eventExternalId: ev.externalId,
+      oddId: firstSelection?.oddId,
     }));
   }
 
@@ -423,7 +433,91 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
       selecao: selection.label,
       linha: lineValue(selection.line),
       odd: String(Number(selection.odd)),
+      oddId: selection.oddId,
     }));
+  }
+
+  /** Add/remove a clicked selection to the cesta, carrying its sportsbook ids. */
+  function onToggleBasket(
+    ev: { externalId: string; homeTeam: string; awayTeam: string; startsAt: string },
+    market: SportMarket,
+    selection: SportSelection,
+  ) {
+    setBasket((b) =>
+      toggleBasketLeg(b, {
+        eventExternalId: ev.externalId,
+        homeTeam: ev.homeTeam,
+        awayTeam: ev.awayTeam,
+        startsAt: ev.startsAt,
+        mercado: market.key,
+        mercadoLabel: marketTitle(market),
+        selecao: selection.label,
+        linha: selection.line,
+        odd: Number(selection.odd),
+        oddId: selection.oddId,
+      }),
+    );
+  }
+
+  /** Turn the cesta into a bilhete: simples (1 leg) or múltipla (2+). */
+  async function onGenerateFromBasket() {
+    if (basket.length === 0) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const soonest = basket.reduce((earliest, leg) =>
+        new Date(leg.startsAt).getTime() < new Date(earliest.startsAt).getTime()
+          ? leg
+          : earliest,
+      );
+      const combined = combinedOdd(basket);
+      if (basket.length === 1) {
+        const l = basket[0];
+        await adminApi.createBilhete({
+          categoria: basketCat,
+          mercado: l.mercado,
+          selecao: l.selecao,
+          linha: l.linha ?? undefined,
+          homeTeam: l.homeTeam,
+          awayTeam: l.awayTeam,
+          homeLogo: crestUrl(l.homeTeam),
+          awayLogo: crestUrl(l.awayTeam),
+          startsAt: l.startsAt,
+          validUntil: l.startsAt,
+          odd: l.odd,
+          eventExternalId: l.eventExternalId,
+          oddId: l.oddId,
+        });
+      } else {
+        await adminApi.createBilhete({
+          categoria: basketCat,
+          titulo: 'Múltipla',
+          homeTeam: soonest.homeTeam,
+          awayTeam: soonest.awayTeam,
+          homeLogo: crestUrl(soonest.homeTeam),
+          awayLogo: crestUrl(soonest.awayTeam),
+          startsAt: soonest.startsAt,
+          validUntil: soonest.startsAt,
+          odd: Number(combined.toFixed(2)),
+          legs: basket.map((l) => ({
+            homeTeam: l.homeTeam,
+            awayTeam: l.awayTeam,
+            mercado: l.mercado,
+            selecao: l.selecao,
+            linha: l.linha ?? undefined,
+            odd: l.odd,
+            eventExternalId: l.eventExternalId,
+            oddId: l.oddId,
+          })),
+        });
+      }
+      setBasket([]);
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   /** Paste an Esportiva match link → preview the card + its popular markets. */
@@ -495,6 +589,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
         odd: firstSelection?.odd != null ? String(Number(firstSelection.odd)) : f.odd,
         eventDeepLink: p.deepLink,
         eventExternalId: p.externalId,
+        oddId: firstSelection?.oddId,
       }));
     } catch (err) {
       setError((err as Error).message);
@@ -544,6 +639,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
         odd: Number(form.odd),
         eventDeepLink: form.eventDeepLink || undefined,
         eventExternalId: form.eventExternalId || undefined,
+        oddId: form.oddId,
         esportivaShareUrl: form.esportivaShareUrl.trim() || undefined,
         legs: form.categoria === 'multiplas'
           ? multipleLegs.map((leg) => ({
@@ -703,7 +799,10 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
   }, [items, q, filterCat, filterStatus, sortBy]);
 
   /** The clickable market/selection grid, shared by the synced pick + preview. */
-  function renderMarkets(markets: SportMarket[]) {
+  function renderMarkets(
+    markets: SportMarket[],
+    ev: { externalId: string; homeTeam: string; awayTeam: string; startsAt: string },
+  ) {
     return (
       <div className="ab-markets">
         {markets.map((market) => (
@@ -715,17 +814,35 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
                   form.mercado === market.key &&
                   form.selecao === selection.label &&
                   form.linha === lineValue(selection.line);
+                const inBasket = isLegInBasket(
+                  basket,
+                  ev.externalId,
+                  selection.oddId,
+                );
                 return (
-                  <button
-                    type="button"
+                  <div
+                    className="ab-selection-wrap"
                     key={`${selection.label}-${selection.line ?? 'noline'}`}
-                    className="ab-selection"
-                    data-active={active}
-                    onClick={() => onPickSelection(market, selection)}
                   >
-                    <span>{selection.label}</span>
-                    <b>{Number(selection.odd).toFixed(2)}</b>
-                  </button>
+                    <button
+                      type="button"
+                      className="ab-selection"
+                      data-active={active}
+                      onClick={() => onPickSelection(market, selection)}
+                    >
+                      <span>{selection.label}</span>
+                      <b>{Number(selection.odd).toFixed(2)}</b>
+                    </button>
+                    <button
+                      type="button"
+                      className="ab-selection__cesta"
+                      data-in-basket={inBasket}
+                      title={inBasket ? 'Remover da cesta' : 'Adicionar à cesta'}
+                      onClick={() => onToggleBasket(ev, market, selection)}
+                    >
+                      {inBasket ? '✓' : '＋'}
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -930,6 +1047,30 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
         <small>casa os times ao vivo com o catálogo e baixa os logos</small>
       </p>
 
+      {basket.length > 0 && (
+        <aside className="ab-basket" aria-label="Cesta de seleções da Esportiva">
+          <div>
+            <strong>{basket.length} {basket.length === 1 ? 'seleção' : 'seleções'}</strong>
+            <span>Odd combinada: {combinedOdd(basket).toFixed(2)}</span>
+          </div>
+          <label>
+            Categoria
+            <select
+              value={basketCat}
+              onChange={(e) => setBasketCat(e.target.value as BilheteCategoria)}
+            >
+              {CATEGORIAS.map((c) => (
+                <option key={c.key} value={c.key}>{c.label}</option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="ab-primary" onClick={onGenerateFromBasket} disabled={busy}>
+            Criar bilhete com cesta
+          </button>
+          <button type="button" onClick={() => setBasket([])} disabled={busy}>Limpar</button>
+        </aside>
+      )}
+
       <form onSubmit={onCreate} className="admin-bilhetes__form">
         <div className="ab-paste">
           <label>
@@ -979,7 +1120,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
             {sortedMarkets(preview.markets).length === 0 ? (
               <p className="ab-market-empty">Sem mercados populares para este jogo.</p>
             ) : (
-              renderMarkets(sortedMarkets(preview.markets))
+              renderMarkets(sortedMarkets(preview.markets), preview)
             )}
           </div>
         )}
@@ -1036,7 +1177,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
                 Este jogo ainda nao trouxe mercados estruturados; use a odd manual.
               </p>
             ) : (
-              renderMarkets(eventMarkets)
+              renderMarkets(eventMarkets, selectedEvent)
             )}
           </div>
         )}

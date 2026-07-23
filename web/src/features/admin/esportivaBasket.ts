@@ -6,6 +6,7 @@ export interface BasketLeg {
   eventExternalId: string;
   homeTeam: string;
   awayTeam: string;
+  startsAt: string;
   mercado: string;
   mercadoLabel: string;
   selecao: string;

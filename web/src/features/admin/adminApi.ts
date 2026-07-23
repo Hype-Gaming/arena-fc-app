@@ -99,6 +99,7 @@ export interface SportSelection {
   label: string;
   odd: number;
   line: number | null;
+  oddId: number;
 }
 
 export interface SportMarket {
@@ -157,6 +158,7 @@ export interface CreateBilheteInput {
   startsAt: string;
   validUntil?: string;
   odd: number;
+  oddId?: number;
   eventDeepLink?: string;
   eventExternalId?: string;
   esportivaShareUrl?: string;
@@ -167,6 +169,8 @@ export interface CreateBilheteInput {
     selecao: string;
     linha?: number;
     odd: number;
+    eventExternalId?: string;
+    oddId?: number;
   }[];
   publish?: boolean;
 }
