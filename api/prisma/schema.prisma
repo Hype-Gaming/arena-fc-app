@@ -334,6 +334,9 @@ model Bilhete {
   startsAt    DateTime
   validUntil  DateTime?
   odd         Decimal          @db.Decimal(6, 2)
+  // Altenar odd id of the single selection, when this bilhete was built from a
+  // sportsbook pick. Lets the `?selections=` deep-link be (re)generated.
+  oddId       Int?
   resultado   BilheteResultado @default(pending)
   publishedAt DateTime?
   createdAt   DateTime         @default(now())
@@ -361,6 +364,10 @@ model BilheteLeg {
   selecao   String
   linha     Decimal? @db.Decimal(6, 2)
   odd       Decimal  @db.Decimal(6, 2)
+  // Sportsbook identity of this leg, when built from the feed picker. Both null
+  // for legacy/hand-typed legs. Enables generating the múltipla deep-link.
+  eventExternalId String?
+  oddId           Int?
 
   bilhete Bilhete @relation(fields: [bilheteId], references: [id], onDelete: Cascade)
 

@@ -1,0 +1,4 @@
+ALTER TABLE "Bilhete" ADD COLUMN "oddId" INTEGER;
+
+ALTER TABLE "BilheteLeg" ADD COLUMN "eventExternalId" TEXT;
+ALTER TABLE "BilheteLeg" ADD COLUMN "oddId" INTEGER;
