@@ -324,6 +324,19 @@
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.035));
   border: 1px solid rgba(255, 255, 255, 0.035);
 }
+/* generic filler apps: a coloured tile with a small white glyph */
+.onb__app--generic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+.onb__app--generic svg {
+  width: 55%;
+  height: 55%;
+  opacity: 0.95;
+}
 .onb__app-wrap {
   display: flex;
   flex-direction: column;
@@ -337,15 +350,15 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: transparent;
+  padding: 3px;
+  background: linear-gradient(150deg, #16283a, #0a121c);
   box-shadow: 0 0 0 2px rgba(140, 230, 10, 0.5), 0 6px 14px rgba(140, 230, 10, 0.35);
 }
-/* The real home-screen icon, so the preview matches what the user installs. */
+/* The hexagonal brand mark, matching the app favicon/home-screen icon. */
 .onb__app--brand img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
+  object-fit: contain;
   display: block;
 }
 .onb__dock {
@@ -357,7 +370,17 @@
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
 }
-.onb__dock i { width: 27px; height: 27px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); }
+.onb__dock i {
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+.onb__dock i svg { width: 55%; height: 55%; opacity: 0.95; }
 .onb__install-tip {
   display: flex;
   align-items: center;

@@ -6,6 +6,7 @@ import {
   CreateBilheteDto,
   FromEventsDto,
   UpdateBilheteDto,
+  BilheteLegDto,
 } from './dto/bilhete.dto';
 import { parseBetslip } from './betslip.parse';
 import {
@@ -14,8 +15,13 @@ import {
 } from '../sports-feed/team-logo.match';
 import { teamLogoUrl } from '../sports-feed/team-logo-cache.service';
 import { AdminTeamsService } from './teams.service';
+import { validateEsportivaShareUrl, buildBilheteShareUrl } from './bilhete-share';
 
 const LOGO_FALLBACK_CAP = 40;
+
+function legsCreate(legs: BilheteLegDto[]) {
+  return legs.map((leg, position) => ({ ...leg, position }));
+}
 
 function defaultHomeSelection(ev: {
   homeTeam: string;
@@ -220,14 +226,26 @@ export class AdminBilhetesService {
   }
 
   list() {
-    return this.prisma.bilhete.findMany({ orderBy: { startsAt: 'asc' } });
+    return this.prisma.bilhete.findMany({
+      orderBy: { startsAt: 'asc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
+    });
   }
 
   create(dto: CreateBilheteDto) {
-    const { publish, startsAt, validUntil, ...data } = dto;
+    const { publish, startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
+    // An official Esportiva shareCode represents the exact coupon assembled
+    // by the bookmaker, so it wins over our generic selections deep-link.
+    // The generated link remains the fallback for admin-created tickets.
+    const generated = buildBilheteShareUrl(dto);
+    const shareUrl = esportivaShareUrl
+      ? validateEsportivaShareUrl(esportivaShareUrl)
+      : generated ?? undefined;
     return this.prisma.bilhete.create({
       data: {
         ...data,
+        ...(shareUrl ? { esportivaShareUrl: shareUrl } : {}),
+        ...(legs ? { legs: { create: legsCreate(legs) } } : {}),
         startsAt: new Date(startsAt),
         validUntil: validUntil ? new Date(validUntil) : new Date(startsAt),
         // Live by default: the admin creates a ticket to sell it now.
@@ -244,11 +262,21 @@ export class AdminBilhetesService {
 
   async update(id: string, dto: UpdateBilheteDto) {
     await this.getOrThrow(id);
-    const { startsAt, validUntil, ...data } = dto;
+    const { startsAt, validUntil, legs, esportivaShareUrl, ...data } = dto;
     return this.prisma.bilhete.update({
       where: { id },
       data: {
         ...data,
+        ...(esportivaShareUrl !== undefined
+          ? {
+              esportivaShareUrl: esportivaShareUrl
+                ? validateEsportivaShareUrl(esportivaShareUrl)
+                : null,
+            }
+          : {}),
+        ...(legs !== undefined
+          ? { legs: { deleteMany: {}, create: legsCreate(legs) } }
+          : {}),
         ...(startsAt ? { startsAt: new Date(startsAt) } : {}),
         ...(validUntil ? { validUntil: new Date(validUntil) } : {}),
       },

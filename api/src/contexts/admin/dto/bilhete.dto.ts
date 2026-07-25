@@ -8,10 +8,24 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
+  ValidateNested,
 } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { BilheteCategoria } from '@prisma/client';
 
 const CATEGORIA_KEYS = Object.values(BilheteCategoria);
+
+export class BilheteLegDto {
+  @IsString() homeTeam!: string;
+  @IsString() awayTeam!: string;
+  @IsString() mercado!: string;
+  @IsString() selecao!: string;
+  @IsOptional() @IsNumber() @IsPositive() linha?: number;
+  @IsNumber() @IsPositive() odd!: number;
+  @IsOptional() @IsString() eventExternalId?: string;
+  @IsOptional() @Transform(({ value }) => value == null ? value : String(value)) @IsString() @Matches(/^[1-9]\d*$/) oddId?: string;
+}
 
 export class CreateBilheteDto {
   @IsOptional() @IsString() titulo?: string;
@@ -29,8 +43,13 @@ export class CreateBilheteDto {
   @IsISO8601() startsAt!: string;
   @IsOptional() @IsISO8601() validUntil?: string;
   @IsNumber() @IsPositive() odd!: number;
+  @IsOptional() @Transform(({ value }) => value == null ? value : String(value)) @IsString() @Matches(/^[1-9]\d*$/) oddId?: string;
   @IsOptional() @IsString() eventDeepLink?: string;
   @IsOptional() @IsString() eventExternalId?: string;
+  /** Esportiva's shared coupon URL, validated by the service. */
+  @IsOptional() @IsString() esportivaShareUrl?: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(30) @ValidateNested({ each: true }) @Type(() => BilheteLegDto)
+  legs?: BilheteLegDto[];
   /** Create-and-publish in one go (default true — admin usually wants it live). */
   @IsOptional() @IsBoolean() publish?: boolean;
 }
@@ -72,6 +91,9 @@ export class UpdateBilheteDto {
   @IsOptional() @IsISO8601() startsAt?: string;
   @IsOptional() @IsISO8601() validUntil?: string;
   @IsOptional() @IsNumber() @IsPositive() odd?: number;
+  @IsOptional() @IsString() esportivaShareUrl?: string;
+  @IsOptional() @IsArray() @ArrayMaxSize(30) @ValidateNested({ each: true }) @Type(() => BilheteLegDto)
+  legs?: BilheteLegDto[];
 }
 
 export class SetBilheteResultDto {

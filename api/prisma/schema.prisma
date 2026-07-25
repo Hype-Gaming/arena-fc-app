@@ -334,6 +334,9 @@ model Bilhete {
   startsAt    DateTime
   validUntil  DateTime?
   odd         Decimal          @db.Decimal(6, 2)
+  // Altenar odd id of the single selection, when this bilhete was built from a
+  // sportsbook pick. Lets the `?selections=` deep-link be (re)generated.
+  oddId       String?
   resultado   BilheteResultado @default(pending)
   publishedAt DateTime?
   createdAt   DateTime         @default(now())
@@ -342,9 +345,34 @@ model Bilhete {
   // the event so they place the bet on their own account.
   eventDeepLink   String?
   eventExternalId String?
+  // A shareable Esportiva betslip URL. Unlike an event deep link, this can
+  // restore one or more already-selected odds in the bookmaker's coupon.
+  esportivaShareUrl String?
+  legs              BilheteLeg[]
 
   @@index([categoria, startsAt])
   @@index([validUntil])
+}
+
+model BilheteLeg {
+  id        String   @id @default(cuid())
+  bilheteId String
+  position  Int
+  homeTeam  String
+  awayTeam  String
+  mercado   String
+  selecao   String
+  linha     Decimal? @db.Decimal(6, 2)
+  odd       Decimal  @db.Decimal(6, 2)
+  // Sportsbook identity of this leg, when built from the feed picker. Both null
+  // for legacy/hand-typed legs. Enables generating the múltipla deep-link.
+  eventExternalId String?
+  oddId           String?
+
+  bilhete Bilhete @relation(fields: [bilheteId], references: [id], onDelete: Cascade)
+
+  @@unique([bilheteId, position])
+  @@index([bilheteId])
 }
 
 model UserCategoryAccess {

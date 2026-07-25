@@ -33,6 +33,8 @@ const b = (id: string, categoria: string, odd = 1.5) => ({
   odd,
   resultado: 'pending',
   publishedAt: new Date(),
+  esportivaShareUrl: null,
+  legs: [],
 });
 
 describe('BilhetesService.getFeed', () => {
@@ -71,6 +73,7 @@ describe('BilhetesService.getFeed', () => {
         ],
       },
       orderBy: { startsAt: 'asc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
     });
   });
 
@@ -147,6 +150,25 @@ describe('BilhetesService.getFeed', () => {
       validUntil: new Date('2026-07-10T16:00:00Z'),
     });
   });
+
+  it('returns the Esportiva coupon URL and ordered legs for a multiple', async () => {
+    const multiple = {
+      ...b('m1', 'multiplas', 3.2),
+      esportivaShareUrl: 'https://esportiva.bet.br/sports?shareCode=ABC123',
+      legs: [{
+        homeTeam: 'Bahia', awayTeam: 'Vitoria', mercado: '1x2', selecao: 'Bahia', linha: null, odd: 1.6,
+      }],
+    };
+    const feed = await new BilhetesService(makePrisma(
+      { status: 'active', currentPeriodEnd: null, plan: { key: 'diamante', rank: 2 } },
+      [multiple],
+    )).getFeed('u1');
+
+    expect(feed.bilhetes[0]).toMatchObject({
+      esportivaShareUrl: multiple.esportivaShareUrl,
+      legs: [{ homeTeam: 'Bahia', odd: 1.6 }],
+    });
+  });
 });
 
 describe('BilhetesService.getHistorico', () => {
@@ -162,6 +184,7 @@ describe('BilhetesService.getHistorico', () => {
     expect(prisma.bilhete.findMany).toHaveBeenCalledWith({
       where: { publishedAt: { not: null }, resultado: 'green' },
       orderBy: { startsAt: 'desc' },
+      include: { legs: { orderBy: { position: 'asc' } } },
     });
     expect(historico.map((x) => x.id)).toEqual(['1', '2']);
     expect(historico[0]).toMatchObject({

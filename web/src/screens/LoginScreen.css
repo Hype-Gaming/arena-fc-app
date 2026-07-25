@@ -114,9 +114,9 @@
 .pf-promo {
   /* The promo is deliberately wider than the form on large screens, matching
      the landscape card in the supplied reference. */
-  width: min(568px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   box-sizing: border-box;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 .pf-viewport {
   overflow: hidden;
@@ -137,8 +137,8 @@
 .pf-login .pf-card {
   position: relative;
   width: 100%;
-  max-width: 568px;
-  min-height: 225px;
+  max-width: 480px;
+  min-height: 190px;
   margin: 0 auto;
   padding: 0;
   display: flex;
@@ -176,7 +176,7 @@
 }
 .pf-card__row--top {
   align-items: center;
-  padding: 24px 22px 19px;
+  padding: 20px 19px 15px;
   gap: 10px;
 }
 .pf-card__body {
@@ -184,7 +184,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 0 22px 23px;
+  padding: 0 19px 19px;
 }
 .pf-card__info {
   min-width: 0;
@@ -196,14 +196,14 @@
   gap: 5px;
   font-family: var(--pf-display);
   font-weight: 900;
-  font-size: 20px;
+  font-size: 18px;
   text-transform: uppercase;
   letter-spacing: 1.4px;
   line-height: 1;
-  min-width: 104px;
-  min-height: 43px;
+  min-width: 92px;
+  min-height: 38px;
   justify-content: center;
-  padding: 9px 18px;
+  padding: 8px 15px;
   border-radius: 8px;
   box-sizing: border-box;
   white-space: nowrap;
@@ -237,7 +237,7 @@
 .pf-card__odd {
   font-family: var(--pf-display);
   font-weight: 900;
-  font-size: 50px;
+  font-size: 42px;
   line-height: 0.86;
   color: var(--pf-green);
   letter-spacing: -0.5px;
@@ -249,7 +249,7 @@
   margin: 0;
   font-family: var(--pf-display);
   font-weight: 800;
-  font-size: 24px;
+  font-size: 21px;
   line-height: 1.2;
   color: #fff;
   /* Wrap long fixtures (up to 2 lines) instead of truncating on mobile. */
@@ -263,7 +263,7 @@
   margin: 2px 0 0;
   font-family: var(--pf-body);
   font-weight: 400;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.25;
   color: rgba(255, 255, 255, 0.45);
 }
@@ -272,7 +272,7 @@
   white-space: nowrap;
   font-family: var(--pf-body);
   font-weight: 500;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.2;
   color: #94a3b8;
   text-align: right;
@@ -283,12 +283,12 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-height: 58px;
-  padding: 16px 22px;
+  min-height: 50px;
+  padding: 13px 19px;
   box-sizing: border-box;
   font-family: var(--pf-display);
   font-weight: 700;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
