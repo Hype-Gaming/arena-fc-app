@@ -15,7 +15,7 @@ import {
   TeamLogoIndex,
 } from './team-logo.match';
 import { teamLogoUrl } from './team-logo-cache.service';
-import { parseEsportivaEventId } from './esportiva-link';
+import { parseEsportivaEventId, parseEsportivaShareCode } from './esportiva-link';
 
 export interface SyncEventsSummary {
   provider: string;
@@ -92,6 +92,14 @@ export class SportsFeedService {
       homeLogo: crest(preview.homeTeam),
       awayLogo: crest(preview.awayTeam),
     };
+  }
+
+  async getSharedEvents(ref: string): Promise<NormalizedEventPreview[]> {
+    const shareCode = parseEsportivaShareCode(ref);
+    if (!shareCode) {
+      throw new BadRequestException('Cole um link ou código shareCode válido da Esportiva');
+    }
+    return this.provider.fetchSharedEvents(shareCode);
   }
 
   /**

@@ -32,6 +32,7 @@ function makeProvider(events: NormalizedEvent[]): SportsFeedProvider {
       deepLink: '',
       markets: [],
     }),
+    fetchSharedEvents: jest.fn().mockResolvedValue([]),
   };
 }
 

@@ -323,6 +323,8 @@ export const adminApi = {
     req<SportEventSyncSummary>('/admin/sport-events/sync', { method: 'POST' }),
   previewEvent: (ref: string) =>
     req<EventPreview>(`/admin/sport-events/preview?ref=${encodeURIComponent(ref)}`),
+  sharedEvents: (ref: string) =>
+    req<EventPreview[]>(`/admin/sport-events/shared?ref=${encodeURIComponent(ref)}`),
   resolveTeamLogo: (name: string, iso?: string) =>
     req<{ logo: string | null }>(
       `/admin/teams/resolve-logo?name=${encodeURIComponent(name)}${iso ? `&iso=${iso}` : ''}`,

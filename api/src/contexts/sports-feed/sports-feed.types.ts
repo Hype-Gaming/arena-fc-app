@@ -90,6 +90,8 @@ export interface SportsFeedProvider {
   fetchLive(): Promise<NormalizedLiveEvent[]>;
   /** One event's identity, kickoff and popular markets board (paste-a-link). */
   fetchEventPreview(eventId: string): Promise<NormalizedEventPreview>;
+  /** Events contained in a sportsbook share/booking code. */
+  fetchSharedEvents(shareCode: string): Promise<NormalizedEventPreview[]>;
 }
 
 export const SPORTS_FEED_PROVIDER = Symbol('SPORTS_FEED_PROVIDER');

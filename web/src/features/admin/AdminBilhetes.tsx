@@ -169,6 +169,7 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
   const [selectedEventId, setSelectedEventId] = useState('');
   const [previewRef, setPreviewRef] = useState('');
   const [preview, setPreview] = useState<EventPreview | null>(null);
+  const [sharedPreviews, setSharedPreviews] = useState<EventPreview[]>([]);
   // Crests resolved on demand (typed names / seleções not in the catalog yet),
   // keyed by the lowercased team name → our cache URL.
   const [resolvedCrests, setResolvedCrests] = useState<Record<string, string>>({});
@@ -562,7 +563,25 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
     setError(null);
     setBusy(true);
     try {
-      const p = await adminApi.previewEvent(previewRef.trim());
+      const ref = previewRef.trim();
+      let p: EventPreview;
+      try {
+        const url = new URL(ref);
+        if (url.searchParams.has('shareCode')) {
+          const shared = await adminApi.sharedEvents(ref);
+          setSharedPreviews(shared);
+          if (shared.length === 0) throw new Error('O shareCode não retornou eventos');
+          p = shared[0];
+        } else {
+          setSharedPreviews([]);
+          p = await adminApi.previewEvent(ref);
+        }
+      } catch (err) {
+        if (err instanceof TypeError) {
+          setSharedPreviews([]);
+          p = await adminApi.previewEvent(ref);
+        } else throw err;
+      }
       setPreview(p);
       setSelectedEventId(''); // the pasted event takes over the card
       // Seed crests the API already matched from the catalog, then resolve any
@@ -1098,6 +1117,17 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
           </button>
           <small>cola o jogo montado na Esportiva e veja o card + mercados</small>
         </div>
+        {sharedPreviews.length > 1 && (
+          <div className="ab-event-card">
+            <b>{sharedPreviews.length} eventos encontrados no shareCode</b>
+            {sharedPreviews.slice(1).map((event) => (
+              <div key={event.externalId} className="ab-event-card__head">
+                <span>{event.homeTeam} x {event.awayTeam}</span>
+                <a href={event.deepLink} target="_blank" rel="noreferrer">Abrir</a>
+              </div>
+            ))}
+          </div>
+        )}
         {preview && (
           <div className="ab-event-card">
             <div className="ab-event-card__head">
