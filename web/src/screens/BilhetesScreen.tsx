@@ -120,6 +120,7 @@ const MARKET_LABELS: Record<string, string> = {
 };
 
 const LAST_COUPON_STORAGE_KEY = 'tips-app:last-esportiva-coupon';
+const ALL_CATS_KEY = 'all';
 
 /** Only pre-filled coupons belong in the persistent sportsbook iframe. */
 function prefilledCouponUrl(value: string | null): string | null {
@@ -232,12 +233,12 @@ export function BilhetesScreen({ api }: Props = {}) {
         if (!initialized.current) {
           // Prefer the deep-linked category (if it exists and is unlocked),
           // otherwise fall back to the first unlocked category with tickets.
-          const requested = requestedCat
-            ? feed.categorias.find((c) => c.key === requestedCat && !c.locked)
-            : undefined;
+          const requested = requestedCat === ALL_CATS_KEY
+            ? ALL_CATS_KEY
+            : feed.categorias.find((c) => c.key === requestedCat && !c.locked)?.key;
           const firstOpen = feed.categorias.find((c) => !c.locked && c.count > 0);
-          const target = requested ?? firstOpen;
-          if (target) setCat(target.key);
+          const target = requested ?? firstOpen?.key;
+          if (target) setCat(target);
           initialized.current = true;
         }
       })
@@ -265,7 +266,11 @@ export function BilhetesScreen({ api }: Props = {}) {
     }
   }, [sportsbookUrl]);
 
-  const cards = all.filter((c) => c.cat === cat);
+  const displayCats: CatView[] = [
+    { key: ALL_CATS_KEY, label: 'Todos os bilhetes', count: all.length, locked: false },
+    ...cats,
+  ];
+  const cards = cat === ALL_CATS_KEY ? all : all.filter((c) => c.cat === cat);
 
   function onRailScroll() {
     const el = railRef.current;
@@ -342,7 +347,7 @@ export function BilhetesScreen({ api }: Props = {}) {
 
         {/* category chips */}
         <div className="spt-chips" role="tablist" aria-label="Mercados">
-          {cats.map((c) => (
+          {displayCats.map((c) => (
             <button
               key={c.key}
               type="button"
