@@ -47,8 +47,15 @@ export class AltenarFeedProvider implements SportsFeedProvider {
   private deepLink = (eventId: number): string =>
     this.deepLinkTemplate().replace('{id}', String(eventId));
 
-  private shareCodePath(): string {
-    return process.env.ALTENAR_SHARE_CODE_PATH ?? 'GetBetSlip';
+  private shareCodePaths(): string[] {
+    return (
+      process.env.ALTENAR_SHARE_CODE_PATHS ??
+      process.env.ALTENAR_SHARE_CODE_PATH ??
+      'GetBetSlip,GetBetSlipByShareCode,GetSharedBet'
+    )
+      .split(',')
+      .map((path) => path.trim())
+      .filter(Boolean);
   }
 
   private async fetchRaw(
@@ -111,12 +118,20 @@ export class AltenarFeedProvider implements SportsFeedProvider {
   }
 
   async fetchSharedEvents(shareCode: string): Promise<NormalizedEventPreview[]> {
-    const raw = await this.fetchRaw(this.shareCodePath(), { shareCode });
-    const ids = extractEventIds(raw);
-    if (ids.length === 0) {
-      throw new BadGatewayException('O shareCode não retornou eventos');
+    let lastError: unknown;
+    for (const path of this.shareCodePaths()) {
+      try {
+        const raw = await this.fetchRaw(path, { shareCode });
+        const ids = extractEventIds(raw);
+        if (ids.length > 0) {
+          return Promise.all(ids.map((id) => this.fetchEventPreview(id)));
+        }
+      } catch (err) {
+        lastError = err;
+      }
     }
-    return Promise.all(ids.map((id) => this.fetchEventPreview(id)));
+    if (lastError instanceof BadGatewayException) throw lastError;
+    throw new BadGatewayException('O shareCode não retornou eventos');
   }
 }
 
