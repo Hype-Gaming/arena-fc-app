@@ -380,8 +380,20 @@ export function BilhetesScreen({ api }: Props = {}) {
             onClickCapture={onRailClickCapture}
             aria-label="Bilhetes do mercado"
           >
-            {cards.map((c) => (
-              <article className="spt-card" data-tone={TIER_TONE[c.tierLabel] ?? 'ultra'} key={c.id}>
+            {cards.map((c) => {
+              const cardLocked = cats.find((item) => item.key === c.cat)?.locked ?? false;
+              return (
+              <article
+                className="spt-card"
+                data-tone={TIER_TONE[c.tierLabel] ?? 'ultra'}
+                data-locked={cardLocked}
+                key={c.id}
+              >
+                {cardLocked && (
+                  <div className="spt-card__lock" aria-label="Bilhete bloqueado para o seu plano">
+                    <Lock /> <span>Plano superior</span>
+                  </div>
+                )}
                 <div className="spt-card__meta">
                   <span className="spt-card__timer">
                     <Clock /> {countdown(c.validMs, now)}
@@ -446,7 +458,11 @@ export function BilhetesScreen({ api }: Props = {}) {
                   <button
                     type="button"
                     className="spt-card__add"
-                    onClick={() =>
+                    onClick={() => {
+                      if (cardLocked) {
+                        navigate('/planos');
+                        return;
+                      }
                       // Placing a bet is gated until the Telegram wait passes.
                       requireUnlock(() => {
                         // Reuse the sportsbook iframe already on this page and
@@ -462,10 +478,10 @@ export function BilhetesScreen({ api }: Props = {}) {
                         } else {
                           setCouponMessage('Este bilhete ainda não possui um cupom pré-preenchido disponível.');
                         }
-                      })
-                    }
+                      });
+                    }}
                   >
-                    Adicionar
+                    {cardLocked ? 'Desbloquear' : 'Adicionar'}
                   </button>
                   <button type="button" className="spt-card__icon" aria-label="Detalhes">
                     ?
@@ -475,7 +491,8 @@ export function BilhetesScreen({ api }: Props = {}) {
                   </button>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         )}
 
