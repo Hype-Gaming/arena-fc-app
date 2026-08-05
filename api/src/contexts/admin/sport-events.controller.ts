@@ -18,4 +18,9 @@ export class AdminSportEventsController {
   preview(@Query('ref') ref = '') {
     return this.feed.getEventPreview(ref);
   }
+
+  @Get('shared')
+  shared(@Query('ref') ref = '') {
+    return this.feed.getSharedEvents(ref);
+  }
 }

@@ -47,6 +47,10 @@ export class AltenarFeedProvider implements SportsFeedProvider {
   private deepLink = (eventId: number): string =>
     this.deepLinkTemplate().replace('{id}', String(eventId));
 
+  private shareCodePath(): string {
+    return process.env.ALTENAR_SHARE_CODE_PATH ?? 'GetBetSlip';
+  }
+
   private async fetchRaw(
     path: string,
     extra: Record<string, string> = {},
@@ -105,4 +109,33 @@ export class AltenarFeedProvider implements SportsFeedProvider {
     })) as unknown as AltenarEventDetails;
     return normalizeAltenarEventPreview(raw, this.deepLink);
   }
+
+  async fetchSharedEvents(shareCode: string): Promise<NormalizedEventPreview[]> {
+    const raw = await this.fetchRaw(this.shareCodePath(), { shareCode });
+    const ids = extractEventIds(raw);
+    if (ids.length === 0) {
+      throw new BadGatewayException('O shareCode não retornou eventos');
+    }
+    return Promise.all(ids.map((id) => this.fetchEventPreview(id)));
+  }
+}
+
+function extractEventIds(raw: unknown): string[] {
+  const found = new Set<string>();
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) return value.forEach(visit);
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (/^(eventId|eventID|fixtureId|fixtureID)$/i.test(key)) {
+        const id = String(child);
+        if (/^\d+$/.test(id)) found.add(id);
+      } else if (/^(event|fixture|match)$/i.test(key) && child && typeof child === 'object') {
+        const id = (child as { id?: unknown }).id;
+        if (id != null && /^\d+$/.test(String(id))) found.add(String(id));
+        visit(child);
+      } else visit(child);
+    }
+  };
+  visit(raw);
+  return [...found];
 }

@@ -22,6 +22,22 @@ export function parseEsportivaEventId(
   return nums ? nums[nums.length - 1] : null;
 }
 
+/** Extract a server-side sportsbook share code from an Esportiva URL or code. */
+export function parseEsportivaShareCode(
+  input: string | null | undefined,
+): string | null {
+  if (!input) return null;
+  const value = input.trim();
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname !== 'esportiva.bet.br') return null;
+    return url.searchParams.get('shareCode')?.trim() || null;
+  } catch {
+    return /^[A-Za-z0-9_-]{4,128}$/.test(value) ? value : null;
+  }
+}
+
 /** Default affiliate base for the pre-filled bet-slip link (env-overridable). */
 const SELECTIONS_BASE_DEFAULT = 'https://go.aff.esportiva.bet/nwxez5q1';
 
