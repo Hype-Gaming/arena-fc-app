@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Arena FC database backup every day
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 America/Sao_Paulo
+RandomizedDelaySec=15m
+Persistent=true
+Unit=arenafc-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Arena FC API and database backup freshness
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/arenafc
+Environment=BACKUP_DIR=./backups
+Environment=BACKUP_MAX_AGE_HOURS=30
+ExecStart=/bin/sh ./infra/backup/check.sh

@@ -274,14 +274,69 @@ dc up -d
 
 ### Backup do banco
 
-O dado do Postgres vive no volume `pgdata`. Faça dump periódico:
+Em produção, mantenha o **Neon como banco principal** e grave dumps lógicos
+verificados na VPS. Não mantenha um segundo Postgres ativo apenas como
+"backup": sem replicação e failover bem operados ele diverge silenciosamente e
+vira mais um banco para atualizar, proteger e monitorar.
+
+O job `db-backup` usa a mesma `DATABASE_URL` da API, produz um arquivo custom
+compactado, valida o arquivo com `pg_restore --list`, grava SHA-256 e só então
+marca a execução como bem-sucedida. Dumps incompletos ficam com sufixo
+`.partial` e nunca contam como backup válido.
+
+Teste manual antes de instalar o agendamento:
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-  exec -T postgres pg_dump -U arenafc arenafc > /opt/arenafc/backup-$(date +%F).sql
+mkdir -p /opt/arenafc/backups
+chmod 700 /opt/arenafc/backups
+
+docker compose --env-file .env.production \
+  -f docker-compose.yml -f docker-compose.prod.yml \
+  run --rm db-backup
+
+ls -lh backups/
+cat backups/last-success.json
 ```
 
-(coloque isso num `cron` diário).
+Instale os timers versionados no repositório:
+
+```bash
+sudo cp infra/systemd/arenafc-backup.service /etc/systemd/system/
+sudo cp infra/systemd/arenafc-backup.timer /etc/systemd/system/
+sudo cp infra/systemd/arenafc-healthcheck.service /etc/systemd/system/
+sudo cp infra/systemd/arenafc-healthcheck.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now arenafc-backup.timer arenafc-healthcheck.timer
+
+systemctl list-timers 'arenafc-*'
+journalctl -u arenafc-backup.service -n 50 --no-pager
+```
+
+Por padrão o backup roda diariamente, retém 14 dias e o check operacional falha
+se o dump tiver mais de 30 horas. Ajuste `BACKUP_DIR` e
+`BACKUP_RETENTION_DAYS` em `.env.production`; se mudar `BACKUP_DIR`, replique o
+valor no `arenafc-healthcheck.service`.
+
+O timer detecta a falha, mas um alerta precisa sair da VPS. Configure também um
+monitor externo para `https://app.arenafcapp.com/api/health` e encaminhe falhas
+do systemd/journald para o seu canal de alerta. Como etapa seguinte, copie os
+dumps para S3/R2: uma cópia que existe somente na VPS não protege contra perda
+do disco ou comprometimento do servidor.
+
+No painel do Neon, habilite a maior janela de instant restore compatível com o
+plano e snapshots agendados. Isso cobre recuperação rápida; o `pg_dump`
+independente cobre erro de fornecedor/conta e retenção fora do Neon.
+
+### Observabilidade operacional
+
+- A API emite logs JSON com `requestId`, status e latência; consulte com
+  `dc logs --since=30m api`.
+- Todos os containers agora rotacionam logs (`10 MB`, cinco arquivos), evitando
+  que logs encham o disco da VPS.
+- `/api/health` confirma API + conexão com o banco e continua sendo usado pelo
+  Docker, deploy e monitor externo.
+- `infra/backup/check.sh` confirma simultaneamente a saúde da API e o frescor do
+  último backup verificado.
 
 ---
 

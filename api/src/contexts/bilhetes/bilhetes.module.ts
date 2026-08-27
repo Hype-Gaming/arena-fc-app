@@ -6,11 +6,12 @@ import { SportsFeedModule } from '../sports-feed/sports-feed.module';
 import { BilhetesController } from './bilhetes.controller';
 import { BilhetesService } from './bilhetes.service';
 import { SettleService } from './settle.service';
+import { AutoBilhetesService } from './auto-bilhetes.service';
 
 @Module({
   imports: [PrismaModule, AuthModule, SportsFeedModule],
   controllers: [BilhetesController],
-  providers: [BilhetesService, SettleService],
-  exports: [BilhetesService, SettleService],
+  providers: [BilhetesService, SettleService, AutoBilhetesService],
+  exports: [BilhetesService, SettleService, AutoBilhetesService],
 })
 export class BilhetesModule {}

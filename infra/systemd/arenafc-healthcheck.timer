@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Arena FC operational health every five minutes
+
+[Timer]
+OnBootSec=5m
+OnUnitActiveSec=5m
+Persistent=true
+Unit=arenafc-healthcheck.service
+
+[Install]
+WantedBy=timers.target

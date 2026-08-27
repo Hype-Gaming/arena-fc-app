@@ -36,7 +36,9 @@ interface AltenarEvent {
 const MATCH_WINNER_TYPE_ID = 1;
 
 /**
- * The core markets we surface for bilhete-building, mapped to a stable slug.
+ * Known markets mapped to stable slugs. Unknown Altenar market types are kept
+ * as `t<typeId>` so adding a market at the bookmaker never makes it silently
+ * disappear from our football catalog.
  * typeIds confirmed against the live Esportiva/Altenar feed:
  *   1  1X2 (Vencedor do encontro)      10 Chance dupla (double chance)
  *   18 Total de gols (Over/Under)       11 Empate anula aposta (DNB)
@@ -50,6 +52,21 @@ const MARKET_KEYS: Record<number, string> = {
   11: 'dnb',
   29: 'btts',
 };
+
+function marketKey(typeId: number, name: string): string {
+  const known = MARKET_KEYS[typeId];
+  if (known) return known;
+  const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/escanteio|canto/.test(normalized)) return 'corners';
+  if (/cart(ao|oes)/.test(normalized)) return 'cards';
+  if (/handicap/.test(normalized)) return 'handicap';
+  if (/resultado correto|placar correto/.test(normalized)) return 'correct_score';
+  if (/intervalo.*final|final.*intervalo/.test(normalized)) return 'half_full';
+  if (/total.*equipe|gols.*equipe/.test(normalized)) return 'team_total';
+  if (/primeiro.*gol|primeiro.*marcar/.test(normalized)) return 'first_goal';
+  if (/intervalo|primeiro tempo/.test(normalized)) return 'half_time';
+  return `t${typeId}`;
+}
 
 type AltenarMarket = NonNullable<AltenarRaw['markets']>[number];
 type AltenarOdd = NonNullable<AltenarRaw['odds']>[number];
@@ -75,8 +92,7 @@ function extractMarkets(
   for (const marketId of event.marketIds ?? []) {
     const market = marketById.get(marketId);
     if (!market) continue;
-    const key = MARKET_KEYS[market.typeId];
-    if (!key) continue;
+    const key = marketKey(market.typeId, market.name ?? '');
 
     const selections = (market.oddIds ?? [])
       .map((id) => oddById.get(id))
@@ -263,7 +279,13 @@ export function normalizeAltenarEventDetails(
   const principal =
     groups.find((g) => /principa|popular/i.test(g.name)) ??
     [...groups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))[0];
-  const orderedIds = principal?.marketIds ?? (raw.markets ?? []).map((m) => m.id);
+  // Keep Principal first for useful ordering, then append every remaining
+  // priced market so the cached football board follows the sportsbook's full
+  // event coverage. Set removes markets repeated across tabs/groups.
+  const orderedIds = [...new Set([
+    ...(principal?.marketIds ?? []),
+    ...(raw.markets ?? []).map((m) => m.id),
+  ])];
 
   // Merge markets by typeId, preserving first-seen order.
   const byType = new Map<number, NormalizedMarket>();
@@ -291,7 +313,7 @@ export function normalizeAltenarEventDetails(
     } else {
       byType.set(market.typeId, {
         typeId: market.typeId,
-        key: MARKET_KEYS[market.typeId] ?? `t${market.typeId}`,
+        key: marketKey(market.typeId, market.name ?? ''),
         name: market.name,
         selections,
       });

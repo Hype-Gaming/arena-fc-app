@@ -98,21 +98,28 @@ describe('normalizeAltenar', () => {
             { label: 'Não', odd: 1.95, line: null, oddId: 61 },
           ],
         },
+        {
+          typeId: 7,
+          key: 'handicap',
+          name: 'Handicap asiático',
+          selections: [
+            { label: 'Botafogo -1', odd: 1.9, line: null, oddId: 70 },
+          ],
+        },
       ],
       deepLink: 'https://esportiva.bet.br/e/16027580',
     });
   });
 
-  it('drops non-core markets and suspended (price 0) selections', () => {
+  it('keeps additional football markets and drops suspended selections', () => {
     const raw = sample();
     // Suspend one leg of the Over/Under market → it should not appear.
     raw.odds!.find((o) => o.id === 50)!.price = 0;
     const [ev] = normalizeAltenar(raw, link, NOW);
-    expect(ev.markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 'btts']);
+    expect(ev.markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 'btts', 'handicap']);
     const ou = ev.markets.find((m) => m.key === 'over_under')!;
     expect(ou.selections).toEqual([{ label: 'Menos de 2.5', odd: 2.05, line: 2.5, oddId: 51 }]);
-    // typeId 7 (Handicap) is never surfaced.
-    expect(ev.markets.some((m) => m.typeId === 7)).toBe(false);
+    expect(ev.markets.some((m) => m.typeId === 7)).toBe(true);
   });
 
   it('omits a market whose every leg is suspended', () => {
@@ -259,11 +266,13 @@ function detailsSample(): AltenarEventDetails {
 }
 
 describe('normalizeAltenarEventDetails', () => {
-  it('surfaces the Principal markets, merging lines and dropping noise', () => {
+  it('surfaces all priced markets, with Principal first, merging lines and dropping noise', () => {
     const markets = normalizeAltenarEventDetails(detailsSample());
     // 1X2 + Total (merged) + Resultado Correto. Corners (not Principal), VAR
     // (denied) and the player market (no live odds) are all excluded.
-    expect(markets.map((m) => m.key)).toEqual(['1x2', 'over_under', 't45']);
+    expect(markets.map((m) => m.key)).toEqual([
+      '1x2', 'over_under', 'correct_score', 'corners',
+    ]);
 
     const ou = markets.find((m) => m.key === 'over_under')!;
     // Both lines merged into one market, each selection keeping its line.
@@ -275,7 +284,7 @@ describe('normalizeAltenarEventDetails', () => {
     ]);
 
     // A scoreline sv ("1:0") is not a numeric line.
-    const cs = markets.find((m) => m.key === 't45')!;
+    const cs = markets.find((m) => m.key === 'correct_score')!;
     expect(cs.selections.every((s) => s.line === null)).toBe(true);
     expect(markets.find((m) => m.key === '1x2')!.selections).toHaveLength(3);
   });
@@ -296,7 +305,7 @@ describe('normalizeAltenarEventDetails', () => {
     raw.marketGroups = [];
     const keys = normalizeAltenarEventDetails(raw).map((m) => m.key);
     // Now corners (166) are included; VAR/player still drop (deny / no odds).
-    expect(keys).toContain('t166');
+    expect(keys).toContain('corners');
     expect(keys).not.toContain('t17725');
   });
 

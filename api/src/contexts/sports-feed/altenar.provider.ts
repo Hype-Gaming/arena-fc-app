@@ -27,19 +27,19 @@ export class AltenarFeedProvider implements SportsFeedProvider {
 
   private base(): string {
     return (
-      process.env.ALTENAR_BASE_URL ??
+      process.env.ALTENAR_BASE_URL?.trim() ||
       'https://sb2frontend-altenar2.biahosted.com/api/Widget'
     );
   }
 
   private integration(): string {
-    return process.env.ALTENAR_INTEGRATION ?? 'esportiva';
+    return process.env.ALTENAR_INTEGRATION?.trim() || 'esportiva';
   }
 
   /** {id} is replaced by the Altenar event id. Provisional path — swap via env. */
   private deepLinkTemplate(): string {
     return (
-      process.env.ESPORTIVA_EVENT_URL_TEMPLATE ??
+      process.env.ESPORTIVA_EVENT_URL_TEMPLATE?.trim() ||
       'https://esportiva.bet.br/sports/?bt-path=%2Fevent%2F{id}'
     );
   }

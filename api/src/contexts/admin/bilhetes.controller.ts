@@ -5,6 +5,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from './admin-role.guard';
 import { AdminBilhetesService } from './bilhetes.service';
+import { AutoBilhetesService } from '../bilhetes/auto-bilhetes.service';
 import {
   CreateBilheteDto,
   FromEventsDto,
@@ -17,10 +18,14 @@ import {
 @UseGuards(JwtAuthGuard, AdminRoleGuard)
 @Controller('admin/bilhetes')
 export class AdminBilhetesController {
-  constructor(private readonly service: AdminBilhetesService) {}
+  constructor(
+    private readonly service: AdminBilhetesService,
+    private readonly autoBilhetes: AutoBilhetesService,
+  ) {}
 
   @Get() list() { return this.service.list(); }
   @Post() create(@Body() dto: CreateBilheteDto) { return this.service.create(dto); }
+  @Post('generate-auto') generateAuto() { return this.autoBilhetes.generateDaily(); }
   @Post('import-betslip') importBetslip(@Body() dto: ImportBetslipDto) {
     return this.service.importBetslip(dto.json, dto.categoria, dto.publish);
   }
