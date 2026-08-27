@@ -20,12 +20,13 @@ const composeEnv = {
   NODE_ENV: process.env.NODE_ENV || 'test',
 };
 
-function readCompose(files) {
+function readCompose(files, profiles = []) {
   const fileArgs = files.flatMap((file) => ['-f', file]);
+  const profileArgs = profiles.flatMap((profile) => ['--profile', profile]);
   return JSON.parse(
     execFileSync(
       'docker',
-      ['compose', ...fileArgs, 'config', '--format', 'json'],
+      ['compose', ...profileArgs, ...fileArgs, 'config', '--format', 'json'],
       {
         cwd: root,
         env: composeEnv,
@@ -40,7 +41,7 @@ const compose = readCompose(['docker-compose.yml']);
 const productionCompose = readCompose([
   'docker-compose.yml',
   'docker-compose.prod.yml',
-]);
+], ['ops']);
 
 const raw = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
 ['nginx:', 'web:', 'api:', 'postgres:'].forEach((s) =>
@@ -74,6 +75,24 @@ assert.strictEqual(
   'service_healthy',
   'production nginx must wait for a healthy api',
 );
+assert.ok(productionCompose.services['db-backup'], 'production must define a database backup job');
+assert.strictEqual(
+  productionCompose.services['db-backup'].environment.DATABASE_URL,
+  composeEnv.DATABASE_URL,
+  'backup job must use the production DATABASE_URL',
+);
+assert.ok(
+  productionCompose.services['db-backup'].volumes.some((volume) =>
+    volume.target === '/backups' && volume.type === 'bind'),
+  'backup job must persist dumps on the VPS',
+);
+['postgres', 'api', 'web', 'nginx'].forEach((service) => {
+  assert.strictEqual(
+    compose.services[service].logging.options['max-size'],
+    '10m',
+    service + ' logs must be size-rotated',
+  );
+});
 
 // The api service must forward every secret the code reads, under the exact
 // names the code expects (a name mismatch = crash-loop on boot).

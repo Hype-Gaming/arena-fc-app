@@ -31,3 +31,23 @@ services:
     restart: unless-stopped
     ports: !override
       - "127.0.0.1:8080:80"
+
+  # One-shot logical backup of the external production database (Neon). Run it
+  # from the host timer with `docker compose ... run --rm db-backup`.
+  db-backup:
+    image: postgres:16-alpine
+    profiles:
+      - ops
+    restart: "no"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups
+      - ./infra/backup/backup.sh:/usr/local/bin/backup-db:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup-db"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

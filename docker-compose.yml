@@ -1,4 +1,9 @@
-# docker-compose.yml
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -15,6 +20,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *default-logging
 
   api:
     build:
@@ -69,6 +75,7 @@ services:
       # The container applies migrations and runs the idempotent seed before
       # Nest starts listening, so production needs a generous grace period.
       start_period: 120s
+    logging: *default-logging
 
   web:
     build:
@@ -76,6 +83,7 @@ services:
       dockerfile: web/Dockerfile
     expose:
       - "80"
+    logging: *default-logging
 
   nginx:
     build:
@@ -92,6 +100,7 @@ services:
       # Read-only view of the API's crest cache so nginx serves logo PNGs
       # straight from disk, hitting the API only on a cache miss.
       - team-logos:/var/cache/team-logos:ro
+    logging: *default-logging
 
 volumes:
   pgdata:

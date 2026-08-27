@@ -1,0 +1,10 @@
+[Unit]
+Description=Arena FC verified Neon database backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/arenafc
+ExecStart=/usr/bin/docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml run --rm db-backup

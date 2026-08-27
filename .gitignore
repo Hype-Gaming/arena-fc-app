@@ -15,3 +15,6 @@ web/dev-dist/
 
 # team-logo image cache
 .cache/
+
+# Logical database dumps created by the VPS backup job.
+backups/
