@@ -297,6 +297,24 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
     }
   }
 
+  async function onGenerateAutomaticBilhetes() {
+    setError(null);
+    setSyncMsg(null);
+    setBusy(true);
+    try {
+      const result = await adminApi.generateAutomaticBilhetes();
+      setSyncMsg(
+        `Automação concluída: ${result.createdOrUpdated} bilhetes, ` +
+        `${result.detailed} jogos detalhados`,
+      );
+      refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onCreateFromEvents() {
     setError(null);
     setSyncMsg(null);
@@ -922,6 +940,9 @@ export function AdminBilhetes({ section = 'all' }: { section?: 'all' | 'create' 
       <p className="ab-sync">
         <button type="button" onClick={onSyncEvents} disabled={busy}>
           Sincronizar jogos (Esportiva)
+        </button>
+        <button type="button" onClick={onGenerateAutomaticBilhetes} disabled={busy}>
+          Gerar bilhetes automaticamente
         </button>
         <small>{events.length} jogos disponíveis</small>
         <label>

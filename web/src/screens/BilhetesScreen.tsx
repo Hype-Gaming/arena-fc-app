@@ -117,6 +117,14 @@ const MARKET_LABELS: Record<string, string> = {
   btts: 'Ambas Marcam',
   double_chance: 'Dupla Chance',
   dnb: 'Empate Anula',
+  handicap: 'Handicap',
+  corners: 'Escanteios',
+  cards: 'Cartões',
+  correct_score: 'Placar Correto',
+  half_full: 'Intervalo/Final',
+  team_total: 'Total da Equipe',
+  first_goal: 'Primeiro Gol',
+  half_time: 'Resultado do 1º Tempo',
 };
 
 const LAST_COUPON_STORAGE_KEY = 'tips-app:last-esportiva-coupon';

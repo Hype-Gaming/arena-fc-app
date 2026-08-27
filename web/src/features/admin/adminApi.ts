@@ -283,6 +283,11 @@ export const adminApi = {
   listBilhetes: () => req<AdminBilhete[]>('/admin/bilhetes'),
   createBilhete: (data: CreateBilheteInput) =>
     req<AdminBilhete>('/admin/bilhetes', { method: 'POST', body: JSON.stringify(data) }),
+  generateAutomaticBilhetes: () =>
+    req<{ synced: number; detailed: number; createdOrUpdated: number; skippedDetails: number }>(
+      '/admin/bilhetes/generate-auto',
+      { method: 'POST' },
+    ),
   updateBilhete: (id: string, data: Partial<CreateBilheteInput>) =>
     req<AdminBilhete>(`/admin/bilhetes/${id}`, {
       method: 'PATCH',
