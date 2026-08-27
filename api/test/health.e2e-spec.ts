@@ -35,4 +35,11 @@ describe('Health (e2e)', () => {
     expect(res.body.db).toBe('up');
     expect(res.body.timestamp).toBeDefined();
   });
+
+  it('GET /health/live returns process liveness without a db field', async () => {
+    const res = await request(app.getHttpServer()).get('/health/live').expect(200);
+    expect(res.body.status).toBe('ok');
+    expect(res.body.timestamp).toBeDefined();
+    expect(res.body.db).toBeUndefined();
+  });
 });

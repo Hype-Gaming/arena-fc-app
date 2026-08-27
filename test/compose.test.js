@@ -54,12 +54,12 @@ assert.ok(/pg_isready/.test(raw), 'postgres needs a healthcheck');
 assert.ok(/"80:80"/.test(raw) || /80:80/.test(raw), 'nginx must publish port 80');
 assert.ok(compose.services.api.healthcheck, 'api needs a healthcheck');
 assert.ok(
-  compose.services.api.healthcheck.test.join(' ').includes('127.0.0.1:3000/health'),
-  'api healthcheck must call its /health endpoint',
+  compose.services.api.healthcheck.test.join(' ').includes('127.0.0.1:3000/health/live'),
+  'api healthcheck must call its process-only /health/live endpoint',
 );
 assert.ok(
-  compose.services.api.healthcheck.test.join(' ').includes("body.db !== 'up'"),
-  'api healthcheck must reject a degraded database',
+  !compose.services.api.healthcheck.test.join(' ').includes('body.db'),
+  'frequent api healthcheck must not query or inspect the database',
 );
 assert.strictEqual(
   compose.services.nginx.depends_on.api.condition,

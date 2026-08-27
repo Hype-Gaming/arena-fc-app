@@ -318,7 +318,7 @@ se o dump tiver mais de 30 horas. Ajuste `BACKUP_DIR` e
 valor no `arenafc-healthcheck.service`.
 
 O timer detecta a falha, mas um alerta precisa sair da VPS. Configure também um
-monitor externo para `https://app.arenafcapp.com/api/health` e encaminhe falhas
+monitor externo para `https://app.arenafcapp.com/api/health/live` e encaminhe falhas
 do systemd/journald para o seu canal de alerta. Como etapa seguinte, copie os
 dumps para S3/R2: uma cópia que existe somente na VPS não protege contra perda
 do disco ou comprometimento do servidor.
@@ -333,10 +333,12 @@ independente cobre erro de fornecedor/conta e retenção fora do Neon.
   `dc logs --since=30m api`.
 - Todos os containers agora rotacionam logs (`10 MB`, cinco arquivos), evitando
   que logs encham o disco da VPS.
-- `/api/health` confirma API + conexão com o banco e continua sendo usado pelo
-  Docker, deploy e monitor externo.
-- `infra/backup/check.sh` confirma simultaneamente a saúde da API e o frescor do
-  último backup verificado.
+- `/api/health/live` confirma somente que a API está viva e é usado pelo Docker
+  e pelo monitor frequente sem acordar continuamente o Postgres serverless.
+- `/api/health` confirma API + banco e é reservado para deploys e diagnósticos
+  pontuais; não configure polling frequente nessa rota.
+- `infra/backup/check.sh` confirma a saúde do processo e o frescor do último
+  backup verificado sem consumir compute do Neon.
 
 ---
 

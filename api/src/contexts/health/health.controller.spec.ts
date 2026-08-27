@@ -21,4 +21,12 @@ describe('HealthController', () => {
     await expect(controller.health()).resolves.toEqual(payload);
     expect(healthService.check).toHaveBeenCalledTimes(1);
   });
+
+  it('GET /health/live reports process liveness without querying the database', () => {
+    healthService.check.mockClear();
+    const result = controller.live();
+    expect(result.status).toBe('ok');
+    expect(result.timestamp).toBeDefined();
+    expect(healthService.check).not.toHaveBeenCalled();
+  });
 });

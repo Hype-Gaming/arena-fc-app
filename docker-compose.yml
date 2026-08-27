@@ -67,13 +67,14 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:3000/health').then(async (res) => { if (!res.ok) process.exit(1); const body = await res.json(); if (body.status !== 'ok' || body.db !== 'up') process.exit(1); }).catch(() => process.exit(1))",
+          "fetch('http://127.0.0.1:3000/health/live').then(async (res) => { if (!res.ok) process.exit(1); const body = await res.json(); if (body.status !== 'ok') process.exit(1); }).catch(() => process.exit(1))",
         ]
       interval: 5s
       timeout: 5s
       retries: 24
-      # The container applies migrations and runs the idempotent seed before
-      # Nest starts listening, so production needs a generous grace period.
+      # This is deliberately a process-only probe. Querying the serverless DB
+      # every five seconds prevents scale-to-zero and exhausts compute quota.
+      # Migrations + seed already verify DB readiness before Nest starts.
       start_period: 120s
     logging: *default-logging
 

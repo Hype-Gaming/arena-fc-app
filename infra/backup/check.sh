@@ -27,7 +27,7 @@ if [ "$age_hours" -gt "$max_age_hours" ]; then
 fi
 
 health="$(curl --fail --silent --show-error --max-time 10 \
-  http://127.0.0.1:8080/api/health)"
+  http://127.0.0.1:8080/api/health/live)"
 printf '%s' "$health" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' || {
   echo "CRITICAL: API health is degraded: ${health}" >&2
   exit 1
